@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "baseUrl": "./src",
+        "target": "es6",
+        "sourceMap": true,
+        "module": "esnext",
+        "moduleResolution": "node",
+        "allowJs": true,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "strictPropertyInitialization": true,
+    }
+}
