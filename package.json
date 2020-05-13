@@ -4,7 +4,8 @@
   "scripts": {
     "build": "rollup -c",
     "dev": "rollup -c -w",
-    "start": "sirv public"
+    "start": "sirv public",
+    "build:shaders": "scripts/build-triangle-shaders.bat"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "11.0.2",
@@ -19,6 +20,7 @@
     "typescript": "^3.9.2"
   },
   "dependencies": {
-    "sirv-cli": "^0.4.4"
+    "sirv-cli": "^0.4.4",
+    "tslib": "^1.12.0"
   }
 }

@@ -1,10 +1,11 @@
 <script>
   import { onMount } from "svelte";
   import { createRenderer } from "./renderer";
-  let canvasElement;
 
-  onMount(() => {
-    createRenderer();
+  let canvasElement;
+  onMount(async () => {
+    const renderer = await createRenderer(canvasElement);
+    renderer.start();
   });
 </script>
 
