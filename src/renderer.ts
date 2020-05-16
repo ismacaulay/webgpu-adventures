@@ -18,6 +18,10 @@ async function loadShader(url: string) {
 
 }
 
+export function webGPUSupported() {
+    return navigator.gpu !== undefined;
+}
+
 export async function createRenderer(canvas: HTMLCanvasElement) {
     // check if webgpu is supported
     const entry = navigator.gpu;
