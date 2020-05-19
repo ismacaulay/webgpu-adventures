@@ -11,15 +11,3 @@ body {
 body {
   font-family: "Source Code Pro", monospace;
 }
-
-a {
-  text-decoration: none;
-}
-
-a:link,
-a:visited {
-  color: #045b88;
-}
-a:hover {
-  text-decoration: underline;
-}

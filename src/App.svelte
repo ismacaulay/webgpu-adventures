@@ -2,6 +2,7 @@
     import router from 'page';
     import HelloWorld from './pages/HelloWorld.svelte';
     import Home from './pages/Home.svelte';
+    import Bunny from './pages/Bunny.svelte';
 
     let examples = [
         {
@@ -9,11 +10,20 @@
             route: '/hello_world',
             component: HelloWorld,
         },
+        {
+            title: 'Bunny',
+            route: '/bunny',
+            component: Bunny,
+        },
     ];
 
     let page;
     router('/', () => (page = Home));
-    router('/hello_world', () => (page = HelloWorld));
+    for (let i = 0; i < examples.length; i++) {
+        const example = examples[i];
+        router(example.route, () => (page = example.component));
+    }
+
     router.start();
 </script>
 

@@ -1,41 +1,66 @@
-/// <reference path="../node_modules/@webgpu/types/dist/index.d.ts" />
+/// <reference path="../../node_modules/@webgpu/types/dist/index.d.ts" />
 
-function createBuffer(device: GPUDevice, arr: Float32Array | Uint16Array, usage: number) {
+export type BufferArray = Float32Array | Uint16Array;
+
+function createBuffer(device: GPUDevice, arr: BufferArray, usage: number) {
     // create a buffer
     const descriptor: GPUBufferDescriptor = { size: arr.byteLength, usage };
-    const [buffer, bufferMapped]: [GPUBuffer, ArrayBuffer] = device.createBufferMapped(descriptor)
+    const [buffer, bufferMapped]: [
+        GPUBuffer,
+        ArrayBuffer,
+    ] = device.createBufferMapped(descriptor);
 
     // write the data to the mapped buffer
-    const writeArray = arr instanceof Float32Array ? new Float32Array(bufferMapped) : new Uint16Array(bufferMapped);
+    const writeArray =
+        arr instanceof Float32Array
+            ? new Float32Array(bufferMapped)
+            : new Uint16Array(bufferMapped);
     writeArray.set(arr);
     buffer.unmap();
     return buffer;
 }
 
 async function loadShader(url: string) {
-    return fetch(url, { mode: 'cors' })
-        .then(res => res.arrayBuffer().then(arr => new Uint32Array(arr)));
-
-}
-
-export function webGPUSupported() {
-    return navigator.gpu !== undefined;
+    return fetch(url, { mode: 'cors' }).then(res =>
+        res.arrayBuffer().then(arr => new Uint32Array(arr)),
+    );
 }
 
 export async function createRenderer(canvas: HTMLCanvasElement) {
     // check if webgpu is supported
-    const entry = navigator.gpu;
+    const entry: GPU | undefined = navigator.gpu;
     if (!entry) {
         // TODO: Should put a message on the page if it is not supported
         throw new Error('WebGPU not supported in this browser');
     }
-    console.log('WebGPU supported')
 
     // request a physical device adapter
     //      an adapter describes the phycical properties fo a given GPU
     //      such as name, extensions, device limits...
     const adapter: GPUAdapter = await entry.requestAdapter();
-    console.log(adapter);
+
+    // request a device
+    //      a device is how you access the core of the webgpu api
+    const device: GPUDevice = await adapter.requestDevice();
+
+    return {
+        createBuffer: (arr: BufferArray, usage: number) =>
+            createBuffer(device, arr, usage),
+    };
+}
+
+export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
+    // check if webgpu is supported
+    const entry: GPU | undefined = navigator.gpu;
+    if (!entry) {
+        // TODO: Should put a message on the page if it is not supported
+        throw new Error('WebGPU not supported in this browser');
+    }
+
+    // request a physical device adapter
+    //      an adapter describes the phycical properties fo a given GPU
+    //      such as name, extensions, device limits...
+    const adapter: GPUAdapter = await entry.requestAdapter();
 
     // request a device
     //      a device is how you access the core of the webgpu api
@@ -54,9 +79,11 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
     const swapChainDescriptor: GPUSwapChainDescriptor = {
         device,
         format: 'bgra8unorm',
-        usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC
-    }
-    const swapchain: GPUSwapChain = context.configureSwapChain(swapChainDescriptor);
+        usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+    };
+    const swapchain: GPUSwapChain = context.configureSwapChain(
+        swapChainDescriptor,
+    );
 
     // create some framebuffer attachments
     //      these are the output textures to write too. these could
@@ -73,8 +100,10 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
         dimension: '2d',
         format: 'depth24plus-stencil8',
         usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC,
-    }
-    const depthTexture: GPUTexture = device.createTexture(depthTextureDescriptor);
+    };
+    const depthTexture: GPUTexture = device.createTexture(
+        depthTextureDescriptor,
+    );
     const depthTextureView: GPUTextureView = depthTexture.createView();
 
     let colorTexture: GPUTexture = swapchain.getCurrentTexture();
@@ -82,69 +111,121 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
 
     // create vertex/index buffers
     const positions = new Float32Array([
-        1.0, -1.0, 0.0,
-        -1.0, -1.0, 0.0,
-        0.0, 1.0, 0.0
+        1.0,
+        -1.0,
+        0.0,
+        -1.0,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
     ]);
-    const positionBuffer = createBuffer(device, positions, GPUBufferUsage.VERTEX);
+    const positionBuffer = createBuffer(
+        device,
+        positions,
+        GPUBufferUsage.VERTEX,
+    );
 
     const colors = new Float32Array([
-        1.0, 0.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 0.0, 1.0
-    ])
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+    ]);
     const colorBuffer = createBuffer(device, colors, GPUBufferUsage.VERTEX);
 
-    const indices = new Uint16Array([
-        0, 1, 2
-    ])
+    const indices = new Uint16Array([0, 1, 2]);
     const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
 
     // load the shader modules
     //      shader modules are precompiled shader binaries that execute on the gpu
-    const vertexShaderModuleDescriptor: GPUShaderModuleDescriptor = { code: await loadShader('build/triangle.vert.spv') };
-    const vertexModule: GPUShaderModule = device.createShaderModule(vertexShaderModuleDescriptor);
-    const fragmentShaderModuleDescriptor: GPUShaderModuleDescriptor = { code: await loadShader('build/triangle.frag.spv') };
-    const fragmentModule: GPUShaderModule = device.createShaderModule(fragmentShaderModuleDescriptor);
+    const vertexShaderModuleDescriptor: GPUShaderModuleDescriptor = {
+        code: await loadShader('build/triangle.vert.spv'),
+    };
+    const vertexModule: GPUShaderModule = device.createShaderModule(
+        vertexShaderModuleDescriptor,
+    );
+    const fragmentShaderModuleDescriptor: GPUShaderModuleDescriptor = {
+        code: await loadShader('build/triangle.frag.spv'),
+    };
+    const fragmentModule: GPUShaderModule = device.createShaderModule(
+        fragmentShaderModuleDescriptor,
+    );
 
     // create a uniform buffer
     const uniforms = new Float32Array([
         //  ModelViewProjection Matrix
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
 
         // Primary Color
-        0.9, 0.1, 0.3, 1.0,
+        0.9,
+        0.1,
+        0.3,
+        1.0,
 
         // Accent Color
-        0.8, 0.2, 0.8, 1.0,
+        0.8,
+        0.2,
+        0.8,
+        1.0,
     ]);
-    const uniformBuffer = createBuffer(device, uniforms, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST)
+    const uniformBuffer: GPUBuffer = createBuffer(
+        device,
+        uniforms,
+        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    );
 
     // create a pipeline layout to describe where the uniform will be when executing a graphics pipeline
-    const uniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
-        entries: [{
-            binding: 0,
-            visibility: GPUShaderStage.VERTEX,
-            type: 'uniform-buffer'
-        }],
-    });
-    const uniformBindGroup = device.createBindGroup({
+    const uniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout(
+        {
+            entries: [
+                {
+                    binding: 0,
+                    visibility: GPUShaderStage.VERTEX,
+                    type: 'uniform-buffer',
+                },
+            ],
+        },
+    );
+    const uniformBindGroup: GPUBindGroup = device.createBindGroup({
         layout: uniformBindGroupLayout,
-        entries: [{
-            binding: 0,
-            resource: {
-                buffer: uniformBuffer,
-            }
-        }],
+        entries: [
+            {
+                binding: 0,
+                resource: {
+                    buffer: uniformBuffer,
+                },
+            },
+        ],
     });
 
-    const layout: GPUPipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformBindGroupLayout] })
+    const layout: GPUPipelineLayout = device.createPipelineLayout({
+        bindGroupLayouts: [uniformBindGroupLayout],
+    });
 
     // graphics pipeline
-    //      this describes all the data that is to be fed into the execture of a raster 
+    //      this describes all the data that is to be fed into the execture of a raster
     //      based graphics pipeline.
 
     // input assembly
@@ -154,47 +235,47 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
         shaderLocation: 0,
         offset: 0,
         format: 'float3',
-    }
+    };
     const colorAttribDescriptor: GPUVertexAttributeDescriptor = {
         shaderLocation: 1,
         offset: 0,
         format: 'float3',
-    }
+    };
     const positionBufferDescriptor: GPUVertexBufferLayoutDescriptor = {
         attributes: [positionAttribDescriptor],
         arrayStride: 4 * 3, // sizeof(float) * 3
-        stepMode: 'vertex'
-    }
+        stepMode: 'vertex',
+    };
     const colorBufferDescriptor: GPUVertexBufferLayoutDescriptor = {
         attributes: [colorAttribDescriptor],
         arrayStride: 4 * 3, // sizeof(float) * 3
-        stepMode: 'vertex'
-    }
+        stepMode: 'vertex',
+    };
 
     const vertexState: GPUVertexStateDescriptor = {
         indexFormat: 'uint16',
-        vertexBuffers: [positionBufferDescriptor, colorBufferDescriptor]
-    }
+        vertexBuffers: [positionBufferDescriptor, colorBufferDescriptor],
+    };
 
     // shader modules
     //      what shader modules will be used in the pipeline
     const vertexStage: GPUProgrammableStageDescriptor = {
         module: vertexModule,
         entryPoint: 'main',
-    }
+    };
 
     const fragmentStage: GPUProgrammableStageDescriptor = {
         module: fragmentModule,
         entryPoint: 'main',
-    }
+    };
 
     // depth/stencil state
     //      should you perform depth testing? which function should you use to test depth
     const depthStencilState: GPUDepthStencilStateDescriptor = {
         depthWriteEnabled: true,
         depthCompare: 'less',
-        format: 'depth24plus-stencil8'
-    }
+        format: 'depth24plus-stencil8',
+    };
 
     // blend state
     //      how should colors be blended between previously written color and current one
@@ -203,15 +284,15 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
         alphaBlend: {
             srcFactor: 'src-alpha',
             dstFactor: 'one-minus-src-alpha',
-            operation: 'add'
+            operation: 'add',
         },
         colorBlend: {
             srcFactor: 'src-alpha',
             dstFactor: 'one-minus-src-alpha',
-            operation: 'add'
+            operation: 'add',
         },
-        writeMask: GPUColorWrite.ALL
-    }
+        writeMask: GPUColorWrite.ALL,
+    };
 
     // rasterization
     //      how does the rasterizer behave when executing the graphics pipeline. does it cull faces?
@@ -219,7 +300,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
     const rasterizationState: GPURasterizationStateDescriptor = {
         frontFace: 'cw',
         cullMode: 'none',
-    }
+    };
 
     // create the pipeline
     const pipelineDescriptor: GPURenderPipelineDescriptor = {
@@ -232,21 +313,23 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
         colorStates: [colorState],
         depthStencilState,
         vertexState,
-        rasterizationState
-    }
-    const pipeline = device.createRenderPipeline(pipelineDescriptor);
+        rasterizationState,
+    };
+    const pipeline: GPURenderPipeline = device.createRenderPipeline(
+        pipelineDescriptor,
+    );
 
     // command encoder
     //      command encoders encode all the draw commands you intend to execute in groups of
-    //      render pass encoders. once finished encoding all commands, you will receive a 
+    //      render pass encoders. once finished encoding all commands, you will receive a
     //      command buffer that can be submitted to the queue
-
     function encodeCommands() {
+        // clear
         const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
             attachment: colorTextureView,
             loadValue: { r: 1, g: 1, b: 1, a: 1 },
             storeOp: 'store',
-        }
+        };
 
         const depthAttachment: GPURenderPassDepthStencilAttachmentDescriptor = {
             attachment: depthTextureView,
@@ -254,16 +337,18 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
             depthStoreOp: 'store',
             stencilLoadValue: 'load',
             stencilStoreOp: 'store',
-        }
+        };
 
         const renderPassDescriptor: GPURenderPassDescriptor = {
             colorAttachments: [colorAttachment],
             depthStencilAttachment: depthAttachment,
-        }
+        };
 
         const commandEncoder = device.createCommandEncoder();
 
-        const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+        const passEncoder = commandEncoder.beginRenderPass(
+            renderPassDescriptor,
+        );
         passEncoder.setPipeline(pipeline);
         passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
@@ -277,6 +362,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
         queue.submit([commandEncoder.finish()]);
     }
 
+    let rafId: number;
     // rendering
     //      rendering in webgpu is a simple matter of updating any uniforms you intend to update,
     //      getting the next attachments from your swapchain, submitting your command encoders
@@ -287,13 +373,27 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
 
         encodeCommands();
 
-        requestAnimationFrame(render);
+        rafId = requestAnimationFrame(render);
     }
 
     return {
         start() {
-            console.log('starting')
             render();
-        }
-    }
+        },
+
+        stop() {
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+            }
+
+            uniformBuffer.destroy();
+
+            indexBuffer.destroy();
+            colorBuffer.destroy();
+            positionBuffer.destroy();
+
+            colorTexture.destroy();
+            depthTexture.destroy();
+        },
+    };
 }

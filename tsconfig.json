@@ -10,6 +10,6 @@
         "preserveConstEnums": true,
         "noImplicitAny": true,
         "strictNullChecks": true,
-        "strictPropertyInitialization": true
+        "strictPropertyInitialization": true,
     }
 }

@@ -1,23 +1,18 @@
 <script>
     import { onMount } from 'svelte';
-    import { createRenderer, webGPUSupported } from '../renderer';
+    import { createTriangleRenderer } from '../rendering/renderer';
+    import Canvas from '../components/Canvas.svelte';
 
-    let canvasElement;
-    let showNotSupported = false;
+    let canvas;
     onMount(async () => {
-        if (webGPUSupported()) {
-            const renderer = await createRenderer(canvasElement);
-            renderer.start();
-        } else {
-            showNotSupported = true;
-        }
+        const renderer = await createTriangleRenderer(canvas.getElement());
+        renderer.start();
+
+        return () => {
+            renderer.stop();
+        };
     });
 </script>
 
-<div>
-    {#if showNotSupported}
-        <p>WebGPU not supported in this browser yet!</p>
-    {:else}
-        <canvas bind:this={canvasElement} />
-    {/if}
-</div>
+<Canvas bind:this={canvas}/>
+

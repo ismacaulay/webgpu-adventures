@@ -1,10 +1,10 @@
 #version 450
 
 // Varying
-layout (location = 0) in vec3 inColor;
+layout(location = 0) in vec3 inColor;
 
 // Return Output
-layout (location = 0) out vec4 outFragColor;
+layout(location = 0) out vec4 outFragColor;
 
 void main()
 {
