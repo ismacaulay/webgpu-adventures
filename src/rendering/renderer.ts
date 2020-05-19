@@ -1,5 +1,11 @@
 /// <reference path="../../node_modules/@webgpu/types/dist/index.d.ts" />
 
+import glslangModule from './glslang';
+// @ts-ignore
+import triangleVert from './shaders/triangle.vert';
+// @ts-ignore
+import triangleFrag from './shaders/triangle.frag';
+
 export type BufferArray = Float32Array | Uint16Array;
 
 function createBuffer(device: GPUDevice, arr: BufferArray, usage: number) {
@@ -145,18 +151,19 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
 
     // load the shader modules
     //      shader modules are precompiled shader binaries that execute on the gpu
-    const vertexShaderModuleDescriptor: GPUShaderModuleDescriptor = {
-        code: await loadShader('build/triangle.vert.spv'),
-    };
-    const vertexModule: GPUShaderModule = device.createShaderModule(
-        vertexShaderModuleDescriptor,
-    );
-    const fragmentShaderModuleDescriptor: GPUShaderModuleDescriptor = {
-        code: await loadShader('build/triangle.frag.spv'),
-    };
-    const fragmentModule: GPUShaderModule = device.createShaderModule(
-        fragmentShaderModuleDescriptor,
-    );
+    const glslang = await glslangModule();
+    // const vertexShaderModuleDescriptor: GPUShaderModuleDescriptor = {
+    //     code: await loadShader('build/triangle.vert.spv'),
+    // };
+    const vertexModule: GPUShaderModule = device.createShaderModule({
+        code: glslang.compileGLSL(triangleVert, "vertex"),
+    })
+    // const fragmentShaderModuleDescriptor: GPUShaderModuleDescriptor = {
+    //     code: await loadShader('build/triangle.frag.spv'),
+    // };
+    const fragmentModule: GPUShaderModule = device.createShaderModule({
+        code: glslang.compileGLSL(triangleFrag, "fragment"),
+    })
 
     // create a uniform buffer
     const uniforms = new Float32Array([

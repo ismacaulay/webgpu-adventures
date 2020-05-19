@@ -4,6 +4,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import livereload from 'rollup-plugin-livereload';
 import { terser } from 'rollup-plugin-terser';
 import typescript from '@rollup/plugin-typescript';
+import { string } from 'rollup-plugin-string';
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -37,6 +38,9 @@ export default {
         }),
         commonjs(),
         typescript(),
+        string({
+            include: ['**/*.vert', '**/*.frag'],
+        }),
 
         // In dev mode, call `npm run start` once
         // the bundle has been generated
