@@ -28,6 +28,6 @@
     {#if !webGPUSupported()}
         <p id="not-supported">WebGPU not supported in this browser yet!</p>
     {:else}
-        <canvas bind:this={element} />
+        <canvas bind:this={element} width="800" height="600"/>
     {/if}
 </div>

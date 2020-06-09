@@ -2,7 +2,7 @@
     import router from 'page';
     import HelloWorld from './pages/HelloWorld.svelte';
     import Home from './pages/Home.svelte';
-    import Bunny from './pages/Bunny.svelte';
+    import Cube from './pages/Cube.svelte';
 
     let examples = [
         {
@@ -11,9 +11,9 @@
             component: HelloWorld,
         },
         {
-            title: 'Bunny',
-            route: '/bunny',
-            component: Bunny,
+            title: 'Cube',
+            route: '/cube',
+            component: Cube,
         },
     ];
 

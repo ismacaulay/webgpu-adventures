@@ -8,8 +8,6 @@ layout(location = 0) out vec3 outColor;
 layout(set = 0, binding = 0) uniform UBO
 {
     mat4 modelViewProj;
-    vec4 primaryColor;
-    vec4 accentColor;
 };
 
 void main()

@@ -1,6 +1,6 @@
 <script>
     import { onMount } from 'svelte';
-    import { createTriangleRenderer } from '../rendering/renderer';
+    import { createTriangleRenderer } from '../rendering/triangle-renderer';
     import Canvas from '../components/Canvas.svelte';
 
     let canvas;

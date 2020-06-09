@@ -1,3 +1,8 @@
+/*
+ * This is a simple WebGPU example that renders a triangle onto the canvas
+ * It is extremely verbose so that all of the typing information can be specified
+ * for every step of building the rendering pipeline.
+ */
 /// <reference path="../../node_modules/@webgpu/types/dist/index.d.ts" />
 
 import glslangModule from './glslang';
@@ -6,53 +11,26 @@ import triangleVert from './shaders/triangle.vert';
 // @ts-ignore
 import triangleFrag from './shaders/triangle.frag';
 
-export type BufferArray = Float32Array | Uint16Array;
-
-function createBuffer(device: GPUDevice, arr: BufferArray, usage: number) {
+export function createBuffer(
+    device: GPUDevice,
+    src: Float32Array | Uint16Array,
+    usage: number,
+) {
     // create a buffer
-    const descriptor: GPUBufferDescriptor = { size: arr.byteLength, usage };
-    const [buffer, bufferMapped]: [
+    //  the simplest way is to create a mapped buffer, then write the array to the mapping
+    //  you can also create a buffer, then request the mapping afterwards (not sure how to yet)
+    //  finally, you can use copyBufferToBuffer to copy the data from one buffer to another
+
+    const descriptor: GPUBufferDescriptor = { size: src.byteLength, usage };
+    const [buffer, mapping]: [
         GPUBuffer,
         ArrayBuffer,
     ] = device.createBufferMapped(descriptor);
-
     // write the data to the mapped buffer
-    const writeArray =
-        arr instanceof Float32Array
-            ? new Float32Array(bufferMapped)
-            : new Uint16Array(bufferMapped);
-    writeArray.set(arr);
+    new (src as any).constructor(mapping).set(src);
+    // the buffer needs to be unmapped before it can be submitted to the queue
     buffer.unmap();
     return buffer;
-}
-
-async function loadShader(url: string) {
-    return fetch(url, { mode: 'cors' }).then(res =>
-        res.arrayBuffer().then(arr => new Uint32Array(arr)),
-    );
-}
-
-export async function createRenderer(canvas: HTMLCanvasElement) {
-    // check if webgpu is supported
-    const entry: GPU | undefined = navigator.gpu;
-    if (!entry) {
-        // TODO: Should put a message on the page if it is not supported
-        throw new Error('WebGPU not supported in this browser');
-    }
-
-    // request a physical device adapter
-    //      an adapter describes the phycical properties fo a given GPU
-    //      such as name, extensions, device limits...
-    const adapter: GPUAdapter = await entry.requestAdapter();
-
-    // request a device
-    //      a device is how you access the core of the webgpu api
-    const device: GPUDevice = await adapter.requestDevice();
-
-    return {
-        createBuffer: (arr: BufferArray, usage: number) =>
-            createBuffer(device, arr, usage),
-    };
 }
 
 export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
@@ -79,20 +57,29 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
 
     // create a swapchain from the canvas element to be able to see what
     // you are drawing
-    //      Q: What is a swap chain?
-    //      Q: What do the parameters of the descriptor mean?
+    //      A swap chain is a series of virtual frame buffers utilized by the graphics card
+    //      for framerate stabalization (and other functions). A swapchain of 2 buffers is a
+    //      double buffer.
+    //
+    //      The descriptor defines the the swap chain to be built. It requires the device
+    //      and a texture format. The usage parameter defaults to an GPUTextureUsage.OUTPUT_ATTACHMENT.
+    //      Depending on what you want to do with the output texture, you may need to set more usage
+    //      flags. For example if you want to copy the texture to another texture for use, then you
+    //      will need to specify a GPUTextureUsage.COPY_SRC flag along with the
+    //      GPUTextureUsage.OUTPUT_ATTACHMENT flag
+    //
+    //      Note: format rgba8unorm is depricated, use bgra8unorm
     const context: GPUCanvasContext = canvas.getContext('gpupresent') as any;
     const swapChainDescriptor: GPUSwapChainDescriptor = {
         device,
         format: 'bgra8unorm',
-        usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC,
     };
     const swapchain: GPUSwapChain = context.configureSwapChain(
         swapChainDescriptor,
     );
 
     // create some framebuffer attachments
-    //      these are the output textures to write too. these could
+    //      these are the output textures to write to. these could
     //      be depth textures, or other attachments for various types
     //      of rendering techniques
     const depthTextureDescriptor: GPUTextureDescriptor = {
@@ -116,16 +103,11 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
     let colorTextureView: GPUTextureView = colorTexture.createView();
 
     // create vertex/index buffers
+    // prettier-ignore
     const positions = new Float32Array([
-        1.0,
-        -1.0,
-        0.0,
-        -1.0,
-        -1.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        -1.0, -1.0, 0.0,
+        1.0, -1.0, 0.0,
+        0.0, 1.0, 0.0,
     ]);
     const positionBuffer = createBuffer(
         device,
@@ -133,16 +115,11 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
         GPUBufferUsage.VERTEX,
     );
 
+    // prettier-ignore
     const colors = new Float32Array([
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
+        1.0, 0.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 1.0,
     ]);
     const colorBuffer = createBuffer(device, colors, GPUBufferUsage.VERTEX);
 
@@ -150,71 +127,57 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
     const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
 
     // load the shader modules
-    //      shader modules are precompiled shader binaries that execute on the gpu
+    //  shader modules are precompiled shader binaries that execute on the gpu. the 
+    //  glslang wasm library can be used to compile shader src to shader binaries at
+    //  runtime. they can also just be a precompiled spir-v binary that gets loaded
+    //  using fetch.
     const glslang = await glslangModule();
     // const vertexShaderModuleDescriptor: GPUShaderModuleDescriptor = {
     //     code: await loadShader('build/triangle.vert.spv'),
     // };
     const vertexModule: GPUShaderModule = device.createShaderModule({
-        code: glslang.compileGLSL(triangleVert, "vertex"),
-    })
+        code: glslang.compileGLSL(triangleVert, 'vertex'),
+    });
     // const fragmentShaderModuleDescriptor: GPUShaderModuleDescriptor = {
     //     code: await loadShader('build/triangle.frag.spv'),
     // };
     const fragmentModule: GPUShaderModule = device.createShaderModule({
-        code: glslang.compileGLSL(triangleFrag, "fragment"),
-    })
+        code: glslang.compileGLSL(triangleFrag, 'fragment'),
+    });
 
     // create a uniform buffer
+    // prettier-ignore
     const uniforms = new Float32Array([
         //  ModelViewProjection Matrix
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-
-        // Primary Color
-        0.9,
-        0.1,
-        0.3,
-        1.0,
-
-        // Accent Color
-        0.8,
-        0.2,
-        0.8,
-        1.0,
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0,
     ]);
     const uniformBuffer: GPUBuffer = createBuffer(
         device,
         uniforms,
-        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        GPUBufferUsage.UNIFORM,
     );
 
     // create a pipeline layout to describe where the uniform will be when executing a graphics pipeline
+    //
+    // a GPUBindGroupLayout defines the interface between a set of resource bound in the GPUBindGroup and
+    // their accessibility in shader stages. A GPUBindGroupLayoutEntry describes a single shader resource
+    // binding to be included in a GPUBindGroupLayout
     const uniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout(
         {
             entries: [
                 {
                     binding: 0,
-                    visibility: GPUShaderStage.VERTEX,
+                    visibility: GPUShaderStage.VERTEX, // specify the stage which has access to the binding
                     type: 'uniform-buffer',
                 },
             ],
         },
     );
+    // a GPUBindGroup defines a set of resources to be bound together in a group and how the resources
+    // how the resources are used in shader stages
     const uniformBindGroup: GPUBindGroup = device.createBindGroup({
         layout: uniformBindGroupLayout,
         entries: [
@@ -243,15 +206,16 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
         offset: 0,
         format: 'float3',
     };
-    const colorAttribDescriptor: GPUVertexAttributeDescriptor = {
-        shaderLocation: 1,
-        offset: 0,
-        format: 'float3',
-    };
     const positionBufferDescriptor: GPUVertexBufferLayoutDescriptor = {
         attributes: [positionAttribDescriptor],
         arrayStride: 4 * 3, // sizeof(float) * 3
         stepMode: 'vertex',
+    };
+
+    const colorAttribDescriptor: GPUVertexAttributeDescriptor = {
+        shaderLocation: 1,
+        offset: 0,
+        format: 'float3',
     };
     const colorBufferDescriptor: GPUVertexBufferLayoutDescriptor = {
         attributes: [colorAttribDescriptor],
@@ -305,8 +269,8 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
     //      how does the rasterizer behave when executing the graphics pipeline. does it cull faces?
     //      which direction should the face be culled
     const rasterizationState: GPURasterizationStateDescriptor = {
-        frontFace: 'cw',
-        cullMode: 'none',
+        frontFace: 'ccw',
+        cullMode: 'back',
     };
 
     // create the pipeline
@@ -351,9 +315,9 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
             depthStencilAttachment: depthAttachment,
         };
 
-        const commandEncoder = device.createCommandEncoder();
+        const commandEncoder: GPUCommandEncoder = device.createCommandEncoder();
 
-        const passEncoder = commandEncoder.beginRenderPass(
+        const passEncoder: GPURenderPassEncoder = commandEncoder.beginRenderPass(
             renderPassDescriptor,
         );
         passEncoder.setPipeline(pipeline);
