@@ -19,7 +19,7 @@
             const model = new controls();
 
             gui = new dat.GUI();
-            const textureEnabledController = gui.add(model, 'texture', { Enabled: 1, Mixed: 0.5, Off: 0 });
+            const textureEnabledController = gui.add(model, 'texture', 0, 1);
             textureEnabledController.onChange(function (enabled) {
                 renderer.enableTextures(enabled);
             });
