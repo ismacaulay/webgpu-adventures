@@ -4,12 +4,19 @@
     import Canvas from '../components/Canvas.svelte';
 
     let canvas;
-    onMount(async () => {
-        const renderer = await createTriangleRenderer(canvas.getElement());
-        renderer.start();
+    onMount(() => {
+        let renderer;
 
+        (async () => {
+            renderer = await createTriangleRenderer(canvas.getElement());
+            renderer.start();
+
+        })();
+     
         return () => {
-            renderer.stop();
+            if (renderer) {
+                renderer.destroy();
+            }
         };
     });
 </script>

@@ -352,7 +352,7 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
             render();
         },
 
-        stop() {
+        destroy() {
             if (rafId) {
                 cancelAnimationFrame(rafId);
             }

@@ -1,5 +1,6 @@
 import { requestGPU, configureSwapChain, createBuffer } from './utils';
 import CubeVertices from '../utils/cube-vertices';
+import { createTextureFromImage } from '../utils/img-loader';
 import glslangModule from './glslang';
 // @ts-ignore
 import triangleVert from './shaders/cube.vert';
@@ -36,8 +37,13 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
                 offset: 4 * 3,
                 format: 'float3',
             },
+            {
+                shaderLocation: 2,
+                offset: 4 * 6,
+                format: 'float2',
+            },
         ],
-        arrayStride: 4 * 6, // sizeof(float) * 3
+        arrayStride: 4 * 8,
         stepMode: 'vertex',
     };
 
@@ -53,9 +59,28 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         ...perspective(radians(45.0), canvas.clientWidth / canvas.clientHeight, 0.1, 100.0),
     ]);
 
+    const cubeTexture = await createTextureFromImage(
+        device,
+        '/images/container.jpg',
+        GPUTextureUsage.SAMPLED,
+    );
+    const sampler = device.createSampler({
+        magFilter: 'linear',
+        minFilter: 'linear',
+    });
+
     const uniformBuffer: GPUBuffer = createBuffer(
         device,
         uniforms,
+        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    );
+
+    const fragmentUniforms = new Float32Array([
+        1.0,
+    ]);
+    const fragmentUniformBuffer: GPUBuffer = createBuffer(
+        device,
+        fragmentUniforms,
         GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     );
     const uniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout(
@@ -64,6 +89,21 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
                 {
                     binding: 0,
                     visibility: GPUShaderStage.VERTEX, // specify the stage which has access to the binding
+                    type: 'uniform-buffer',
+                },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    type: 'sampler',
+                },
+                {
+                    binding: 2,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    type: 'sampled-texture',
+                },
+                {
+                    binding: 3,
+                    visibility: GPUShaderStage.FRAGMENT,
                     type: 'uniform-buffer',
                 },
             ],
@@ -77,6 +117,20 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
                 resource: {
                     buffer: uniformBuffer,
                 },
+            },
+            {
+                binding: 1,
+                resource: sampler,
+            },
+            {
+                binding: 2,
+                resource: cubeTexture.createView(),
+            },
+            {
+                binding: 3,
+                resource: {
+                    buffer: fragmentUniformBuffer,
+                }
             },
         ],
     });
@@ -149,21 +203,19 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
 
     let colorTexture: GPUTexture = swapChain.getCurrentTexture();
     let colorTextureView: GPUTextureView = colorTexture.createView();
-    
-    const depthTexture: GPUTexture = device.createTexture(
-        {
-            size: {
-                width: canvas.width,
-                height: canvas.height,
-                depth: 1,
-            },
-            mipLevelCount: 1,
-            sampleCount: 1,
-            dimension: '2d',
-            format: 'depth24plus-stencil8',
-            usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+
+    const depthTexture: GPUTexture = device.createTexture({
+        size: {
+            width: canvas.width,
+            height: canvas.height,
+            depth: 1,
         },
-    );
+        mipLevelCount: 1,
+        sampleCount: 1,
+        dimension: '2d',
+        format: 'depth24plus-stencil8',
+        usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+    });
     const depthTextureView: GPUTextureView = depthTexture.createView();
 
     let model = identity();
@@ -237,10 +289,36 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
     }
     render();
 
-    return () => {
-        if (rafId) {
-            cancelAnimationFrame(rafId);
-        }
-        positionsBuffer.destroy();
+    return {
+        enableTextures(state: number) {
+            const fragmentUniforms = new Float32Array([
+                state,
+            ]);
+            const uploadBuffer = createBuffer(
+                device,
+                fragmentUniforms,
+                GPUBufferUsage.COPY_SRC,
+            );
+            const commandEncoder = device.createCommandEncoder();
+            commandEncoder.copyBufferToBuffer(
+                uploadBuffer,
+                0,
+                fragmentUniformBuffer,
+                0,
+                fragmentUniforms.byteLength,
+            );
+            device.defaultQueue.submit([commandEncoder.finish()]);
+        },
+        destroy() {
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+            }
+
+            positionsBuffer.destroy();
+            uniformBuffer.destroy();
+            fragmentUniformBuffer.destroy();
+            depthTexture.destroy();
+            cubeTexture.destroy();
+        },
     };
 }
