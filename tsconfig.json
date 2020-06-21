@@ -1,6 +1,9 @@
 {
     "compilerOptions": {
         "baseUrl": "./src",
+        "paths": {
+            "toolkit": ["toolkit"],
+        },
         "target": "es6",
         "sourceMap": true,
         "module": "esnext",

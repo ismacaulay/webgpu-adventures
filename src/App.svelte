@@ -3,17 +3,23 @@
     import HelloWorld from './pages/HelloWorld.svelte';
     import Home from './pages/Home.svelte';
     import Cube from './pages/Cube.svelte';
+    import RotatingCube from './pages/RotatingCube.svelte';
 
     let examples = [
         {
-            title: 'Hello World',
-            route: '/hello_world',
+            title: 'hello-world',
+            route: '/hello-world',
             component: HelloWorld,
         },
         {
-            title: 'Cube',
+            title: 'cube',
             route: '/cube',
             component: Cube,
+        },
+        {
+            title: 'rotating-cube',
+            route: '/rotating-cube',
+            component: RotatingCube,
         },
     ];
 

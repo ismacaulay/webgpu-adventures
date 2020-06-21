@@ -8,9 +8,6 @@ import triangleVert from './shaders/cube.vert';
 import triangleFrag from './shaders/cube.frag';
 
 import { perspective, radians, translate, identity, rotate } from '../math';
-import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
-import { createCamera } from 'toolkit/camera/camera';
-import { createVec3 } from 'toolkit/math/vec3';
 
 export async function createCubeRenderer(canvas: HTMLCanvasElement) {
     const gpu = requestGPU();
@@ -50,20 +47,13 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         stepMode: 'vertex',
     };
 
-    const camera = createCamera();
-    camera.position.set([0, 0, 3]);
-    camera.updateViewMatrix();
-    
-    const cameraController = createFreeCameraController(canvas, camera);
-
     // prettier-ignore
     const uniforms = new Float32Array([
         // model matrix
         ...identity(),
 
         // view Matrix
-        ...camera.matrix.value,
-        // ...translate(identity(), [0, 0, -3.0]),
+        ...translate(identity(), [0, 0, -3.0]),
 
         // projection Matrix
         ...perspective(radians(45.0), canvas.clientWidth / canvas.clientHeight, 0.1, 100.0),
@@ -85,7 +75,9 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     );
 
-    const fragmentUniforms = new Float32Array([1.0]);
+    const fragmentUniforms = new Float32Array([
+        1.0,
+    ]);
     const fragmentUniformBuffer: GPUBuffer = createBuffer(
         device,
         fragmentUniforms,
@@ -138,7 +130,7 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
                 binding: 3,
                 resource: {
                     buffer: fragmentUniformBuffer,
-                },
+                }
             },
         ],
     });
@@ -249,25 +241,19 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
 
         const commandEncoder: GPUCommandEncoder = device.createCommandEncoder();
 
-        // prettier-ignore
-        const mvp = new Float32Array([
-            // model matrix
-            ...identity(),
-
-            // view Matrix
-            ...camera.matrix.value,
-            // ...translate(identity(), [0, 0, -3.0]),
-
-            // projection Matrix
-            ...perspective(radians(45.0), canvas.clientWidth / canvas.clientHeight, 0.1, 100.0),
-        ]);
-        const uploadBuffer = createBuffer(device, mvp, GPUBufferUsage.COPY_SRC);
+        model = rotate(model, delta * radians(50), [0.5, 1.0, 0.0]);
+        const matrices = Float32Array.from(model);
+        const uploadBuffer = createBuffer(
+            device,
+            matrices,
+            GPUBufferUsage.COPY_SRC,
+        );
         commandEncoder.copyBufferToBuffer(
             uploadBuffer,
             0,
             uniformBuffer,
             0,
-            mvp.byteLength,
+            matrices.byteLength,
         );
 
         const passEncoder: GPURenderPassEncoder = commandEncoder.beginRenderPass(
@@ -282,6 +268,8 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         passEncoder.endPass();
 
         device.defaultQueue.submit([commandEncoder.finish()]);
+
+        uploadBuffer.destroy();
     }
 
     let rafId: number;
@@ -289,9 +277,8 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
 
     function render() {
         const now = performance.now();
-        const dt = (now - lastTime) / 1000;
+        const dt = now - lastTime;
         lastTime = now;
-        cameraController.update(dt);
 
         colorTexture = swapChain.getCurrentTexture();
         colorTextureView = colorTexture.createView();
@@ -304,7 +291,9 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
 
     return {
         enableTextures(state: number) {
-            const fragmentUniforms = new Float32Array([state]);
+            const fragmentUniforms = new Float32Array([
+                state,
+            ]);
             const uploadBuffer = createBuffer(
                 device,
                 fragmentUniforms,
@@ -325,7 +314,6 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
                 cancelAnimationFrame(rafId);
             }
 
-            cameraController.destroy();
             positionsBuffer.destroy();
             uniformBuffer.destroy();
             fragmentUniformBuffer.destroy();
