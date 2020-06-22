@@ -7,10 +7,9 @@ import triangleVert from './shaders/cube.vert';
 // @ts-ignore
 import triangleFrag from './shaders/cube.frag';
 
-import { perspective, radians, translate, identity, rotate } from '../math';
+import { perspective, radians, identity } from '../math';
 import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
 import { createCamera } from 'toolkit/camera/camera';
-import { createVec3 } from 'toolkit/math/vec3';
 
 export async function createCubeRenderer(canvas: HTMLCanvasElement) {
     const gpu = requestGPU();
@@ -273,10 +272,11 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         const passEncoder: GPURenderPassEncoder = commandEncoder.beginRenderPass(
             renderPassDescriptor,
         );
-        passEncoder.setPipeline(pipeline);
-        passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
         passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
+
+        passEncoder.setPipeline(pipeline);
+        passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.setVertexBuffer(0, positionsBuffer);
         passEncoder.draw(36, 1, 0, 0);
         passEncoder.endPass();
