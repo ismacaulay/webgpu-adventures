@@ -1,5 +1,5 @@
 import { requestGPU, configureSwapChain, createBuffer } from './utils';
-import { CUBE_VERTICES } from 'utils/cube-vertices';
+import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS } from 'utils/cube-vertices';
 
 import { createShader } from 'toolkit/rendering/shaders/shader';
 
@@ -7,6 +7,8 @@ import { createShader } from 'toolkit/rendering/shaders/shader';
 import cubeVert from './shaders/lighting.vert';
 // @ts-ignore
 import cubeFrag from './shaders/lighting.frag';
+// @ts-ignore
+import lightVert from './shaders/light.vert';
 // @ts-ignore
 import lightFrag from './shaders/light.frag';
 
@@ -20,8 +22,9 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     const camera = createCamera();
     camera.position.set([0, 0, 3]);
     camera.updateViewMatrix();
-
     const cameraController = createFreeCameraController(canvas, camera);
+
+    const lightPos = createVec3([1.2, 1.0, 2.0]);
 
     const gpu = requestGPU();
     const adapter = await gpu.requestAdapter();
@@ -36,7 +39,7 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     // TODO: Abstract vertex buffers and layouts
     const positionsBuffer = createBuffer(
         device,
-        CUBE_VERTICES,
+        CUBE_VERTICES_WITH_NORMALS,
         GPUBufferUsage.VERTEX,
     );
     const positionBufferDescriptor: GPUVertexBufferLayoutDescriptor = {
@@ -46,8 +49,13 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
                 offset: 0,
                 format: 'float3',
             },
+            {
+                shaderLocation: 1,
+                offset: 4 * 3,
+                format: 'float3',
+            },
         ],
-        arrayStride: 4 * 3,
+        arrayStride: 4 * 6,
         stepMode: 'vertex',
     };
 
@@ -86,6 +94,10 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         1.0, 0.5, 0.31, 0.0,
         // u_light_color
         1.0, 1.0, 1.0, 0.0,
+        // light_pos
+        ...lightPos.value, 0.0,
+        // view position
+        ...camera.position.value, 0.0
     ]);
     const cubeObjectUniformsBuffer: GPUBuffer = createBuffer(
         device,
@@ -96,16 +108,19 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     const cubeUniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout(
         {
             entries: [
+                // viewProjection
                 {
                     binding: 0,
                     visibility: GPUShaderStage.VERTEX,
                     type: 'uniform-buffer',
                 },
+                // modelMatrix
                 {
                     binding: 1,
                     visibility: GPUShaderStage.VERTEX,
                     type: 'uniform-buffer',
                 },
+                // objectUniforms
                 {
                     binding: 2,
                     visibility: GPUShaderStage.FRAGMENT,
@@ -184,7 +199,6 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         },
     });
 
-
     // LIGHT
     const lightPositionsBuffer = createBuffer(
         device,
@@ -203,11 +217,10 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         stepMode: 'vertex',
     };
 
-    const lightPos = createVec3([1.2, 1.0, 2.0]);
     const lightModelMatrix = createMat4();
     lightModelMatrix.translate(lightPos);
     lightModelMatrix.scale(createVec3([0.2, 0.2, 0.2]));
-    
+
     // prettier-ignore
     const lightModelMatrixUniforms = new Float32Array([
         // model matrix
@@ -275,9 +288,8 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         ],
     });
 
- 
     const lightShader = await createShader(device, {
-        vertex: cubeVert,
+        vertex: lightVert,
         fragment: lightFrag,
     });
     const lightPipelineLayout: GPUPipelineLayout = device.createPipelineLayout({
@@ -369,7 +381,11 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
             // projection Matrix
             ...perspective(radians(45.0), canvas.clientWidth / canvas.clientHeight, 0.1, 100.0),
         ]);
-        const uploadBuffer = createBuffer(device, viewProjection, GPUBufferUsage.COPY_SRC);
+        const uploadBuffer = createBuffer(
+            device,
+            viewProjection,
+            GPUBufferUsage.COPY_SRC,
+        );
         commandEncoder.copyBufferToBuffer(
             uploadBuffer,
             0,
@@ -378,7 +394,19 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
             viewProjection.byteLength,
         );
 
-    
+        const viewPos = Float32Array.from(camera.position.value)
+        const cubeUploadBuffer = createBuffer(
+            device, 
+            viewPos,
+            GPUBufferUsage.COPY_SRC
+        )
+        commandEncoder.copyBufferToBuffer(
+            cubeUploadBuffer,
+            0,
+            cubeObjectUniformsBuffer,
+            4 * 12,
+            viewPos.byteLength,
+        );
 
         const passEncoder: GPURenderPassEncoder = commandEncoder.beginRenderPass(
             renderPassDescriptor,
@@ -399,6 +427,9 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         passEncoder.endPass();
 
         device.defaultQueue.submit([commandEncoder.finish()]);
+
+        uploadBuffer.destroy();
+        cubeUploadBuffer.destroy();
     }
 
     let rafId: number;
@@ -427,7 +458,7 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
 
             cameraController.destroy();
             viewProjectionUniformsBuffer.destroy();
-            
+
             positionsBuffer.destroy();
             cubeMatrixUniformBuffer.destroy();
             cubeObjectUniformsBuffer.destroy();
