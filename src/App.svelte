@@ -1,33 +1,24 @@
 <script>
+
     import router from 'page';
     import HelloWorld from './pages/HelloWorld.svelte';
     import Home from './pages/Home.svelte';
     import Cube from './pages/Cube.svelte';
     import RotatingCube from './pages/RotatingCube.svelte';
+    import Lighting from './pages/Lighting.svelte';
 
-    let examples = [
-        {
-            title: 'hello-world',
-            route: '/hello-world',
-            component: HelloWorld,
-        },
-        {
-            title: 'cube',
-            route: '/cube',
-            component: Cube,
-        },
-        {
-            title: 'rotating-cube',
-            route: '/rotating-cube',
-            component: RotatingCube,
-        },
+    const examples = [
+        { title: 'hello-world', component: HelloWorld },
+        { title: 'cube', component: Cube },
+        { title: 'rotating-cube', component: RotatingCube },
+        { title: 'lighting', component: Lighting },
     ];
 
     let page;
     router('/', () => (page = Home));
     for (let i = 0; i < examples.length; i++) {
         const example = examples[i];
-        router(example.route, () => (page = example.component));
+        router(`/${example.title}`, () => (page = example.component));
     }
 
     router.start();
@@ -87,7 +78,7 @@
             <a href="/">WebGPU Adventures</a>
         </h1>
         {#each examples as example}
-            <a class="nav-link" href={example.route}>{example.title}</a>
+            <a class="nav-link" href="/{example.title}">{example.title}</a>
         {/each}
     </div>
     <div id="panel">

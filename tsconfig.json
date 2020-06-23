@@ -3,6 +3,8 @@
         "baseUrl": "./src",
         "paths": {
             "toolkit": ["toolkit"],
+            "rendering": ["rendering"],
+            "utils": ["utils"],
         },
         "target": "es6",
         "sourceMap": true,

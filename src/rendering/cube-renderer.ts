@@ -1,7 +1,7 @@
 import { requestGPU, configureSwapChain, createBuffer } from './utils';
 import CubeVertices from '../utils/cube-vertices';
 import { createTextureFromImage } from '../utils/img-loader';
-import glslangModule from './glslang';
+import glslangModule from 'toolkit/rendering/shaders/glslang';
 // @ts-ignore
 import triangleVert from './shaders/cube.vert';
 // @ts-ignore
@@ -52,7 +52,7 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
     const camera = createCamera();
     camera.position.set([0, 0, 3]);
     camera.updateViewMatrix();
-    
+
     const cameraController = createFreeCameraController(canvas, camera);
 
     // prettier-ignore

@@ -4,6 +4,7 @@ export interface mat4 {
     readonly value: Float32Array,
     
     translate(t: vec3): mat4;
+    scale(t: vec3): mat4;
     setTranslation(t: vec3): mat4;
     lookAt(eye: vec3, target: vec3, up: vec3): mat4;
 }
@@ -25,6 +26,26 @@ export function createMat4(): mat4 {
             value[14] = value[2] * x + value[6] * y + value[10] * z + value[14];
             value[15] = value[3] * x + value[7] * y + value[11] * z + value[15];
 
+            return this;
+        },
+        scale(t: vec3) {
+            const [x, y, z] = t.value;
+
+            value[0] *= x;
+            value[1] *= x;
+            value[2] *= x;
+            value[3] *= x;
+
+            value[4] *= y;
+            value[5] *= y;
+            value[6] *= y;
+            value[7] *= y;
+
+            value[8] *= z;
+            value[9] *= z;
+            value[10] *= z;
+            value[11] *= z;
+            
             return this;
         },
         setTranslation(t: vec3) {

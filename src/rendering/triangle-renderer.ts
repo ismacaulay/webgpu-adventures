@@ -5,7 +5,7 @@
  */
 /// <reference path="../../node_modules/@webgpu/types/dist/index.d.ts" />
 
-import glslangModule from './glslang';
+import glslangModule from 'toolkit/rendering/shaders/glslang';
 // @ts-ignore
 import triangleVert from './shaders/triangle.vert';
 // @ts-ignore
