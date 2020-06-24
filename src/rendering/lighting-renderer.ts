@@ -82,60 +82,42 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         view_pos: camera.position.value,
     });
 
-    const cubeUniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout(
-        {
-            entries: [
-                // viewProjection
-                {
-                    binding: 0,
-                    visibility: GPUShaderStage.VERTEX,
-                    type: 'uniform-buffer',
-                },
-                // modelMatrix
-                {
-                    binding: 1,
-                    visibility: GPUShaderStage.VERTEX,
-                    type: 'uniform-buffer',
-                },
-                // objectUniforms
-                {
-                    binding: 2,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    type: 'uniform-buffer',
-                },
-            ],
-        },
-    );
-    const cubeUniformBindGroup: GPUBindGroup = device.createBindGroup({
-        layout: cubeUniformBindGroupLayout,
-        entries: [
+    const cubeShader = await createShader(device, {
+        vertex: cubeVert,
+        fragment: cubeFrag,
+        bindings: [
+            // viewProjection
             {
                 binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                type: 'uniform-buffer',
                 resource: {
                     buffer: viewProjectionUBO.buffer,
                 },
             },
+            // modelMatrix
             {
                 binding: 1,
+                visibility: GPUShaderStage.VERTEX,
+                type: 'uniform-buffer',
                 resource: {
                     buffer: cubeVertexUBO.buffer,
                 },
             },
+            // objectUniforms
             {
                 binding: 2,
+                visibility: GPUShaderStage.FRAGMENT,
+                type: 'uniform-buffer',
                 resource: {
                     buffer: cubeFragmentUBO.buffer,
                 },
             },
         ],
     });
-
-    const cubeShader = await createShader(device, {
-        vertex: cubeVert,
-        fragment: cubeFrag,
-    });
+    
     const cubeLayout: GPUPipelineLayout = device.createPipelineLayout({
-        bindGroupLayouts: [cubeUniformBindGroupLayout],
+        bindGroupLayouts: [cubeShader.bindGroupLayout],
     });
 
     const cubePipeline: GPURenderPipeline = device.createRenderPipeline({
@@ -206,57 +188,38 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         u_light_color: [1.0, 1.0, 1.0],
     });
 
-    const lightUniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout(
-        {
-            entries: [
-                {
-                    binding: 0,
-                    visibility: GPUShaderStage.VERTEX,
-                    type: 'uniform-buffer',
-                },
-                {
-                    binding: 1,
-                    visibility: GPUShaderStage.VERTEX,
-                    type: 'uniform-buffer',
-                },
-                {
-                    binding: 2,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    type: 'uniform-buffer',
-                },
-            ],
-        },
-    );
-    const lightUniformBindGroup: GPUBindGroup = device.createBindGroup({
-        layout: lightUniformBindGroupLayout,
-        entries: [
+    const lightShader = await createShader(device, {
+        vertex: lightVert,
+        fragment: lightFrag,
+        bindings: [
             {
                 binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                type: 'uniform-buffer',
                 resource: {
                     buffer: viewProjectionUBO.buffer,
                 },
             },
             {
                 binding: 1,
+                visibility: GPUShaderStage.VERTEX,
+                type: 'uniform-buffer',
                 resource: {
                     buffer: lightVertexUBO.buffer,
                 },
             },
             {
                 binding: 2,
+                visibility: GPUShaderStage.FRAGMENT,
+                type: 'uniform-buffer',
                 resource: {
                     buffer: lightFragmentUBO.buffer,
                 },
             },
         ],
     });
-
-    const lightShader = await createShader(device, {
-        vertex: lightVert,
-        fragment: lightFrag,
-    });
     const lightPipelineLayout: GPUPipelineLayout = device.createPipelineLayout({
-        bindGroupLayouts: [lightUniformBindGroupLayout],
+        bindGroupLayouts: [lightShader.bindGroupLayout],
     });
 
     const lightPipeline: GPURenderPipeline = device.createRenderPipeline({
@@ -316,8 +279,6 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
 
     let lightRotation = 0;
     function encodeCommands(delta: number) {
-    
-
         const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
             attachment: colorTextureView,
             loadValue: { r: 0, g: 0, b: 0, a: 1 },
@@ -351,7 +312,11 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
 
         lightRotation += delta;
         lightRotation %= 2 * Math.PI;
-        lightPos.set([1.0 * Math.sin(lightRotation), 1.0, 1.0 * Math.cos(lightRotation)]);
+        lightPos.set([
+            1.0 * Math.sin(lightRotation),
+            1.0,
+            1.0 * Math.cos(lightRotation),
+        ]);
         lightModelMatrix.setTranslation(lightPos);
         lightVertexUBO.updateUniform('model', lightModelMatrix.value);
         lightVertexUBO.updateBuffer();
@@ -369,12 +334,12 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
 
         passEncoder.setPipeline(cubePipeline);
-        passEncoder.setBindGroup(0, cubeUniformBindGroup);
+        passEncoder.setBindGroup(0, cubeShader.bindGroup);
         passEncoder.setVertexBuffer(0, positionsBuffer);
         passEncoder.draw(36, 1, 0, 0);
 
         passEncoder.setPipeline(lightPipeline);
-        passEncoder.setBindGroup(0, lightUniformBindGroup);
+        passEncoder.setBindGroup(0, lightShader.bindGroup);
         passEncoder.setVertexBuffer(0, lightPositionsBuffer);
         passEncoder.draw(36, 1, 0, 0);
 
