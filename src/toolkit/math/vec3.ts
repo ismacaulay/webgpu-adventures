@@ -88,8 +88,6 @@ export function sub(a: vec3, b: vec3) {
     return createVec3(a).sub(b);
 }
 
-export function multiply(a: vec3, b: vec3) {}
-
 export function dot(a: vec3, b: vec3) {
     return a.dot(b);
 }

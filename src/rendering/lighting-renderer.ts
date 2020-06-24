@@ -12,11 +12,12 @@ import lightVert from './shaders/light.vert';
 // @ts-ignore
 import lightFrag from './shaders/light.frag';
 
-import { perspective, radians, identity } from '../math';
+import { perspective, radians, identity, rotate } from '../math';
 import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
 import { createCamera } from 'toolkit/camera/camera';
 import { createMat4 } from 'toolkit/math/mat4';
 import { createVec3 } from 'toolkit/math/vec3';
+import { createUniformBuffer } from 'toolkit/rendering/buffers/uniform-buffer';
 
 export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     const camera = createCamera();
@@ -59,51 +60,27 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         stepMode: 'vertex',
     };
 
-    const viewProjectionUniforms = new Float32Array([
-        // view Matrix
-        ...camera.matrix.value,
-
-        // projection Matrix
-        ...perspective(
+    const viewProjectionUBO = createUniformBuffer(device, {
+        view: camera.matrix.value,
+        projection: perspective(
             radians(45.0),
             canvas.clientWidth / canvas.clientHeight,
             0.1,
             100.0,
         ),
-    ]);
-    const viewProjectionUniformsBuffer: GPUBuffer = createBuffer(
-        device,
-        viewProjectionUniforms,
-        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    );
+    });
 
     // prettier-ignore
-    const cubeMatrixUniforms = new Float32Array([
-        // model matrix
-        ...identity(),
-    ]);
-    const cubeMatrixUniformBuffer: GPUBuffer = createBuffer(
-        device,
-        cubeMatrixUniforms,
-        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    );
+    const cubeVertexUBO = createUniformBuffer(device, {
+        model: identity(),
+    })
 
-    // prettier-ignore
-    const cubeObjectUniforms = new Float32Array([
-        // u_object_color
-        1.0, 0.5, 0.31, 0.0,
-        // u_light_color
-        1.0, 1.0, 1.0, 0.0,
-        // light_pos
-        ...lightPos.value, 0.0,
-        // view position
-        ...camera.position.value, 0.0
-    ]);
-    const cubeObjectUniformsBuffer: GPUBuffer = createBuffer(
-        device,
-        cubeObjectUniforms,
-        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    );
+    const cubeFragmentUBO = createUniformBuffer(device, {
+        u_object_color: [1.0, 0.5, 0.31],
+        u_light_color: [1.0, 1.0, 1.0],
+        light_pos: lightPos.value,
+        view_pos: camera.position.value,
+    });
 
     const cubeUniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout(
         {
@@ -135,19 +112,19 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
             {
                 binding: 0,
                 resource: {
-                    buffer: viewProjectionUniformsBuffer,
+                    buffer: viewProjectionUBO.buffer,
                 },
             },
             {
                 binding: 1,
                 resource: {
-                    buffer: cubeMatrixUniformBuffer,
+                    buffer: cubeVertexUBO.buffer,
                 },
             },
             {
                 binding: 2,
                 resource: {
-                    buffer: cubeObjectUniformsBuffer,
+                    buffer: cubeFragmentUBO.buffer,
                 },
             },
         ],
@@ -221,27 +198,13 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     lightModelMatrix.translate(lightPos);
     lightModelMatrix.scale(createVec3([0.2, 0.2, 0.2]));
 
-    // prettier-ignore
-    const lightModelMatrixUniforms = new Float32Array([
-        // model matrix
-        ...lightModelMatrix.value,
-    ]);
-    const lightModelMatrixUniformBuffer: GPUBuffer = createBuffer(
-        device,
-        lightModelMatrixUniforms,
-        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    );
+    const lightVertexUBO = createUniformBuffer(device, {
+        model: lightModelMatrix.value,
+    });
 
-    // prettier-ignore
-    const lightUniforms = new Float32Array([
-        // u_light_color
-        1.0, 1.0, 1.0, 0.0,
-    ]);
-    const lightUniformsBuffer: GPUBuffer = createBuffer(
-        device,
-        lightUniforms,
-        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    );
+    const lightFragmentUBO = createUniformBuffer(device, {
+        u_light_color: [1.0, 1.0, 1.0],
+    });
 
     const lightUniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout(
         {
@@ -270,19 +233,19 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
             {
                 binding: 0,
                 resource: {
-                    buffer: viewProjectionUniformsBuffer,
+                    buffer: viewProjectionUBO.buffer,
                 },
             },
             {
                 binding: 1,
                 resource: {
-                    buffer: lightModelMatrixUniformBuffer,
+                    buffer: lightVertexUBO.buffer,
                 },
             },
             {
                 binding: 2,
                 resource: {
-                    buffer: lightUniformsBuffer,
+                    buffer: lightFragmentUBO.buffer,
                 },
             },
         ],
@@ -351,7 +314,10 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     });
     const depthTextureView: GPUTextureView = depthTexture.createView();
 
+    let lightRotation = 0;
     function encodeCommands(delta: number) {
+    
+
         const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
             attachment: colorTextureView,
             loadValue: { r: 0, g: 0, b: 0, a: 1 },
@@ -371,42 +337,30 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
             depthStencilAttachment: depthAttachment,
         };
 
+        viewProjectionUBO.updateUniform('view', camera.matrix.value);
+        viewProjectionUBO.updateUniform(
+            'projection',
+            perspective(
+                radians(45.0),
+                canvas.clientWidth / canvas.clientHeight,
+                0.1,
+                100.0,
+            ),
+        );
+        viewProjectionUBO.updateBuffer();
+
+        lightRotation += delta;
+        lightRotation %= 2 * Math.PI;
+        lightPos.set([1.0 * Math.sin(lightRotation), 1.0, 1.0 * Math.cos(lightRotation)]);
+        lightModelMatrix.setTranslation(lightPos);
+        lightVertexUBO.updateUniform('model', lightModelMatrix.value);
+        lightVertexUBO.updateBuffer();
+
+        cubeFragmentUBO.updateUniform('light_pos', lightPos.value);
+        cubeFragmentUBO.updateUniform('view_pos', camera.position.value);
+        cubeFragmentUBO.updateBuffer();
+
         const commandEncoder: GPUCommandEncoder = device.createCommandEncoder();
-
-        // prettier-ignore
-        const viewProjection = new Float32Array([
-            // view Matrix
-            ...camera.matrix.value,
-
-            // projection Matrix
-            ...perspective(radians(45.0), canvas.clientWidth / canvas.clientHeight, 0.1, 100.0),
-        ]);
-        const uploadBuffer = createBuffer(
-            device,
-            viewProjection,
-            GPUBufferUsage.COPY_SRC,
-        );
-        commandEncoder.copyBufferToBuffer(
-            uploadBuffer,
-            0,
-            viewProjectionUniformsBuffer,
-            0,
-            viewProjection.byteLength,
-        );
-
-        const viewPos = Float32Array.from(camera.position.value)
-        const cubeUploadBuffer = createBuffer(
-            device, 
-            viewPos,
-            GPUBufferUsage.COPY_SRC
-        )
-        commandEncoder.copyBufferToBuffer(
-            cubeUploadBuffer,
-            0,
-            cubeObjectUniformsBuffer,
-            4 * 12,
-            viewPos.byteLength,
-        );
 
         const passEncoder: GPURenderPassEncoder = commandEncoder.beginRenderPass(
             renderPassDescriptor,
@@ -427,9 +381,6 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         passEncoder.endPass();
 
         device.defaultQueue.submit([commandEncoder.finish()]);
-
-        uploadBuffer.destroy();
-        cubeUploadBuffer.destroy();
     }
 
     let rafId: number;
@@ -444,7 +395,7 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         colorTexture = swapChain.getCurrentTexture();
         colorTextureView = colorTexture.createView();
 
-        encodeCommands(dt / 1000);
+        encodeCommands(dt);
 
         rafId = requestAnimationFrame(render);
     }
@@ -457,15 +408,17 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
             }
 
             cameraController.destroy();
-            viewProjectionUniformsBuffer.destroy();
+
+            viewProjectionUBO.destroy();
+
+            cubeVertexUBO.destroy();
+            cubeFragmentUBO.destroy();
 
             positionsBuffer.destroy();
-            cubeMatrixUniformBuffer.destroy();
-            cubeObjectUniformsBuffer.destroy();
 
             lightPositionsBuffer.destroy();
-            lightModelMatrixUniformBuffer.destroy();
-            lightUniformsBuffer.destroy();
+            lightVertexUBO.destroy();
+            lightFragmentUBO.destroy();
 
             depthTexture.destroy();
         },
