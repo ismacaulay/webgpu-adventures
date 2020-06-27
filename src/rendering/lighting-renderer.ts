@@ -4,9 +4,15 @@ import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS } from 'utils/cube-vertices';
 import { createShader } from 'toolkit/rendering/shaders/shader';
 
 // @ts-ignore
-import cubeVert from './shaders/lighting.vert';
+import cubePhongVert from './shaders/lighting.vert';
 // @ts-ignore
-import cubeFrag from './shaders/lighting.frag';
+import cubePhongFrag from './shaders/lighting.frag';
+// @ts-ignore
+import cubePhongMaterialFrag from './shaders/lighting-material.frag';
+// @ts-ignore
+import cubeGouraudVert from './shaders/gouraud.vert';
+// @ts-ignore
+import cubeGouraudFrag from './shaders/gouraud.frag';
 // @ts-ignore
 import lightVert from './shaders/light.vert';
 // @ts-ignore
@@ -18,6 +24,13 @@ import { createCamera } from 'toolkit/camera/camera';
 import { createMat4 } from 'toolkit/math/mat4';
 import { createVec3 } from 'toolkit/math/vec3';
 import { createUniformBuffer } from 'toolkit/rendering/buffers/uniform-buffer';
+
+interface Material {
+    ambient: [number, number, number];
+    diffuse: [number, number, number];
+    specular: [number, number, number];
+    shininess: number;
+}
 
 export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     const camera = createCamera();
@@ -73,20 +86,57 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     // prettier-ignore
     const cubeVertexUBO = createUniformBuffer(device, {
         model: identity(),
+
+        // // gouraud shading
+        // light_color: [1.0, 1.0, 1.0],
+        // light_pos: lightPos.value,
+        // view_pos: camera.position.value,
     })
 
     const cubeFragmentUBO = createUniformBuffer(device, {
-        u_object_color: [1.0, 0.5, 0.31],
-        u_light_color: [1.0, 1.0, 1.0],
-        light_pos: lightPos.value,
+        // object_color: [1.0, 0.5, 0.31],
+
+        // phong shading
+        // light_color: [1.0, 1.0, 1.0],
+        // light_pos: lightPos.value,
         view_pos: camera.position.value,
+        // t: {
+        //     r: 0,
+        //     g: 0,
+        //     b: 1,
+        // }
+        // // material system
+        material: {
+            ambient: [1.0, 0.5, 0.31],
+            diffuse: [1.0, 0.5, 0.31],
+            specular: [0.5, 0.5, 0.5],
+            shininess: 32.0,
+        },
+        light: {
+            position: lightPos.value,
+            // ambient: [0.2, 0.2, 0.2],
+            ambient: [1.0, 1.0, 1.0],
+            // diffuse: [0.5, 0.5, 0.5],
+            diffuse: [1.0, 1.0, 1.0],
+            specular: [1.0, 1.0, 1.0],
+        },
+        // 'material.ambient': [1.0, 0.5, 0.31],
+        // 'material.diffuse': [1.0, 0.5, 0.31],
+        // // specular does not get padded because the shiness value is inserted into the last memory spot
+        // 'material.specular': [0.5, 0.5, 0.5],
+        // 'material.shininess': 32.0,
+
+        // 'light.position': lightPos.value,
+        // 'light.ambient': [0.2, 0.2, 0.2],
+        // 'light.diffuse': [0.5, 0.5, 0.5],
+        // 'light.specular': [1.0, 1.0, 1.0],
     });
+    console.log(cubeFragmentUBO.bufferData);
 
     const cubeShader = await createShader(device, {
-        vertex: cubeVert,
-        fragment: cubeFrag,
+        vertex: cubePhongVert,
+        fragment: cubePhongMaterialFrag,
         bindings: [
-            // viewProjection
             {
                 binding: 0,
                 visibility: GPUShaderStage.VERTEX,
@@ -95,7 +145,6 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
                     buffer: viewProjectionUBO.buffer,
                 },
             },
-            // modelMatrix
             {
                 binding: 1,
                 visibility: GPUShaderStage.VERTEX,
@@ -104,7 +153,6 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
                     buffer: cubeVertexUBO.buffer,
                 },
             },
-            // objectUniforms
             {
                 binding: 2,
                 visibility: GPUShaderStage.FRAGMENT,
@@ -115,7 +163,7 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
             },
         ],
     });
-    
+
     const cubeLayout: GPUPipelineLayout = device.createPipelineLayout({
         bindGroupLayouts: [cubeShader.bindGroupLayout],
     });
@@ -185,7 +233,7 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     });
 
     const lightFragmentUBO = createUniformBuffer(device, {
-        u_light_color: [1.0, 1.0, 1.0],
+        light_color: [1.0, 1.0, 1.0],
     });
 
     const lightShader = await createShader(device, {
@@ -321,7 +369,13 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         lightVertexUBO.updateUniform('model', lightModelMatrix.value);
         lightVertexUBO.updateBuffer();
 
-        cubeFragmentUBO.updateUniform('light_pos', lightPos.value);
+        // gouraud shading
+        // cubeVertexUBO.updateUniform('light_pos', lightPos.value);
+        // cubeVertexUBO.updateUniform('view_pos', camera.position.value);
+        // cubeVertexUBO.updateBuffer();
+
+        // phong shading
+        cubeFragmentUBO.updateUniform('light.position', lightPos.value);
         cubeFragmentUBO.updateUniform('view_pos', camera.position.value);
         cubeFragmentUBO.updateBuffer();
 
@@ -367,6 +421,13 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     render();
 
     return {
+        setMaterial(material: Material) {
+            cubeFragmentUBO.updateUniform('material.ambient', material.ambient);
+            cubeFragmentUBO.updateUniform('material.diffuse', material.diffuse);
+            cubeFragmentUBO.updateUniform('material.specular', material.specular);
+            cubeFragmentUBO.updateUniform('material.shininess', material.shininess);
+            console.log(material);
+        },
         destroy() {
             if (rafId) {
                 cancelAnimationFrame(rafId);

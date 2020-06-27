@@ -5,6 +5,7 @@
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "start": "sirv public --single",
+    "test": "jest --config jest.config.js",
     "build:shaders": "scripts/build-triangle-shaders.bat"
   },
   "devDependencies": {
@@ -12,9 +13,11 @@
     "@rollup/plugin-node-resolve": "^7.0.0",
     "@rollup/plugin-typescript": "^4.1.1",
     "@types/dat.gui": "^0.7.5",
+    "@types/jest": "^26.0.3",
     "@types/page": "^1.8.0",
     "@webgpu/types": "^0.0.24",
     "dat.gui": "^0.7.7",
+    "jest": "^26.1.0",
     "prettier": "^2.0.5",
     "prettier-plugin-svelte": "^1.1.0",
     "rollup": "^1.20.0",
@@ -23,6 +26,7 @@
     "rollup-plugin-svelte": "^5.0.3",
     "rollup-plugin-terser": "^5.1.2",
     "svelte": "^3.0.0",
+    "ts-jest": "^26.1.1",
     "typescript": "^3.9.2"
   },
   "dependencies": {
