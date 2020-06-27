@@ -24,6 +24,11 @@ import { createCamera } from 'toolkit/camera/camera';
 import { createMat4 } from 'toolkit/math/mat4';
 import { createVec3 } from 'toolkit/math/vec3';
 import { createUniformBuffer } from 'toolkit/rendering/buffers/uniform-buffer';
+import { createMeshRenderer } from 'toolkit/rendering/meshRenderer';
+import {
+    createVertexBuffer,
+    BufferAttributeType,
+} from 'toolkit/rendering/buffers/vertex-buffer';
 
 interface Material {
     ambient: [number, number, number];
@@ -50,28 +55,18 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         format: swapChainFormat,
     });
 
-    // TODO: Abstract vertex buffers and layouts
-    const positionsBuffer = createBuffer(
+    const cubeVB = createVertexBuffer(
         device,
-        CUBE_VERTICES_WITH_NORMALS,
-        GPUBufferUsage.VERTEX,
-    );
-    const positionBufferDescriptor: GPUVertexBufferLayoutDescriptor = {
-        attributes: [
+        [
             {
-                shaderLocation: 0,
-                offset: 0,
-                format: 'float3',
+                type: BufferAttributeType.Float3,
             },
             {
-                shaderLocation: 1,
-                offset: 4 * 3,
-                format: 'float3',
+                type: BufferAttributeType.Float3,
             },
         ],
-        arrayStride: 4 * 6,
-        stepMode: 'vertex',
-    };
+        CUBE_VERTICES_WITH_NORMALS,
+    );
 
     const viewProjectionUBO = createUniformBuffer(device, {
         view: camera.matrix.value,
@@ -100,12 +95,8 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         // light_color: [1.0, 1.0, 1.0],
         // light_pos: lightPos.value,
         view_pos: camera.position.value,
-        // t: {
-        //     r: 0,
-        //     g: 0,
-        //     b: 1,
-        // }
-        // // material system
+
+        // material system
         material: {
             ambient: [1.0, 0.5, 0.31],
             diffuse: [1.0, 0.5, 0.31],
@@ -120,18 +111,7 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
             diffuse: [1.0, 1.0, 1.0],
             specular: [1.0, 1.0, 1.0],
         },
-        // 'material.ambient': [1.0, 0.5, 0.31],
-        // 'material.diffuse': [1.0, 0.5, 0.31],
-        // // specular does not get padded because the shiness value is inserted into the last memory spot
-        // 'material.specular': [0.5, 0.5, 0.5],
-        // 'material.shininess': 32.0,
-
-        // 'light.position': lightPos.value,
-        // 'light.ambient': [0.2, 0.2, 0.2],
-        // 'light.diffuse': [0.5, 0.5, 0.5],
-        // 'light.specular': [1.0, 1.0, 1.0],
     });
-    console.log(cubeFragmentUBO.bufferData);
 
     const cubeShader = await createShader(device, {
         vertex: cubePhongVert,
@@ -164,65 +144,18 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         ],
     });
 
-    const cubeLayout: GPUPipelineLayout = device.createPipelineLayout({
-        bindGroupLayouts: [cubeShader.bindGroupLayout],
-    });
-
-    const cubePipeline: GPURenderPipeline = device.createRenderPipeline({
-        layout: cubeLayout,
-
-        ...cubeShader.stages,
-
-        primitiveTopology: 'triangle-list',
-        colorStates: [
-            {
-                format: 'bgra8unorm',
-                alphaBlend: {
-                    srcFactor: 'src-alpha',
-                    dstFactor: 'one-minus-src-alpha',
-                    operation: 'add',
-                },
-                colorBlend: {
-                    srcFactor: 'src-alpha',
-                    dstFactor: 'one-minus-src-alpha',
-                    operation: 'add',
-                },
-                writeMask: GPUColorWrite.ALL,
-            },
-        ],
-
-        depthStencilState: {
-            depthWriteEnabled: true,
-            depthCompare: 'less',
-            format: 'depth24plus-stencil8',
-        },
-        vertexState: {
-            indexFormat: 'uint16',
-            vertexBuffers: [positionBufferDescriptor],
-        },
-        rasterizationState: {
-            frontFace: 'ccw',
-            cullMode: 'none',
-        },
-    });
+    const cubeMeshRenderer = createMeshRenderer(device, cubeShader, cubeVB);
 
     // LIGHT
-    const lightPositionsBuffer = createBuffer(
+    const lightVB = createVertexBuffer(
         device,
-        CUBE_VERTICES,
-        GPUBufferUsage.VERTEX,
-    );
-    const lightPositionBufferDescriptor: GPUVertexBufferLayoutDescriptor = {
-        attributes: [
+        [
             {
-                shaderLocation: 0,
-                offset: 0,
-                format: 'float3',
+                type: BufferAttributeType.Float3,
             },
         ],
-        arrayStride: 4 * 3,
-        stepMode: 'vertex',
-    };
+        CUBE_VERTICES,
+    );
 
     const lightModelMatrix = createMat4();
     lightModelMatrix.translate(lightPos);
@@ -266,47 +199,8 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
             },
         ],
     });
-    const lightPipelineLayout: GPUPipelineLayout = device.createPipelineLayout({
-        bindGroupLayouts: [lightShader.bindGroupLayout],
-    });
 
-    const lightPipeline: GPURenderPipeline = device.createRenderPipeline({
-        layout: lightPipelineLayout,
-
-        ...lightShader.stages,
-
-        primitiveTopology: 'triangle-list',
-        colorStates: [
-            {
-                format: 'bgra8unorm',
-                alphaBlend: {
-                    srcFactor: 'src-alpha',
-                    dstFactor: 'one-minus-src-alpha',
-                    operation: 'add',
-                },
-                colorBlend: {
-                    srcFactor: 'src-alpha',
-                    dstFactor: 'one-minus-src-alpha',
-                    operation: 'add',
-                },
-                writeMask: GPUColorWrite.ALL,
-            },
-        ],
-
-        depthStencilState: {
-            depthWriteEnabled: true,
-            depthCompare: 'less',
-            format: 'depth24plus-stencil8',
-        },
-        vertexState: {
-            indexFormat: 'uint16',
-            vertexBuffers: [lightPositionBufferDescriptor],
-        },
-        rasterizationState: {
-            frontFace: 'ccw',
-            cullMode: 'none',
-        },
-    });
+    const lightMeshRenderer = createMeshRenderer(device, lightShader, lightVB);
 
     let colorTexture: GPUTexture = swapChain.getCurrentTexture();
     let colorTextureView: GPUTextureView = colorTexture.createView();
@@ -387,15 +281,8 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
         passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
 
-        passEncoder.setPipeline(cubePipeline);
-        passEncoder.setBindGroup(0, cubeShader.bindGroup);
-        passEncoder.setVertexBuffer(0, positionsBuffer);
-        passEncoder.draw(36, 1, 0, 0);
-
-        passEncoder.setPipeline(lightPipeline);
-        passEncoder.setBindGroup(0, lightShader.bindGroup);
-        passEncoder.setVertexBuffer(0, lightPositionsBuffer);
-        passEncoder.draw(36, 1, 0, 0);
+        cubeMeshRenderer.render(passEncoder);
+        lightMeshRenderer.render(passEncoder);
 
         passEncoder.endPass();
 
@@ -424,9 +311,14 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         setMaterial(material: Material) {
             cubeFragmentUBO.updateUniform('material.ambient', material.ambient);
             cubeFragmentUBO.updateUniform('material.diffuse', material.diffuse);
-            cubeFragmentUBO.updateUniform('material.specular', material.specular);
-            cubeFragmentUBO.updateUniform('material.shininess', material.shininess);
-            console.log(material);
+            cubeFragmentUBO.updateUniform(
+                'material.specular',
+                material.specular,
+            );
+            cubeFragmentUBO.updateUniform(
+                'material.shininess',
+                material.shininess,
+            );
         },
         destroy() {
             if (rafId) {
@@ -439,12 +331,11 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
 
             cubeVertexUBO.destroy();
             cubeFragmentUBO.destroy();
+            cubeVB.destroy();
 
-            positionsBuffer.destroy();
-
-            lightPositionsBuffer.destroy();
             lightVertexUBO.destroy();
             lightFragmentUBO.destroy();
+            lightVB.destroy();
 
             depthTexture.destroy();
         },

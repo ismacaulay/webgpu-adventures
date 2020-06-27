@@ -110,7 +110,7 @@ export function createUniformBuffer(
     uniforms: UniformDictionary,
 ) {
     const { buffer, locations } = processUniforms(uniforms);
-    console.log(locations);
+    
     const gpuBuffer = createBuffer(
         device,
         buffer,
