@@ -170,7 +170,7 @@ export function createMat4(): mat4 {
         },
 
         setTranslation(t: vec3) {
-            const [x, y, z] = t.value;
+            const [x, y, z] = Array.isArray(t) ? t : t.value;
 
             value[12] = x;
             value[13] = y;
