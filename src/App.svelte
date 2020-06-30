@@ -6,12 +6,14 @@
     import Cube from './pages/Cube.svelte';
     import RotatingCube from './pages/RotatingCube.svelte';
     import Lighting from './pages/Lighting.svelte';
+    import ECS from './pages/ecs/Page.svelte';
 
     const examples = [
         { title: 'hello-world', component: HelloWorld },
         { title: 'cube', component: Cube },
         { title: 'rotating-cube', component: RotatingCube },
         { title: 'lighting', component: Lighting },
+        { title: 'ecs', component: ECS },
     ];
 
     let page;

@@ -1,27 +1,8 @@
-import { mat4 } from "toolkit/math/mat4";
+import { ComponentType, Component } from './components';
 
 export type Entity = number;
 
 type ComponentFlags = number;
-export enum ComponentType {
-    Transform = 0x1,
-    Movement = 0x2,
-    Renderer = 0x4,
-}
-
-export interface Component {
-    type: ComponentType;
-}
-
-export interface TransformComponent extends Component {
-    type: ComponentType.Transform;
-
-    readonly matrix: mat4;
-
-    multiply(mat: mat4): void;
-}
-
-
 type ComponentMap = Map<ComponentType, Component>;
 
 export interface EntityManager {
@@ -89,6 +70,8 @@ export function createEntityManager(): EntityManager {
                         let entHasAllComponents = true;
                         let flags =
                             entityComponentFlags.get(nextEnt.value) || 0x0;
+
+                        // I think this can be components & flags === components
                         for (let i = 0; i < components.length; ++i) {
                             if ((flags & components[i]) === 0) {
                                 entHasAllComponents = false;
@@ -96,7 +79,7 @@ export function createEntityManager(): EntityManager {
                             }
                         }
 
-                        if (!entityComponentFlags) {
+                        if (!entHasAllComponents) {
                             continue;
                         }
 
@@ -104,7 +87,9 @@ export function createEntityManager(): EntityManager {
                         let value: Component[] = [];
                         if (comps) {
                             for (let i = 0; i < components.length; ++i) {
-                                value.push(comps.get(components[i]) as Component);
+                                value.push(
+                                    comps.get(components[i]) as Component,
+                                );
                             }
                         }
 

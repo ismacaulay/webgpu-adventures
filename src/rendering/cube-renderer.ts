@@ -7,9 +7,9 @@ import triangleVert from './shaders/cube.vert';
 // @ts-ignore
 import triangleFrag from './shaders/cube.frag';
 
-import { perspective, radians, identity } from '../math';
 import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
 import { createCamera } from 'toolkit/camera/camera';
+import { vec3, mat4 } from 'gl-matrix';
 
 export async function createCubeRenderer(canvas: HTMLCanvasElement) {
     const gpu = requestGPU();
@@ -50,22 +50,16 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
     };
 
     const camera = createCamera();
-    camera.position.set([0, 0, 3]);
+    vec3.set(camera.position, 0, 0, 3);
     camera.updateViewMatrix();
 
     const cameraController = createFreeCameraController(canvas, camera);
 
     // prettier-ignore
     const uniforms = new Float32Array([
-        // model matrix
-        ...identity(),
-
-        // view Matrix
-        ...camera.matrix.value,
-        // ...translate(identity(), [0, 0, -3.0]),
-
-        // projection Matrix
-        ...perspective(radians(45.0), canvas.clientWidth / canvas.clientHeight, 0.1, 100.0),
+        ...mat4.create(),
+        ...camera.viewMatrix,
+        ...camera.projectionMatrix,
     ]);
 
     const cubeTexture = await createTextureFromImage(
@@ -225,7 +219,9 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
     });
     const depthTextureView: GPUTextureView = depthTexture.createView();
 
-    let model = identity();
+    const model = mat4.create();
+    let textureOpacity = 1.0;
+
     function encodeCommands(delta: number) {
         const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
             attachment: colorTextureView,
@@ -251,14 +247,14 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         // prettier-ignore
         const mvp = new Float32Array([
             // model matrix
-            ...identity(),
+            ...model,
 
             // view Matrix
-            ...camera.matrix.value,
+            ...camera.viewMatrix,
             // ...translate(identity(), [0, 0, -3.0]),
 
             // projection Matrix
-            ...perspective(radians(45.0), canvas.clientWidth / canvas.clientHeight, 0.1, 100.0),
+            ...camera.projectionMatrix,
         ]);
         const uploadBuffer = createBuffer(device, mvp, GPUBufferUsage.COPY_SRC);
         commandEncoder.copyBufferToBuffer(
@@ -267,6 +263,20 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
             uniformBuffer,
             0,
             mvp.byteLength,
+        );
+
+        const fragmentUniforms = new Float32Array([textureOpacity]);
+        const fragmentUploadBuffer = createBuffer(
+            device,
+            fragmentUniforms,
+            GPUBufferUsage.COPY_SRC,
+        );
+        commandEncoder.copyBufferToBuffer(
+            fragmentUploadBuffer,
+            0,
+            fragmentUniformBuffer,
+            0,
+            fragmentUniforms.byteLength,
         );
 
         const passEncoder: GPURenderPassEncoder = commandEncoder.beginRenderPass(
@@ -282,6 +292,9 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         passEncoder.endPass();
 
         device.defaultQueue.submit([commandEncoder.finish()]);
+
+        uploadBuffer.destroy();
+        fragmentUploadBuffer.destroy();
     }
 
     let rafId: number;
@@ -292,6 +305,8 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         const dt = (now - lastTime) / 1000;
         lastTime = now;
         cameraController.update(dt);
+        camera.updateViewMatrix();
+        camera.updateProjectionMatrix();
 
         colorTexture = swapChain.getCurrentTexture();
         colorTextureView = colorTexture.createView();
@@ -304,21 +319,22 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
 
     return {
         enableTextures(state: number) {
-            const fragmentUniforms = new Float32Array([state]);
-            const uploadBuffer = createBuffer(
-                device,
-                fragmentUniforms,
-                GPUBufferUsage.COPY_SRC,
-            );
-            const commandEncoder = device.createCommandEncoder();
-            commandEncoder.copyBufferToBuffer(
-                uploadBuffer,
-                0,
-                fragmentUniformBuffer,
-                0,
-                fragmentUniforms.byteLength,
-            );
-            device.defaultQueue.submit([commandEncoder.finish()]);
+            textureOpacity = state;
+            // const fragmentUniforms = new Float32Array([state]);
+            // const uploadBuffer = createBuffer(
+            //     device,
+            //     fragmentUniforms,
+            //     GPUBufferUsage.COPY_SRC,
+            // );
+            // const commandEncoder = device.createCommandEncoder();
+            // commandEncoder.copyBufferToBuffer(
+            //     uploadBuffer,
+            //     0,
+            //     fragmentUniformBuffer,
+            //     0,
+            //     fragmentUniforms.byteLength,
+            // );
+            // device.defaultQueue.submit([commandEncoder.finish()]);
         },
         destroy() {
             if (rafId) {

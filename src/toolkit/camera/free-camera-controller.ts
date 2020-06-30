@@ -1,6 +1,6 @@
 import { Camera } from './camera';
-import { radians } from 'math';
-import { createVec3, cross, add } from 'toolkit/math/vec3';
+import { vec3 } from 'gl-matrix';
+import { radians } from 'toolkit/math';
 
 const W_KEY_BIT = 1 << 1;
 const A_KEY_BIT = 1 << 2;
@@ -107,22 +107,25 @@ export function createFreeCameraController(
 
     let yaw = -90;
     let pitch = 0;
-    const front = createVec3();
-    const right = createVec3();
-    const worldUp = createVec3([0, 1, 0]);
+    const front = vec3.create();
+    const right = vec3.create();
+    const worldUp = vec3.fromValues(0, 1, 0);
 
     function updateCamera() {
-        front
-            .set([
+        vec3.normalize(
+            front,
+            vec3.set(
+                front,
                 Math.cos(radians(yaw)) * Math.cos(radians(pitch)),
                 Math.sin(radians(pitch)),
                 Math.sin(radians(yaw)) * Math.cos(radians(pitch)),
-            ])
-            .normalize();
-        right.set(cross(front, worldUp).normalize());
+            ),
+        );
 
-        camera.up.set(cross(right, front));
-        camera.target.set(add(camera.position, front));
+        vec3.normalize(right, vec3.cross(right, front, worldUp));
+
+        vec3.cross(camera.up, right, front);
+        vec3.add(camera.target, camera.position, front);
         camera.updateViewMatrix();
     }
 
@@ -144,32 +147,42 @@ export function createFreeCameraController(
     document.addEventListener('keydown', onKeyDown, false);
     document.addEventListener('keyup', onKeyUp, false);
     document.addEventListener('mousemove', onMouseMove, false);
+
+    const _front = vec3.create();
+    const _right = vec3.create();
+    const _up = vec3.create();
+    const dir = vec3.create();
+
     return {
         update(dt: number) {
             if (!locked) return;
 
-            camera.position
-                .add(
-                    createVec3(front).scale(
-                        dt *
-                            directionValue(keys, S_KEY_BIT, W_KEY_BIT) *
-                            moveSensitivity,
-                    ),
-                )
-                .add(
-                    createVec3(right).scale(
-                        dt *
-                            directionValue(keys, A_KEY_BIT, D_KEY_BIT) *
-                            moveSensitivity,
-                    ),
-                )
-                .add(
-                    createVec3(camera.up).scale(
-                        dt *
-                            directionValue(keys, C_KEY_BIT, SPACE_KEY_BIT) *
-                            moveSensitivity,
-                    ),
-                );
+            vec3.scale(
+                _front,
+                front,
+                dt *
+                    directionValue(keys, S_KEY_BIT, W_KEY_BIT) *
+                    moveSensitivity,
+            );
+
+            vec3.scale(
+                _right,
+                right,
+                dt *
+                    directionValue(keys, A_KEY_BIT, D_KEY_BIT) *
+                    moveSensitivity,
+            );
+
+            vec3.scale(
+                _up,
+                camera.up,
+                dt *
+                    directionValue(keys, C_KEY_BIT, SPACE_KEY_BIT) *
+                    moveSensitivity,
+            );
+
+            vec3.add(dir, _up, vec3.add(dir, _front, _right));
+            vec3.add(camera.position, camera.position, dir);
 
             updateCamera();
         },

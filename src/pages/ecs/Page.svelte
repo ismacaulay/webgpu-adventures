@@ -1,7 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { create } from './ecs'
-    import Canvas from '../components/Canvas.svelte';
+    import Canvas from '../../components/Canvas.svelte';
 
     let canvas;
     onMount(() => {

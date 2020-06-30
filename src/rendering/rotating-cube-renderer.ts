@@ -6,8 +6,7 @@ import glslangModule from 'toolkit/rendering/shaders/glslang';
 import triangleVert from './shaders/cube.vert';
 // @ts-ignore
 import triangleFrag from './shaders/cube.frag';
-
-import { perspective, radians, translate, identity, rotate } from '../math';
+import { mat4, glMatrix } from 'gl-matrix';
 
 export async function createCubeRenderer(canvas: HTMLCanvasElement) {
     const gpu = requestGPU();
@@ -47,16 +46,24 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         stepMode: 'vertex',
     };
 
+    const modelMatrix = mat4.create();
+
+    const viewMatrix = mat4.create();
+    mat4.translate(viewMatrix, viewMatrix, [0, 0, -3]);
+
+    const projectionMatrix = mat4.create();
+    mat4.perspective(
+        projectionMatrix,
+        glMatrix.toRadian(45),
+        canvas.clientWidth / canvas.clientHeight,
+        0.1,
+        100.0,
+    );
     // prettier-ignore
     const uniforms = new Float32Array([
-        // model matrix
-        ...identity(),
-
-        // view Matrix
-        ...translate(identity(), [0, 0, -3.0]),
-
-        // projection Matrix
-        ...perspective(radians(45.0), canvas.clientWidth / canvas.clientHeight, 0.1, 100.0),
+        ...modelMatrix,
+        ...viewMatrix,
+        ...projectionMatrix
     ]);
 
     const cubeTexture = await createTextureFromImage(
@@ -75,9 +82,7 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     );
 
-    const fragmentUniforms = new Float32Array([
-        1.0,
-    ]);
+    const fragmentUniforms = new Float32Array([1.0]);
     const fragmentUniformBuffer: GPUBuffer = createBuffer(
         device,
         fragmentUniforms,
@@ -130,7 +135,7 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
                 binding: 3,
                 resource: {
                     buffer: fragmentUniformBuffer,
-                }
+                },
             },
         ],
     });
@@ -218,7 +223,6 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
     });
     const depthTextureView: GPUTextureView = depthTexture.createView();
 
-    let model = identity();
     function encodeCommands(delta: number) {
         const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
             attachment: colorTextureView,
@@ -241,8 +245,13 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
 
         const commandEncoder: GPUCommandEncoder = device.createCommandEncoder();
 
-        model = rotate(model, delta * radians(50), [0.5, 1.0, 0.0]);
-        const matrices = Float32Array.from(model);
+        mat4.rotate(modelMatrix, modelMatrix, delta * glMatrix.toRadian(45), [
+            0.5,
+            1.0,
+            0.0,
+        ]);
+
+        const matrices = Float32Array.from(modelMatrix);
         const uploadBuffer = createBuffer(
             device,
             matrices,
@@ -291,9 +300,7 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
 
     return {
         enableTextures(state: number) {
-            const fragmentUniforms = new Float32Array([
-                state,
-            ]);
+            const fragmentUniforms = new Float32Array([state]);
             const uploadBuffer = createBuffer(
                 device,
                 fragmentUniforms,

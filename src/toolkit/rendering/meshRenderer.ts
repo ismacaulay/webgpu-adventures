@@ -1,6 +1,10 @@
-import { VertexBuffer } from "./buffers/vertex-buffer";
+import { VertexBuffer } from './buffers';
 
-export function createMeshRenderer(device: GPUDevice, shader: any, vertexBuffer: VertexBuffer) {
+export function createMeshRenderer(
+    device: GPUDevice,
+    shader: any,
+    vertexBuffer: VertexBuffer,
+) {
     const layout: GPUPipelineLayout = device.createPipelineLayout({
         bindGroupLayouts: [shader.bindGroupLayout],
     });
@@ -50,6 +54,7 @@ export function createMeshRenderer(device: GPUDevice, shader: any, vertexBuffer:
             encoder.setBindGroup(0, shader.bindGroup);
             encoder.setVertexBuffer(0, vertexBuffer.buffer);
             encoder.draw(vertexBuffer.count, 1, 0, 0);
-        }
-    }
+        },
+    };
 }
+

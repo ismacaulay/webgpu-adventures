@@ -1,20 +1,10 @@
 import { createBuffer } from 'rendering/utils';
-
-export enum BufferAttributeType {
-    Float3 = 'float3',
-}
-
-export interface BufferAttribute {
-    type: BufferAttributeType;
-}
-
-export interface VertexBuffer {
-    readonly descriptor: GPUVertexBufferLayoutDescriptor;
-    readonly buffer: GPUBuffer;
-    readonly count: number;
-
-    destroy(): void;
-}
+import {
+    BufferAttributeType,
+    BufferAttribute,
+    VertexBuffer,
+    BufferType,
+} from './types';
 
 function getSizeForType(type: BufferAttributeType) {
     switch (type) {
@@ -25,15 +15,24 @@ function getSizeForType(type: BufferAttributeType) {
     }
 }
 
+export function getCountForType(type: BufferAttributeType) {
+    switch (type) {
+        case BufferAttributeType.Float3:
+            return 3;
+        default:
+            throw new Error(`Unknown BufferAttributeType ${type}`);
+    }
+}
+
 function buildGPUVertexAttributes(attributes: BufferAttribute[]) {
     const gpuAttrs: GPUVertexAttributeDescriptor[] = [];
     let stride = 0;
 
     for (let i = 0; i < attributes.length; ++i) {
-        const { type } = attributes[i];
+        const { type, location } = attributes[i];
 
         gpuAttrs.push({
-            shaderLocation: i,
+            shaderLocation: location,
             format: type,
             offset: stride,
         });
@@ -62,14 +61,16 @@ export function createVertexBuffer(
     const buffer = createBuffer(device, data, GPUBufferUsage.VERTEX);
 
     const count = (data.BYTES_PER_ELEMENT * data.length) / stride;
-    
+
     return {
-        descriptor,
+        type: BufferType.Vertex,
         buffer,
+        data,
+        descriptor,
         count,
 
         destroy() {
             buffer.destroy();
-        }
+        },
     };
 }
