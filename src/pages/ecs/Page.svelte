@@ -13,7 +13,6 @@
 
         (async () => {
             const stats = new Stats();
-            console.log(stats);
             stats.showPanel(0);
             container.appendChild(stats.dom);
 
