@@ -6,6 +6,8 @@ export interface MaterialComponent extends Component {
     readonly shader: number;
 
     readonly uniforms: any;
+
+    readonly lighting: boolean;
 }
 
 export function createBasicMaterialComponent(initial: {
@@ -17,6 +19,7 @@ export function createBasicMaterialComponent(initial: {
     return {
         type: ComponentType.Material,
         shader,
+        lighting: false,
         uniforms: {
             color,
         },
@@ -33,6 +36,7 @@ export function createMaterialComponent({
     return {
         type: ComponentType.Material,
         shader,
+        lighting: true,
         uniforms,
     };
 }

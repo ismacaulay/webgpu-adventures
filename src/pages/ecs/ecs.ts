@@ -4,6 +4,7 @@ import {
     createTransformComponent,
     createBasicMaterialComponent,
     createMaterialComponent,
+    createLightComponent,
 } from 'toolkit/ecs/components';
 import { createMeshGeometryComponent } from 'toolkit/ecs/components/geometry';
 import { CUBE_VERTICES, CUBE_NORMALS } from 'utils/cube-vertices';
@@ -25,6 +26,7 @@ import { CommonMaterials } from 'toolkit/materials';
 import * as dat from 'dat.gui';
 import { createCircularMovementComponent } from 'toolkit/ecs/components/movement';
 import { createMovementSystem } from 'toolkit/ecs/systems/movement';
+import { createLightingSystem } from 'toolkit/ecs/systems/lighting';
 
 export async function create(canvas: HTMLCanvasElement) {
     const renderer = await createRenderer(canvas);
@@ -39,6 +41,7 @@ export async function create(canvas: HTMLCanvasElement) {
     const shaderManager = await createShaderManager(renderer.device);
 
     const movementSystem = createMovementSystem(entityManager);
+    const lightingSystem = createLightingSystem(entityManager);
     const renderSystem = createRenderSystem(
         entityManager,
         shaderManager,
@@ -53,6 +56,12 @@ export async function create(canvas: HTMLCanvasElement) {
     const lightShader = shaderManager.create(getBasicShaderInfo(bufferManager));
 
     const lightPos = vec3.fromValues(1.2, 1.0, 2.0);
+    const lightColor = {
+        ambient: [1.0, 1.0, 1.0] as vec3,
+        diffuse: [1.0, 1.0, 1.0] as vec3,
+        specular: [1.0, 1.0, 1.0] as vec3,
+    };
+
     const viewProjectionBuffer = bufferManager.get(
         DefaultBuffers.ViewProjection,
     );
@@ -69,13 +78,10 @@ export async function create(canvas: HTMLCanvasElement) {
         },
         light: {
             position: lightPos,
-            ambient: [1.0, 1.0, 1.0],
-            diffuse: [1.0, 1.0, 1.0],
-            shininess: [1.0, 1.0, 1.0],
+            ...lightColor,
         },
     };
     const materialBuffer = bufferManager.createUniformBuffer(materialUniforms);
-
     const cubeShader = shaderManager.create({
         vertex: phongVertex,
         fragment: phongFrag,
@@ -114,10 +120,17 @@ export async function create(canvas: HTMLCanvasElement) {
         createCircularMovementComponent({
             center: [0, 1.0, 0.0],
             axis: [0, 1, 0],
-            radius: 2,
+            radius: 1,
             period: 4,
         }),
     );
+    entityManager.addComponent(
+        lightEntity,
+        createLightComponent({
+            ...lightColor,
+        }),
+    );
+
     entityManager.addComponent(
         lightEntity,
         createBasicMaterialComponent({
@@ -181,38 +194,6 @@ export async function create(canvas: HTMLCanvasElement) {
     });
     entityManager.addComponent(cubeEntity, cubeMaterialComponent);
 
-    // const movingCube = entityManager.create();
-    // entityManager.addComponent(
-    //     movingCube,
-    //     createTransformComponent({
-    //         position: [0, -1.2, 0],
-    //     }),
-    // );
-    // entityManager.addComponent(
-    //     movingCube,
-    //     createLinearMovementComponent({
-    //
-    //     })
-    // )
-    // entityManager.addComponent(
-    //     lightEntity,
-    //     createMeshGeometryComponent({
-    //         buffers: [
-    //             {
-    //                 array: CUBE_VERTICES_WITH_NORMALS,
-    //                 attributes: [
-    //                     {
-    //                         type: 'float3',
-    //                     },
-    //                     {
-    //                         type: 'float3',
-    //                     },
-    //                 ],
-    //             },
-    //         ],
-    //     }),
-    // );
-
     let rafId: number;
     let lastTime = performance.now();
     function render() {
@@ -227,6 +208,7 @@ export async function create(canvas: HTMLCanvasElement) {
         camera.updateProjectionMatrix();
 
         movementSystem.update(dt);
+        lightingSystem.update();
         renderSystem.update();
 
         rafId = requestAnimationFrame(render);
@@ -251,6 +233,8 @@ export async function create(canvas: HTMLCanvasElement) {
             if (rafId) {
                 cancelAnimationFrame(rafId);
             }
+
+            gui.destroy();
 
             cameraController.destroy();
             bufferManager.destroy();

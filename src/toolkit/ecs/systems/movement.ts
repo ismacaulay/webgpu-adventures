@@ -1,7 +1,7 @@
 import { EntityManager } from '../entity-manager';
 import { ComponentType, TransformComponent } from '../components';
 import { MovementComponent, MovementType } from '../components/movement';
-import { vec3, mat4 } from 'gl-matrix';
+import { vec3 } from 'gl-matrix';
 
 export function createMovementSystem(entityManager: EntityManager) {
     let currentTime = 0;
@@ -28,11 +28,6 @@ export function createMovementSystem(entityManager: EntityManager) {
                     const dist = currentTime / period;
                     const frac = dist - Math.floor(dist);
                     const theta = 2 * Math.PI * frac;
-                    // const x = center[0] + radius * Math.cos(rad);
-                    // const y = center[1] + radius * Math.sin(rad);
-                    //
-                    // // transform.translation = [x, y, transform.translation[2]];
-                    // transform.translation = [x, transform.translation[1], y];
 
                     vec3.cross(right, axis, [0, 1, 0]);
                     if (vec3.len(right) === 0) {
