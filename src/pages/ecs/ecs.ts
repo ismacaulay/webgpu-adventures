@@ -23,6 +23,8 @@ import phongVertex from '../../rendering/shaders/phong.vert';
 import phongFrag from '../../rendering/shaders/phong.frag';
 import { CommonMaterials } from 'toolkit/materials';
 import * as dat from 'dat.gui';
+import { createCircularMovementComponent } from 'toolkit/ecs/components/movement';
+import { createMovementSystem } from 'toolkit/ecs/systems/movement';
 
 export async function create(canvas: HTMLCanvasElement) {
     const renderer = await createRenderer(canvas);
@@ -36,6 +38,7 @@ export async function create(canvas: HTMLCanvasElement) {
     const bufferManager = createBufferManager(renderer.device);
     const shaderManager = await createShaderManager(renderer.device);
 
+    const movementSystem = createMovementSystem(entityManager);
     const renderSystem = createRenderSystem(
         entityManager,
         shaderManager,
@@ -106,14 +109,15 @@ export async function create(canvas: HTMLCanvasElement) {
             scale: [0.1, 0.1, 0.1],
         }),
     );
-    // entityManager.addComponent(
-    //     lightEntity,
-    //     createCircularMovementComponent({
-    //         center: [0, 0, 0],
-    //         radius: 2,
-    //         speed: Math.PI,
-    //     }),
-    // );
+    entityManager.addComponent(
+        lightEntity,
+        createCircularMovementComponent({
+            center: [0, 1.0, 0.0],
+            axis: [0, 1, 0],
+            radius: 2,
+            period: 4,
+        }),
+    );
     entityManager.addComponent(
         lightEntity,
         createBasicMaterialComponent({
@@ -222,7 +226,7 @@ export async function create(canvas: HTMLCanvasElement) {
         camera.aspect = canvas.clientWidth / canvas.clientHeight;
         camera.updateProjectionMatrix();
 
-        // movementSystem.update(dt);
+        movementSystem.update(dt);
         renderSystem.update();
 
         rafId = requestAnimationFrame(render);
