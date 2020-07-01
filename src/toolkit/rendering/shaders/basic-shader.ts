@@ -40,7 +40,6 @@ void main()
 }
 `;
 
-    // TODO: THESE BUFFERS NEED TO BE MANAGED!
     const viewProjectionBuffer = bufferManager.get<UniformBuffer>(
         DefaultBuffers.ViewProjection,
     );

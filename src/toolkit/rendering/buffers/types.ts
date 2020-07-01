@@ -40,7 +40,7 @@ export interface UniformDictionary {
 }
 
 export interface UniformLocationDictionary {
-    [key: string]: number;
+    [key: string]: number | boolean;
 }
 
 export interface UniformBuffer extends Buffer {

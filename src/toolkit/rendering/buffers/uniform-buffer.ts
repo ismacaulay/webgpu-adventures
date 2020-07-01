@@ -84,6 +84,7 @@ export function processUniforms(uniforms: UniformDictionary) {
                     location += padding;
                 }
 
+                locations[locationKey] = true;
                 processUniformsRecursive(value, locationKey);
 
                 if (location % 4 !== 0) {
@@ -114,6 +115,35 @@ export function createUniformBuffer(
 
     let needsUpdate = false;
 
+    function updateUniform(name: string, value: UniformValue) {
+        const location = locations[name];
+        if (location === undefined) {
+            throw new Error(`Unknown uniform: ${name}`);
+        }
+
+        if (typeof location === 'boolean') {
+            if (!(typeof value === 'object')) {
+                throw new Error(
+                    `Invalid value given for ${name}. Requires an object`,
+                );
+            }
+
+            Object.entries(value).forEach(([key, value]) => {
+                updateUniform(`${name}.${key}`, value);
+            });
+
+            return;
+        } else {
+            if (typeof value === 'number') {
+                buffer.set([value], location);
+            } else if (Array.isArray(value) || value instanceof Float32Array) {
+                buffer.set(value, location);
+            }
+        }
+
+        needsUpdate = true;
+    }
+
     return {
         type: BufferType.Uniform,
         buffer: gpuBuffer,
@@ -129,20 +159,7 @@ export function createUniformBuffer(
         hasUniform(name: string): boolean {
             return name in locations;
         },
-        updateUniform(name: string, value: UniformValue) {
-            const offset = locations[name];
-            if (!(name in locations)) {
-                throw new Error(`Unknown uniform: ${name}`);
-            }
-
-            if (typeof value === 'number') {
-                buffer.set([value], offset);
-            } else if (Array.isArray(value) || value instanceof Float32Array) {
-                buffer.set(value, offset);
-            }
-
-            needsUpdate = true;
-        },
+        updateUniform,
 
         updateBuffer(encoder?: GPUCommandEncoder) {
             if (!needsUpdate) {

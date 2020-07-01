@@ -3,18 +3,26 @@ import { createRenderSystem } from 'toolkit/ecs/rendering-system';
 import {
     createTransformComponent,
     createBasicMaterialComponent,
+    createMaterialComponent,
 } from 'toolkit/ecs/components';
 import { createMeshGeometryComponent } from 'toolkit/ecs/components/geometry';
 import { CUBE_VERTICES, CUBE_NORMALS } from 'utils/cube-vertices';
 import { BufferAttributeType } from 'toolkit/rendering/buffers';
 import { createShaderManager } from 'toolkit/rendering/shaders';
 import { createRenderer } from 'toolkit/rendering/renderer';
-import { createBufferManager } from 'toolkit/ecs/buffer-manager';
+import {
+    createBufferManager,
+    DefaultBuffers,
+} from 'toolkit/ecs/buffer-manager';
 import { createCamera } from 'toolkit/camera/camera';
 import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
-import { vec3 } from 'gl-matrix';
+import { vec3, mat4 } from 'gl-matrix';
 import { Colors } from 'toolkit/materials/color';
 import { getBasicShaderInfo } from 'toolkit/rendering/shaders/basic-shader';
+import phongVertex from '../../rendering/shaders/phong.vert';
+import phongFrag from '../../rendering/shaders/phong.frag';
+import { CommonMaterials } from 'toolkit/materials';
+import * as dat from 'dat.gui';
 
 export async function create(canvas: HTMLCanvasElement) {
     const renderer = await createRenderer(canvas);
@@ -40,7 +48,55 @@ export async function create(canvas: HTMLCanvasElement) {
     // to share the layout (since they have the same source), but the
     // uniform buffers need to be unique (other than shared buffers)
     const lightShader = shaderManager.create(getBasicShaderInfo(bufferManager));
-    const cubeShader = shaderManager.create(getBasicShaderInfo(bufferManager));
+
+    const lightPos = vec3.fromValues(1.2, 1.0, 2.0);
+    const viewProjectionBuffer = bufferManager.get(
+        DefaultBuffers.ViewProjection,
+    );
+    const modelBuffer = bufferManager.createUniformBuffer({
+        model: mat4.create(),
+    });
+    const materialUniforms = {
+        view_pos: camera.position,
+        material: {
+            ambient: [0.0215, 0.1745, 0.0215],
+            diffuse: [0.07568, 0.61424, 0.07568],
+            specular: [0.633, 0.727811, 0.633],
+            shininess: 0.6 * 128,
+        },
+        light: {
+            position: lightPos,
+            ambient: [1.0, 1.0, 1.0],
+            diffuse: [1.0, 1.0, 1.0],
+            shininess: [1.0, 1.0, 1.0],
+        },
+    };
+    const materialBuffer = bufferManager.createUniformBuffer(materialUniforms);
+
+    const cubeShader = shaderManager.create({
+        vertex: phongVertex,
+        fragment: phongFrag,
+        bindings: [
+            {
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                type: 'uniform-buffer',
+                buffer: viewProjectionBuffer,
+            },
+            {
+                binding: 1,
+                visibility: GPUShaderStage.VERTEX,
+                type: 'uniform-buffer',
+                buffer: bufferManager.get(modelBuffer),
+            },
+            {
+                binding: 2,
+                visibility: GPUShaderStage.FRAGMENT,
+                type: 'uniform-buffer',
+                buffer: bufferManager.get(materialBuffer),
+            },
+        ],
+    });
 
     const lightEntity = entityManager.create();
     entityManager.addComponent(
@@ -114,12 +170,12 @@ export async function create(canvas: HTMLCanvasElement) {
             ],
         }),
     );
-    entityManager.addComponent(
-        cubeEntity,
-        createBasicMaterialComponent({
-            shader: cubeShader,
-        }),
-    );
+
+    const cubeMaterialComponent = createMaterialComponent({
+        shader: cubeShader,
+        uniforms: materialUniforms,
+    });
+    entityManager.addComponent(cubeEntity, cubeMaterialComponent);
 
     // const movingCube = entityManager.create();
     // entityManager.addComponent(
@@ -173,6 +229,19 @@ export async function create(canvas: HTMLCanvasElement) {
     }
     render();
 
+    const model = {
+        material: Object.keys(CommonMaterials)[0],
+    };
+    const gui = new dat.GUI();
+    const materialSelectionController = gui.add(
+        model,
+        'material',
+        Object.keys(CommonMaterials),
+    );
+    materialSelectionController.onChange((material: string) => {
+        cubeMaterialComponent.uniforms.material = CommonMaterials[material];
+    });
+
     return {
         destroy() {
             if (rafId) {
@@ -180,6 +249,7 @@ export async function create(canvas: HTMLCanvasElement) {
             }
 
             cameraController.destroy();
+            bufferManager.destroy();
         },
     };
 }
