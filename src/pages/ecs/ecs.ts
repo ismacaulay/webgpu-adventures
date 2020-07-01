@@ -23,12 +23,13 @@ import { getBasicShaderInfo } from 'toolkit/rendering/shaders/basic-shader';
 import phongVertex from '../../rendering/shaders/phong.vert';
 import phongFrag from '../../rendering/shaders/phong.frag';
 import { CommonMaterials } from 'toolkit/materials';
-import * as dat from 'dat.gui';
 import { createCircularMovementComponent } from 'toolkit/ecs/components/movement';
 import { createMovementSystem } from 'toolkit/ecs/systems/movement';
 import { createLightingSystem } from 'toolkit/ecs/systems/lighting';
 
-export async function create(canvas: HTMLCanvasElement) {
+import * as dat from 'dat.gui';
+
+export async function create(canvas: HTMLCanvasElement, options: any) {
     const renderer = await createRenderer(canvas);
 
     const camera = createCamera();
@@ -197,6 +198,8 @@ export async function create(canvas: HTMLCanvasElement) {
     let rafId: number;
     let lastTime = performance.now();
     function render() {
+        options.onRenderBegin();
+
         const now = performance.now();
         const dt = (now - lastTime) / 1000;
         lastTime = now;
@@ -211,6 +214,7 @@ export async function create(canvas: HTMLCanvasElement) {
         lightingSystem.update();
         renderSystem.update();
 
+        options.onRenderFinish();
         rafId = requestAnimationFrame(render);
     }
     render();
