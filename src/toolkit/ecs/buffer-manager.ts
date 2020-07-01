@@ -3,6 +3,7 @@ import {
     createVertexBuffer as createWebGPUVertexBuffer,
     Buffer,
     createUniformBuffer,
+    UniformDictionary,
 } from 'toolkit/rendering/buffers';
 import { mat4 } from 'gl-matrix';
 
@@ -14,8 +15,10 @@ export interface VertexBufferInfo {
 
 export interface BufferManager {
     createVertexBuffer(info: VertexBufferInfo): number;
+    createUniformBuffer(uniforms: UniformDictionary): number;
 
     get<T extends Buffer>(id: number): T;
+    destroy(): void;
 }
 
 export enum DefaultBuffers {
@@ -29,7 +32,7 @@ interface BufferStorage {
 }
 
 export function createBufferManager(device: GPUDevice): BufferManager {
-    const storage: BufferStorage = {};
+    let storage: BufferStorage = {};
     let next = DefaultBuffers.Count;
 
     return {
@@ -42,6 +45,14 @@ export function createBufferManager(device: GPUDevice): BufferManager {
                 info.attributes,
                 info.array,
             );
+            return id;
+        },
+
+        createUniformBuffer(uniforms: UniformDictionary) {
+            const id = next;
+            next++;
+
+            storage[id] = createUniformBuffer(device, uniforms);
             return id;
         },
 
@@ -61,6 +72,13 @@ export function createBufferManager(device: GPUDevice): BufferManager {
             }
 
             return buffer as T;
+        },
+
+        destroy() {
+            Object.values(storage).forEach((buffer: Buffer) => {
+                buffer.destroy();
+            });
+            storage = {};
         },
     };
 }

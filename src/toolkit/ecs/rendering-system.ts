@@ -1,6 +1,6 @@
 import { ShaderManager } from 'toolkit/rendering/shaders';
 import { Camera } from 'toolkit/camera/camera';
-import { Renderer, RendererCommandType } from 'toolkit/rendering/renderer';
+import { Renderer, CommandType } from 'toolkit/rendering/renderer';
 import { UniformBuffer, VertexBuffer } from 'toolkit/rendering/buffers';
 import { EntityManager } from './entity-manager';
 import {
@@ -30,8 +30,8 @@ export function createRenderSystem(
                 'projection',
                 camera.projectionMatrix,
             );
-            renderer.submitCommand({
-                type: RendererCommandType.CopySrcToDst,
+            renderer.submit({
+                type: CommandType.CopySrcToDst,
                 src: viewProjectionBuffer.data,
                 dst: viewProjectionBuffer.buffer,
                 size: viewProjectionBuffer.data.byteLength,
@@ -67,8 +67,8 @@ export function createRenderSystem(
 
                 shader.buffers.forEach((buffer: UniformBuffer) => {
                     if (buffer.needsUpdate) {
-                        renderer.submitCommand({
-                            type: RendererCommandType.CopySrcToDst,
+                        renderer.submit({
+                            type: CommandType.CopySrcToDst,
                             src: buffer.data,
                             dst: buffer.buffer,
                             size: buffer.data.byteLength,
@@ -78,16 +78,14 @@ export function createRenderSystem(
                     }
                 });
 
-                renderer.beginRenderPass();
-
                 renderer.submit({
+                    type: CommandType.Draw,
                     shader,
                     buffers: vbs,
                     count: geometry.count,
                 });
 
                 result = view.next();
-                renderer.endPass();
             }
 
             renderer.finish();

@@ -1,12 +1,8 @@
-import { createShader } from './shader';
-import { UniformBuffer, createUniformBuffer } from '../buffers';
+import { UniformBuffer } from '../buffers';
 import { mat4 } from 'gl-matrix';
+import { BufferManager, DefaultBuffers } from 'toolkit/ecs/buffer-manager';
 
-export function createBasicShader(
-    device: GPUDevice,
-    glslang: any,
-    viewProjectionBuffer: UniformBuffer,
-) {
+export function getBasicShaderInfo(bufferManager: BufferManager) {
     const vertex = `
 #version 450
 
@@ -45,8 +41,16 @@ void main()
 `;
 
     // TODO: THESE BUFFERS NEED TO BE MANAGED!
-    const modelBuffer = createUniformBuffer(device, { model: mat4.create() });
-    const materialBuffer = createUniformBuffer(device, { color: [0, 0, 0] });
+    const viewProjectionBuffer = bufferManager.get<UniformBuffer>(
+        DefaultBuffers.ViewProjection,
+    );
+    const modelBuffer = bufferManager.createUniformBuffer({
+        model: mat4.create(),
+    });
+    const materialBuffer = bufferManager.createUniformBuffer({
+        color: [0, 0, 0],
+    });
+
     const bindings = [
         {
             binding: 0,
@@ -58,19 +62,19 @@ void main()
             binding: 1,
             visibility: GPUShaderStage.VERTEX,
             type: 'uniform-buffer',
-            buffer: modelBuffer,
+            buffer: bufferManager.get(modelBuffer),
         },
         {
             binding: 2,
             visibility: GPUShaderStage.FRAGMENT,
             type: 'uniform-buffer',
-            buffer: materialBuffer,
+            buffer: bufferManager.get(materialBuffer),
         },
     ];
 
-    return createShader(device, glslang, {
+    return {
         vertex,
         fragment,
         bindings,
-    });
+    };
 }

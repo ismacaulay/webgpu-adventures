@@ -1,58 +1,40 @@
 import glslangModule from './glslang';
 import { createShader } from './shader';
-import { createBasicShader } from './basic-shader';
-import { BufferManager, DefaultBuffers } from 'toolkit/ecs/buffer-manager';
-import { UniformBuffer } from '../buffers';
+
+export interface ShaderInfo {
+    vertex: string;
+    fragment: string;
+    bindings: any[];
+}
 
 export interface ShaderManager {
     get(id: number): any;
+    create(info: ShaderInfo): number;
 }
 
-export enum DefaultShaders {
-    Basic = 0,
-
-    Count,
-}
-
-export async function createShaderManager(
-    device: GPUDevice,
-    bufferManager: BufferManager,
-) {
+export async function createShaderManager(device: GPUDevice) {
     const glslang = await glslangModule();
 
     const storage: any = {};
 
-    let next = DefaultShaders.Count;
+    let next = 0;
 
     return {
         get(id: number) {
             let shader = storage[id];
             if (!shader) {
-                if (id < DefaultShaders.Count) {
-                    if (id === DefaultShaders.Basic) {
-                        const viewProjectionUBO = bufferManager.get<
-                            UniformBuffer
-                        >(DefaultBuffers.ViewProjection);
-                        shader = createBasicShader(
-                            device,
-                            glslang,
-                            viewProjectionUBO,
-                        );
-                    }
-                    storage[id] = shader;
-                } else {
-                    throw new Error(`Unknown shader: ${id}`);
-                }
+                throw new Error(`Unknown shader: ${id}`);
             }
 
             return shader;
         },
 
-        create(vertex: string, fragment: string, bindings: any[]) {
+        create({ vertex, fragment, bindings }: ShaderInfo) {
             const id = next;
             next++;
 
             const shader = createShader(device, glslang, {
+                id,
                 vertex,
                 fragment,
                 bindings,

@@ -7,28 +7,32 @@ export interface RendererSubmission {
     count: number;
 }
 
-export enum RendererCommandType {
+export enum CommandType {
+    Draw,
     CopySrcToDst,
 }
 
+export interface DrawCommand {
+    type: CommandType.Draw;
+
+    shader: any;
+    buffers: VertexBuffer[];
+    count: number;
+}
+
 export interface CopySrcToDstCommand {
-    type: RendererCommandType.CopySrcToDst;
+    type: CommandType.CopySrcToDst;
 
     src: Float32Array;
     dst: GPUBuffer;
     size: number;
 }
-export type RendererCommand = CopySrcToDstCommand;
+export type RendererCommand = DrawCommand | CopySrcToDstCommand;
 
 export interface Renderer {
     begin(): void;
+    submit(command: RendererCommand): void;
     finish(): void;
-
-    beginRenderPass(): void;
-    endPass(): void;
-
-    submitCommand(command: RendererCommand): void;
-    submit(data: RendererSubmission): void;
 }
 
 function createRenderPipeline(
@@ -105,24 +109,51 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
     });
     const depthTextureView: GPUTextureView = depthTexture.createView();
 
-    let commandEncoder: GPUCommandEncoder;
-    let passEncoder: GPURenderPassEncoder;
-    let buffersToCleanup: GPUBuffer[] = [];
+    let commands: any[] = [];
+    let draws: any[] = [];
 
     return {
         device,
 
-        begin() {
-            commandEncoder = device.createCommandEncoder();
-        },
+        begin() {},
+        submit(command: RendererCommand) {
+            switch (command.type) {
+                case CommandType.Draw: {
+                    draws.push(command);
+                    break;
+                }
+                case CommandType.CopySrcToDst: {
+                    commands.push((encoder: GPUCommandEncoder) => {
+                        const { src, dst, size } = command;
 
-        beginRenderPass() {
+                        const uploadBuffer = createBuffer(
+                            device,
+                            src,
+                            GPUBufferUsage.COPY_SRC,
+                        );
+                        encoder.copyBufferToBuffer(
+                            uploadBuffer,
+                            0,
+                            dst,
+                            0,
+                            size,
+                        );
+
+                        return () => {
+                            uploadBuffer.destroy();
+                        };
+                    });
+                    break;
+                }
+            }
+        },
+        finish() {
             const colorTexture = swapChain.getCurrentTexture();
             const colorTextureView = colorTexture.createView();
 
             const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
                 attachment: colorTextureView,
-                loadValue: { r: 1, g: 1, b: 1, a: 1 },
+                loadValue: { r: 0, g: 0, b: 0, a: 1 },
                 storeOp: 'store',
             };
 
@@ -138,51 +169,46 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
                 depthStencilAttachment: depthAttachment,
             };
 
-            passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+            const commandEncoder = device.createCommandEncoder();
+
+            // encode all upload commands
+            const cleanups = commands.map(fn => fn(commandEncoder));
+            commands = [];
+
+            const passEncoder = commandEncoder.beginRenderPass(
+                renderPassDescriptor,
+            );
 
             passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
             passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
-        },
-        endPass() {
+
+            // process the draw calls
+            const lastShaderId = -1;
+            for (let i = 0; i < draws.length; ++i) {
+                const { shader, buffers, count } = draws[i];
+
+                if (shader.id !== lastShaderId) {
+                    passEncoder.setPipeline(
+                        createRenderPipeline(device, shader, buffers),
+                    );
+                }
+
+                // TODO: Shaders should be able to share the same
+                // stages, but can have different bind groups.
+                // Bind groups dictate what buffers are bound
+                passEncoder.setBindGroup(0, shader.bindGroup);
+                buffers.forEach((buf: VertexBuffer, idx: number) => {
+                    passEncoder.setVertexBuffer(idx, buf.buffer);
+                });
+
+                passEncoder.draw(count, 1, 0, 0);
+            }
+            draws = [];
+
             passEncoder.endPass();
-        },
-
-        submitCommand(command: RendererCommand) {
-            const { type } = command;
-
-            if (type === RendererCommandType.CopySrcToDst) {
-                const { src, dst, size } = command;
-                const upload = createBuffer(
-                    device,
-                    src,
-                    GPUBufferUsage.COPY_SRC,
-                );
-
-                commandEncoder.copyBufferToBuffer(upload, 0, dst, 0, size);
-
-                buffersToCleanup.push(upload);
-            }
-        },
-
-        submit(data: RendererSubmission) {
-            const { shader, buffers, count } = data;
-            const pipeline = createRenderPipeline(device, shader, buffers);
-
-            passEncoder.setPipeline(pipeline);
-            passEncoder.setBindGroup(0, shader.bindGroup);
-
-            for (let i = 0; i < buffers.length; ++i) {
-                passEncoder.setVertexBuffer(i, buffers[i].buffer);
-            }
-
-            passEncoder.draw(count, 1, 0, 0);
-        },
-
-        finish() {
             device.defaultQueue.submit([commandEncoder.finish()]);
 
-            buffersToCleanup.forEach(b => b.destroy());
-            buffersToCleanup = [];
+            cleanups.forEach(fn => fn());
         },
     };
 }

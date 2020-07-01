@@ -28,6 +28,8 @@ export function createTransformComponent(initial: {
         mat4.translate(_matrix, _matrix, _translation);
         mat4.scale(_matrix, _matrix, _scale);
     }
+    updateMatrix();
+
     return {
         type: ComponentType.Transform,
 

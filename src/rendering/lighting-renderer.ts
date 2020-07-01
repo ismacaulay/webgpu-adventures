@@ -112,6 +112,7 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     const glslang = await glslangModule();
 
     const cubeShader = createShader(device, glslang, {
+        id: 0,
         vertex: cubePhongVert,
         fragment: cubePhongMaterialFrag,
         bindings: [
@@ -163,6 +164,7 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     });
 
     const lightShader = createShader(device, glslang, {
+        id: 1,
         vertex: lightVert,
         fragment: lightFrag,
         bindings: [

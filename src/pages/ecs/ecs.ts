@@ -13,6 +13,8 @@ import { createBufferManager } from 'toolkit/ecs/buffer-manager';
 import { createCamera } from 'toolkit/camera/camera';
 import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
 import { vec3 } from 'gl-matrix';
+import { Colors } from 'toolkit/materials/color';
+import { getBasicShaderInfo } from 'toolkit/rendering/shaders/basic-shader';
 
 export async function create(canvas: HTMLCanvasElement) {
     const renderer = await createRenderer(canvas);
@@ -24,10 +26,7 @@ export async function create(canvas: HTMLCanvasElement) {
 
     const entityManager = createEntityManager();
     const bufferManager = createBufferManager(renderer.device);
-    const shaderManager = await createShaderManager(
-        renderer.device,
-        bufferManager,
-    );
+    const shaderManager = await createShaderManager(renderer.device);
 
     const renderSystem = createRenderSystem(
         entityManager,
@@ -36,18 +35,21 @@ export async function create(canvas: HTMLCanvasElement) {
         renderer,
         camera,
     );
-    //
-    // const cubeVertices = [];
-    // const cubeNormals = [];
 
-    // const lightEntity = entityManager.create();
-    // entityManager.addComponent(
-    //     lightEntity,
-    //     createTransformComponent({
-    //         position: [1.2, 1.0, 2.0],
-    //         scale: [0.1, 0.1, 0.1],
-    //     }),
-    // );
+    // TODO: Shaders should be shareable. To do that, they should need
+    // to share the layout (since they have the same source), but the
+    // uniform buffers need to be unique (other than shared buffers)
+    const lightShader = shaderManager.create(getBasicShaderInfo(bufferManager));
+    const cubeShader = shaderManager.create(getBasicShaderInfo(bufferManager));
+
+    const lightEntity = entityManager.create();
+    entityManager.addComponent(
+        lightEntity,
+        createTransformComponent({
+            translation: [1.2, 1.0, 2.0],
+            scale: [0.1, 0.1, 0.1],
+        }),
+    );
     // entityManager.addComponent(
     //     lightEntity,
     //     createCircularMovementComponent({
@@ -56,17 +58,29 @@ export async function create(canvas: HTMLCanvasElement) {
     //         speed: Math.PI,
     //     }),
     // );
-    // entityManager.addComponent(
-    //     lightEntity,
-    //     createMeshGeometryComponent({
-    //         attributes: [
-    //             {
-    //                 array: cubeVertices,
-    //                 type: 'float3',
-    //             },
-    //         ],
-    //     }),
-    // );
+    entityManager.addComponent(
+        lightEntity,
+        createBasicMaterialComponent({
+            shader: lightShader,
+            color: Colors.White,
+        }),
+    );
+    entityManager.addComponent(
+        lightEntity,
+        createMeshGeometryComponent({
+            buffers: [
+                {
+                    array: CUBE_VERTICES,
+                    attributes: [
+                        {
+                            type: BufferAttributeType.Float3,
+                            location: 0,
+                        },
+                    ],
+                },
+            ],
+        }),
+    );
 
     const cubeEntity = entityManager.create();
     entityManager.addComponent(
@@ -100,7 +114,12 @@ export async function create(canvas: HTMLCanvasElement) {
             ],
         }),
     );
-    entityManager.addComponent(cubeEntity, createBasicMaterialComponent());
+    entityManager.addComponent(
+        cubeEntity,
+        createBasicMaterialComponent({
+            shader: cubeShader,
+        }),
+    );
 
     // const movingCube = entityManager.create();
     // entityManager.addComponent(

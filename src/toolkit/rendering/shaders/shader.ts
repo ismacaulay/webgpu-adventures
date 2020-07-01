@@ -4,10 +4,11 @@ export function createShader(
     device: GPUDevice,
     glslang: any,
     {
+        id,
         vertex,
         fragment,
         bindings,
-    }: { vertex: string; fragment: string; bindings: any[] },
+    }: { id: number; vertex: string; fragment: string; bindings: any[] },
 ) {
     const vertexModule: GPUShaderModule = device.createShaderModule({
         code: glslang.compileGLSL(vertex, 'vertex'),
@@ -53,6 +54,7 @@ export function createShader(
     });
 
     return {
+        id,
         bindGroupLayout,
         bindGroup,
         buffers: uniformBuffers,
