@@ -11,11 +11,11 @@
 
     const examples = [
         { title: 'hello-world', component: HelloWorld },
-        { title: 'cube', component: Cube },
-        { title: 'rotating-cube', component: RotatingCube },
-        { title: 'lighting', component: Lighting },
         { title: 'ecs', component: ECS },
-        { title: 'lighting-maps', component: LightingMaps },
+        { title: 'learn-opengl/basics', component: Cube },
+        { title: 'learn-opengl/transformations', component: RotatingCube },
+        { title: 'learn-opengl/materials', component: Lighting },
+        { title: 'learn-opengl/lighting-maps', component: LightingMaps },
     ];
 
     let page;
