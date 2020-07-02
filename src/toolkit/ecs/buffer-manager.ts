@@ -4,7 +4,7 @@ import {
     Buffer,
     createUniformBuffer,
     UniformDictionary,
-} from 'toolkit/rendering/buffers';
+} from 'toolkit/webgpu/buffers';
 import { mat4 } from 'gl-matrix';
 
 export interface VertexBufferInfo {

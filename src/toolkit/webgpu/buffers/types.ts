@@ -13,6 +13,7 @@ export interface Buffer {
 }
 
 export enum BufferAttributeType {
+    Float2 = 'float2',
     Float3 = 'float3',
 }
 

@@ -1,31 +1,32 @@
-import { createEntityManager } from 'toolkit/ecs/entity-manager';
-import { createRenderSystem } from 'toolkit/ecs/rendering-system';
+import {
+    createEntityManager,
+    createBufferManager,
+    createShaderManager,
+    DefaultBuffers,
+} from 'toolkit/ecs';
+import {
+    createRenderSystem,
+    createMovementSystem,
+    createLightingSystem,
+} from 'toolkit/ecs/systems';
 import {
     createTransformComponent,
     createBasicMaterialComponent,
     createMaterialComponent,
     createLightComponent,
+    createMeshGeometryComponent,
+    createCircularMovementComponent,
 } from 'toolkit/ecs/components';
-import { createMeshGeometryComponent } from 'toolkit/ecs/components/geometry';
 import { CUBE_VERTICES, CUBE_NORMALS } from 'utils/cube-vertices';
-import { BufferAttributeType } from 'toolkit/rendering/buffers';
-import { createShaderManager } from 'toolkit/rendering/shaders';
-import { createRenderer } from 'toolkit/rendering/renderer';
-import {
-    createBufferManager,
-    DefaultBuffers,
-} from 'toolkit/ecs/buffer-manager';
-import { createCamera } from 'toolkit/camera/camera';
-import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
+import { BufferAttributeType } from 'toolkit/webgpu/buffers';
+import { createRenderer } from 'toolkit/webgpu/renderer';
+import { createCamera, createFreeCameraController } from 'toolkit/camera';
 import { vec3, mat4 } from 'gl-matrix';
 import { Colors } from 'toolkit/materials/color';
-import { getBasicShaderInfo } from 'toolkit/rendering/shaders/basic-shader';
+import { getBasicShaderInfo } from 'toolkit/webgpu/shaders/basic-shader';
 import phongVertex from '../../rendering/shaders/phong.vert';
 import phongFrag from '../../rendering/shaders/phong.frag';
 import { CommonMaterials } from 'toolkit/materials';
-import { createCircularMovementComponent } from 'toolkit/ecs/components/movement';
-import { createMovementSystem } from 'toolkit/ecs/systems/movement';
-import { createLightingSystem } from 'toolkit/ecs/systems/lighting';
 
 import * as dat from 'dat.gui';
 
@@ -91,19 +92,19 @@ export async function create(canvas: HTMLCanvasElement, options: any) {
                 binding: 0,
                 visibility: GPUShaderStage.VERTEX,
                 type: 'uniform-buffer',
-                buffer: viewProjectionBuffer,
+                resource: viewProjectionBuffer,
             },
             {
                 binding: 1,
                 visibility: GPUShaderStage.VERTEX,
                 type: 'uniform-buffer',
-                buffer: bufferManager.get(modelBuffer),
+                resource: bufferManager.get(modelBuffer),
             },
             {
                 binding: 2,
                 visibility: GPUShaderStage.FRAGMENT,
                 type: 'uniform-buffer',
-                buffer: bufferManager.get(materialBuffer),
+                resource: bufferManager.get(materialBuffer),
             },
         ],
     });
@@ -234,7 +235,7 @@ export async function create(canvas: HTMLCanvasElement, options: any) {
 
     return {
         destroy() {
-            if (rafId) {
+            if (rafId > 0) {
                 cancelAnimationFrame(rafId);
             }
 

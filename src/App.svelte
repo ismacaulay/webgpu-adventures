@@ -7,6 +7,7 @@
     import RotatingCube from './pages/RotatingCube.svelte';
     import Lighting from './pages/Lighting.svelte';
     import ECS from './pages/ecs/Page.svelte';
+    import LightingMaps from './pages/lighting-maps/Page.svelte';
 
     const examples = [
         { title: 'hello-world', component: HelloWorld },
@@ -14,6 +15,7 @@
         { title: 'rotating-cube', component: RotatingCube },
         { title: 'lighting', component: Lighting },
         { title: 'ecs', component: ECS },
+        { title: 'lighting-maps', component: LightingMaps },
     ];
 
     let page;

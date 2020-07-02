@@ -1,6 +1,6 @@
 import { Colors, Color } from 'toolkit/materials/color';
 import { Component, ComponentType } from './types';
-import { UniformDictionary } from 'toolkit/rendering/buffers';
+import { UniformDictionary } from 'toolkit/webgpu/buffers';
 
 export interface MaterialComponent extends Component {
     readonly shader: number;

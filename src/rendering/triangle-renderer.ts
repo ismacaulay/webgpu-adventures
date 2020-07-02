@@ -5,7 +5,7 @@
  */
 /// <reference path="../../node_modules/@webgpu/types/dist/index.d.ts" />
 
-import glslangModule from 'toolkit/rendering/shaders/glslang';
+import glslangModule from 'toolkit/webgpu/shaders/glslang';
 // @ts-ignore
 import triangleVert from './shaders/triangle.vert';
 // @ts-ignore
@@ -127,7 +127,7 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
     const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
 
     // load the shader modules
-    //  shader modules are precompiled shader binaries that execute on the gpu. the 
+    //  shader modules are precompiled shader binaries that execute on the gpu. the
     //  glslang wasm library can be used to compile shader src to shader binaries at
     //  runtime. they can also just be a precompiled spir-v binary that gets loaded
     //  using fetch.

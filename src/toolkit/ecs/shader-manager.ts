@@ -1,10 +1,17 @@
-import glslangModule from './glslang';
-import { createShader } from './shader';
+import glslangModule from 'toolkit/webgpu/shaders/glslang';
+import { createShader } from 'toolkit/webgpu/shaders';
+import { Buffer } from 'toolkit/webgpu/buffers';
 
+export interface ShaderBinding {
+    binding: number;
+    visibility: number;
+    type: string;
+    resource: Buffer | GPUSampler | GPUTextureView;
+}
 export interface ShaderInfo {
     vertex: string;
     fragment: string;
-    bindings: any[];
+    bindings: ShaderBinding[];
 }
 
 export interface ShaderManager {

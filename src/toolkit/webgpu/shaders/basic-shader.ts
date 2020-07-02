@@ -55,19 +55,19 @@ void main()
             binding: 0,
             visibility: GPUShaderStage.VERTEX,
             type: 'uniform-buffer',
-            buffer: viewProjectionBuffer,
+            resource: viewProjectionBuffer,
         },
         {
             binding: 1,
             visibility: GPUShaderStage.VERTEX,
             type: 'uniform-buffer',
-            buffer: bufferManager.get(modelBuffer),
+            resource: bufferManager.get(modelBuffer),
         },
         {
             binding: 2,
             visibility: GPUShaderStage.FRAGMENT,
             type: 'uniform-buffer',
-            buffer: bufferManager.get(materialBuffer),
+            resource: bufferManager.get(materialBuffer),
         },
     ];
 

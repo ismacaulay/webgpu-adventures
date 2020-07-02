@@ -33,10 +33,10 @@ export function createShader(
             groupEntries.push({
                 binding: binding.binding,
                 resource: {
-                    buffer: binding.buffer.buffer,
+                    buffer: binding.resource.buffer,
                 },
             });
-            uniformBuffers.push(binding.buffer);
+            uniformBuffers.push(binding.resource);
         } else {
             groupEntries.push({
                 binding: binding.binding,

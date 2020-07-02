@@ -8,6 +8,8 @@ import {
 
 function getSizeForType(type: BufferAttributeType) {
     switch (type) {
+        case BufferAttributeType.Float2:
+            return 4 * 2;
         case BufferAttributeType.Float3:
             return 4 * 3;
         default:
@@ -17,6 +19,8 @@ function getSizeForType(type: BufferAttributeType) {
 
 export function getCountForType(type: BufferAttributeType) {
     switch (type) {
+        case BufferAttributeType.Float2:
+            return 2;
         case BufferAttributeType.Float3:
             return 3;
         default:

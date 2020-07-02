@@ -1,32 +1,25 @@
-import glslangModule from 'toolkit/rendering/shaders/glslang';
+import glslangModule from 'toolkit/webgpu/shaders/glslang';
 import { requestGPU, configureSwapChain } from './utils';
 import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS } from 'utils/cube-vertices';
 
-import { createShader } from 'toolkit/rendering/shaders/shader';
+import { createShader } from 'toolkit/webgpu/shaders/shader';
 
-// @ts-ignore
 import cubePhongVert from './shaders/lighting.vert';
-// @ts-ignore
-import cubePhongFrag from './shaders/lighting.frag';
-// @ts-ignore
+// import cubePhongFrag from './shaders/lighting.frag';
 import cubePhongMaterialFrag from './shaders/lighting-material.frag';
-// @ts-ignore
-import cubeGouraudVert from './shaders/gouraud.vert';
-// @ts-ignore
-import cubeGouraudFrag from './shaders/gouraud.frag';
-// @ts-ignore
+// import cubeGouraudVert from './shaders/gouraud.vert';
+// import cubeGouraudFrag from './shaders/gouraud.frag';
 import lightVert from './shaders/light.vert';
-// @ts-ignore
 import lightFrag from './shaders/light.frag';
 
 import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
 import { createCamera } from 'toolkit/camera/camera';
-import { createUniformBuffer } from 'toolkit/rendering/buffers/uniform-buffer';
-import { createMeshRenderer } from 'toolkit/rendering/meshRenderer';
+import { createUniformBuffer } from 'toolkit/webgpu/buffers/uniform-buffer';
+import { createMeshRenderer } from 'toolkit/webgpu/meshRenderer';
 import {
     createVertexBuffer,
     BufferAttributeType,
-} from 'toolkit/rendering/buffers';
+} from 'toolkit/webgpu/buffers';
 import { vec3, mat4 } from 'gl-matrix';
 
 interface Material {

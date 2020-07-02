@@ -1,15 +1,15 @@
-import { ShaderManager } from 'toolkit/rendering/shaders';
 import { Camera } from 'toolkit/camera/camera';
-import { Renderer, CommandType } from 'toolkit/rendering/renderer';
-import { UniformBuffer, VertexBuffer } from 'toolkit/rendering/buffers';
-import { EntityManager } from './entity-manager';
+import { Renderer, CommandType } from 'toolkit/webgpu/renderer';
+import { UniformBuffer, VertexBuffer } from 'toolkit/webgpu/buffers';
+import { EntityManager } from '../entity-manager';
+import { ShaderManager } from '../shader-manager';
 import {
     ComponentType,
     TransformComponent,
     MaterialComponent,
     GeometryComponent,
-} from './components';
-import { BufferManager, DefaultBuffers } from './buffer-manager';
+} from '../components';
+import { BufferManager, DefaultBuffers } from '../buffer-manager';
 
 export function createRenderSystem(
     entityManager: EntityManager,

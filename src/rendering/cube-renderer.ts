@@ -1,7 +1,7 @@
 import { requestGPU, configureSwapChain, createBuffer } from './utils';
 import CubeVertices from '../utils/cube-vertices';
 import { createTextureFromImage } from '../utils/img-loader';
-import glslangModule from 'toolkit/rendering/shaders/glslang';
+import glslangModule from 'toolkit/webgpu/shaders/glslang';
 // @ts-ignore
 import triangleVert from './shaders/cube.vert';
 // @ts-ignore

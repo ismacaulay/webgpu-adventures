@@ -1,6 +1,6 @@
 import { Component, ComponentType } from './types';
 import { VertexBufferInfo } from '../buffer-manager';
-import { getCountForType } from 'toolkit/rendering/buffers/vertex-buffer';
+import { getCountForType } from 'toolkit/webgpu/buffers/vertex-buffer';
 
 export enum GeometryType {
     Mesh = 'mesh',
