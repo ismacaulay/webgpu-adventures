@@ -1,26 +1,21 @@
 import { createBuffer } from 'rendering/utils';
-
-type UniformValue =
-    | boolean
-    | number
-    | number[]
-    | Float32Array
-    | UniformDictionary;
-
-interface UniformDictionary {
-    [key: string]: UniformValue;
-}
-
-interface UniformLocationDictionary {
-    [key: string]: number;
-}
+import {
+    UniformValue,
+    UniformDictionary,
+    UniformLocationDictionary,
+    UniformBuffer,
+    BufferType,
+} from './types';
 
 export function processUniforms(uniforms: UniformDictionary) {
     let buffer: number[] = [];
     let location = 0;
     const locations: UniformLocationDictionary = {};
 
-    function processUniformsRecursive(uniforms: UniformDictionary, keyBase = '') {
+    function processUniformsRecursive(
+        uniforms: UniformDictionary,
+        keyBase = '',
+    ) {
         const entries = Object.entries(uniforms);
 
         for (let i = 0; i < entries.length; ++i) {
@@ -75,7 +70,7 @@ export function processUniforms(uniforms: UniformDictionary) {
                         // TODO: Base align this properly
                         locations[locationKey] = location;
                         buffer.push(...value);
-                        location += 16
+                        location += 16;
                         break;
                     default:
                         throw new Error(
@@ -89,8 +84,9 @@ export function processUniforms(uniforms: UniformDictionary) {
                     location += padding;
                 }
 
+                locations[locationKey] = true;
                 processUniformsRecursive(value, locationKey);
-                
+
                 if (location % 4 !== 0) {
                     const padding = 4 - (location % 4);
                     buffer.push(...Array(padding).fill(0));
@@ -108,33 +104,68 @@ export function processUniforms(uniforms: UniformDictionary) {
 export function createUniformBuffer(
     device: GPUDevice,
     uniforms: UniformDictionary,
-) {
+): UniformBuffer {
     const { buffer, locations } = processUniforms(uniforms);
-    
+
     const gpuBuffer = createBuffer(
         device,
         buffer,
         GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     );
 
-    return {
-        buffer: gpuBuffer,
-        bufferData: buffer,
+    let needsUpdate = false;
 
-        updateUniform(name: string, value: UniformValue) {
-            const offset = locations[name];
-            if (!(name in locations)) {
-                throw new Error(`Unknown uniform: ${name}`);
+    function updateUniform(name: string, value: UniformValue) {
+        const location = locations[name];
+        if (location === undefined) {
+            throw new Error(`Unknown uniform: ${name}`);
+        }
+
+        if (typeof location === 'boolean') {
+            if (!(typeof value === 'object')) {
+                throw new Error(
+                    `Invalid value given for ${name}. Requires an object`,
+                );
             }
 
+            Object.entries(value).forEach(([key, value]) => {
+                updateUniform(`${name}.${key}`, value);
+            });
+
+            return;
+        } else {
             if (typeof value === 'number') {
-                buffer.set([value], offset);
+                buffer.set([value], location);
             } else if (Array.isArray(value) || value instanceof Float32Array) {
-                buffer.set(value, offset);
+                buffer.set(value, location);
             }
+        }
+
+        needsUpdate = true;
+    }
+
+    return {
+        type: BufferType.Uniform,
+        buffer: gpuBuffer,
+        data: buffer,
+
+        get needsUpdate() {
+            return needsUpdate;
+        },
+        set needsUpdate(value: boolean) {
+            needsUpdate = value;
         },
 
-        updateBuffer() {
+        hasUniform(name: string): boolean {
+            return name in locations;
+        },
+        updateUniform,
+
+        updateBuffer(encoder?: GPUCommandEncoder) {
+            if (!needsUpdate) {
+                return;
+            }
+
             const uploadBuffer = createBuffer(
                 device,
                 buffer,
@@ -142,18 +173,23 @@ export function createUniformBuffer(
             );
 
             // TODO: How efficient is it to create a command encoder and submit it for each buffer update?
-            const encoder = device.createCommandEncoder();
+            const enc = encoder || device.createCommandEncoder();
             // TODO: we should do better than updating the whole buffer as maybe only a few bytes changed
-            encoder.copyBufferToBuffer(
+            enc.copyBufferToBuffer(
                 uploadBuffer,
                 0,
                 gpuBuffer,
                 0,
                 buffer.byteLength,
             );
-            device.defaultQueue.submit([encoder.finish()]);
+
+            if (!encoder) {
+                device.defaultQueue.submit([enc.finish()]);
+            }
 
             uploadBuffer.destroy();
+
+            needsUpdate = false;
         },
 
         destroy() {

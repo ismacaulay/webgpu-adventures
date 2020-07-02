@@ -13,6 +13,7 @@
     "@rollup/plugin-node-resolve": "^7.0.0",
     "@rollup/plugin-typescript": "^4.1.1",
     "@types/dat.gui": "^0.7.5",
+    "@types/gl-matrix": "^2.4.5",
     "@types/jest": "^26.0.3",
     "@types/page": "^1.8.0",
     "@webgpu/types": "^0.0.24",
@@ -30,6 +31,7 @@
     "typescript": "^3.9.2"
   },
   "dependencies": {
+    "gl-matrix": "^3.3.0",
     "page": "^1.11.6",
     "sirv-cli": "^0.4.4",
     "tslib": "^1.12.0"

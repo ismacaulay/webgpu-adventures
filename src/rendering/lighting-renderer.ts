@@ -1,4 +1,5 @@
-import { requestGPU, configureSwapChain, createBuffer } from './utils';
+import glslangModule from 'toolkit/rendering/shaders/glslang';
+import { requestGPU, configureSwapChain } from './utils';
 import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS } from 'utils/cube-vertices';
 
 import { createShader } from 'toolkit/rendering/shaders/shader';
@@ -18,17 +19,15 @@ import lightVert from './shaders/light.vert';
 // @ts-ignore
 import lightFrag from './shaders/light.frag';
 
-import { perspective, radians, identity, rotate } from '../math';
 import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
 import { createCamera } from 'toolkit/camera/camera';
-import { createMat4 } from 'toolkit/math/mat4';
-import { createVec3 } from 'toolkit/math/vec3';
 import { createUniformBuffer } from 'toolkit/rendering/buffers/uniform-buffer';
 import { createMeshRenderer } from 'toolkit/rendering/meshRenderer';
 import {
     createVertexBuffer,
     BufferAttributeType,
-} from 'toolkit/rendering/buffers/vertex-buffer';
+} from 'toolkit/rendering/buffers';
+import { vec3, mat4 } from 'gl-matrix';
 
 interface Material {
     ambient: [number, number, number];
@@ -39,11 +38,11 @@ interface Material {
 
 export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     const camera = createCamera();
-    camera.position.set([0, 0, 3]);
+    vec3.set(camera.position, 0, 0, 3);
     camera.updateViewMatrix();
     const cameraController = createFreeCameraController(canvas, camera);
 
-    const lightPos = createVec3([1.2, 1.0, 2.0]);
+    const lightPos = vec3.fromValues(1.2, 1.0, 2.0);
 
     const gpu = requestGPU();
     const adapter = await gpu.requestAdapter();
@@ -60,27 +59,24 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         [
             {
                 type: BufferAttributeType.Float3,
+                location: 0,
             },
             {
                 type: BufferAttributeType.Float3,
+                location: 1,
             },
         ],
         CUBE_VERTICES_WITH_NORMALS,
     );
 
     const viewProjectionUBO = createUniformBuffer(device, {
-        view: camera.matrix.value,
-        projection: perspective(
-            radians(45.0),
-            canvas.clientWidth / canvas.clientHeight,
-            0.1,
-            100.0,
-        ),
+        view: camera.viewMatrix,
+        projection: camera.projectionMatrix,
     });
 
     // prettier-ignore
     const cubeVertexUBO = createUniformBuffer(device, {
-        model: identity(),
+        model: mat4.create()
 
         // // gouraud shading
         // light_color: [1.0, 1.0, 1.0],
@@ -94,7 +90,7 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         // phong shading
         // light_color: [1.0, 1.0, 1.0],
         // light_pos: lightPos.value,
-        view_pos: camera.position.value,
+        view_pos: camera.position,
 
         // material system
         material: {
@@ -104,7 +100,7 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
             shininess: 32.0,
         },
         light: {
-            position: lightPos.value,
+            position: lightPos,
             // ambient: [0.2, 0.2, 0.2],
             ambient: [1.0, 1.0, 1.0],
             // diffuse: [0.5, 0.5, 0.5],
@@ -113,7 +109,10 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         },
     });
 
-    const cubeShader = await createShader(device, {
+    const glslang = await glslangModule();
+
+    const cubeShader = createShader(device, glslang, {
+        id: 0,
         vertex: cubePhongVert,
         fragment: cubePhongMaterialFrag,
         bindings: [
@@ -121,25 +120,19 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
                 binding: 0,
                 visibility: GPUShaderStage.VERTEX,
                 type: 'uniform-buffer',
-                resource: {
-                    buffer: viewProjectionUBO.buffer,
-                },
+                buffer: viewProjectionUBO,
             },
             {
                 binding: 1,
                 visibility: GPUShaderStage.VERTEX,
                 type: 'uniform-buffer',
-                resource: {
-                    buffer: cubeVertexUBO.buffer,
-                },
+                buffer: cubeVertexUBO,
             },
             {
                 binding: 2,
                 visibility: GPUShaderStage.FRAGMENT,
                 type: 'uniform-buffer',
-                resource: {
-                    buffer: cubeFragmentUBO.buffer,
-                },
+                buffer: cubeFragmentUBO,
             },
         ],
     });
@@ -152,24 +145,26 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         [
             {
                 type: BufferAttributeType.Float3,
+                location: 0,
             },
         ],
         CUBE_VERTICES,
     );
 
-    const lightModelMatrix = createMat4();
-    lightModelMatrix.translate(lightPos);
-    lightModelMatrix.scale(createVec3([0.2, 0.2, 0.2]));
+    const lightModelMatrix = mat4.create();
+    mat4.translate(lightModelMatrix, lightModelMatrix, lightPos);
+    mat4.scale(lightModelMatrix, lightModelMatrix, [0.2, 0.2, 0.2]);
 
     const lightVertexUBO = createUniformBuffer(device, {
-        model: lightModelMatrix.value,
+        model: lightModelMatrix,
     });
 
     const lightFragmentUBO = createUniformBuffer(device, {
         light_color: [1.0, 1.0, 1.0],
     });
 
-    const lightShader = await createShader(device, {
+    const lightShader = createShader(device, glslang, {
+        id: 1,
         vertex: lightVert,
         fragment: lightFrag,
         bindings: [
@@ -177,25 +172,19 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
                 binding: 0,
                 visibility: GPUShaderStage.VERTEX,
                 type: 'uniform-buffer',
-                resource: {
-                    buffer: viewProjectionUBO.buffer,
-                },
+                buffer: viewProjectionUBO,
             },
             {
                 binding: 1,
                 visibility: GPUShaderStage.VERTEX,
                 type: 'uniform-buffer',
-                resource: {
-                    buffer: lightVertexUBO.buffer,
-                },
+                buffer: lightVertexUBO,
             },
             {
                 binding: 2,
                 visibility: GPUShaderStage.FRAGMENT,
                 type: 'uniform-buffer',
-                resource: {
-                    buffer: lightFragmentUBO.buffer,
-                },
+                buffer: lightFragmentUBO,
             },
         ],
     });
@@ -240,27 +229,28 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
             depthStencilAttachment: depthAttachment,
         };
 
-        viewProjectionUBO.updateUniform('view', camera.matrix.value);
-        viewProjectionUBO.updateUniform(
-            'projection',
-            perspective(
-                radians(45.0),
-                canvas.clientWidth / canvas.clientHeight,
-                0.1,
-                100.0,
-            ),
-        );
+        camera.updateViewMatrix();
+        camera.updateProjectionMatrix();
+        viewProjectionUBO.updateUniform('view', camera.viewMatrix);
+        viewProjectionUBO.updateUniform('projection', camera.projectionMatrix);
         viewProjectionUBO.updateBuffer();
 
         lightRotation += delta;
         lightRotation %= 2 * Math.PI;
-        lightPos.set([
+
+        vec3.set(
+            lightPos,
             1.0 * Math.sin(lightRotation),
             1.0,
             1.0 * Math.cos(lightRotation),
-        ]);
-        lightModelMatrix.setTranslation(lightPos);
-        lightVertexUBO.updateUniform('model', lightModelMatrix.value);
+        );
+        mat4.fromRotationTranslationScale(
+            lightModelMatrix,
+            [0, 0, 0, 0],
+            lightPos,
+            [0.2, 0.2, 0.2],
+        );
+        lightVertexUBO.updateUniform('model', lightModelMatrix);
         lightVertexUBO.updateBuffer();
 
         // gouraud shading
@@ -269,8 +259,8 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         // cubeVertexUBO.updateBuffer();
 
         // phong shading
-        cubeFragmentUBO.updateUniform('light.position', lightPos.value);
-        cubeFragmentUBO.updateUniform('view_pos', camera.position.value);
+        cubeFragmentUBO.updateUniform('light.position', lightPos);
+        cubeFragmentUBO.updateUniform('view_pos', camera.position);
         cubeFragmentUBO.updateBuffer();
 
         const commandEncoder: GPUCommandEncoder = device.createCommandEncoder();

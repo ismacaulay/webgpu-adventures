@@ -1,11 +1,15 @@
-import glslangModule from './glslang';
+import { UniformBuffer, UniformDictionary } from '../buffers';
 
-export async function createShader(
+export function createShader(
     device: GPUDevice,
-    { vertex, fragment, bindings }: { vertex: string; fragment: string, bindings?: any[] },
+    glslang: any,
+    {
+        id,
+        vertex,
+        fragment,
+        bindings,
+    }: { id: number; vertex: string; fragment: string; bindings: any[] },
 ) {
-    const glslang = await glslangModule();
-
     const vertexModule: GPUShaderModule = device.createShaderModule({
         code: glslang.compileGLSL(vertex, 'vertex'),
     });
@@ -14,24 +18,47 @@ export async function createShader(
         code: glslang.compileGLSL(fragment, 'fragment'),
     });
 
-    const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
-        entries: bindings ? bindings.map((binding: any) => ({
+    const layoutEntries = [];
+    const groupEntries = [];
+    const uniformBuffers: UniformBuffer[] = [];
+    for (let i = 0; i < bindings.length; ++i) {
+        const binding = bindings[i];
+        layoutEntries.push({
             binding: binding.binding,
             visibility: binding.visibility,
             type: binding.type,
-        })) : [],
+        });
+
+        if (binding.type === 'uniform-buffer') {
+            groupEntries.push({
+                binding: binding.binding,
+                resource: {
+                    buffer: binding.buffer.buffer,
+                },
+            });
+            uniformBuffers.push(binding.buffer);
+        } else {
+            groupEntries.push({
+                binding: binding.binding,
+                resource: binding.resource,
+            });
+        }
+    }
+
+    const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
+        entries: layoutEntries,
     });
     const bindGroup: GPUBindGroup = device.createBindGroup({
         layout: bindGroupLayout,
-        entries: bindings ? bindings.map((binding: any) => ({
-            binding: binding.binding,
-            resource: binding.resource,
-        })) : []
+        entries: groupEntries,
     });
 
     return {
+        id,
         bindGroupLayout,
         bindGroup,
+        buffers: uniformBuffers,
+
         stages: {
             vertexStage: {
                 module: vertexModule,
@@ -41,6 +68,27 @@ export async function createShader(
                 module: fragmentModule,
                 entryPoint: 'main',
             },
+        },
+
+        update(uniforms: UniformDictionary) {
+            Object.entries(uniforms).forEach(([name, value]) => {
+                let found = false;
+                for (let i = 0; i < uniformBuffers.length; ++i) {
+                    const buffer = uniformBuffers[i];
+                    if (buffer.hasUniform(name)) {
+                        buffer.updateUniform(name, value);
+
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    console.warn(
+                        `[shader] Tried to update unknown uniform: ${name}`,
+                    );
+                }
+            });
         },
     };
 }
