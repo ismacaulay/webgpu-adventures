@@ -1,8 +1,8 @@
 <script>
 
     import router from 'page';
-    import HelloWorld from './pages/HelloWorld.svelte';
     import Home from './pages/Home.svelte';
+    import HelloWorld from './pages/HelloWorld.svelte';
     import Cube from './pages/Cube.svelte';
     import RotatingCube from './pages/RotatingCube.svelte';
     import Lighting from './pages/Lighting.svelte';
