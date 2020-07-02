@@ -2,18 +2,16 @@ import { EntityManager } from '../entity-manager';
 import {
     ComponentType,
     MaterialComponent,
-    TransformComponent,
     LightComponent,
+    LightType,
 } from '../components';
 
 export function createLightingSystem(entityManager: EntityManager) {
     return {
         update() {
-            const lights = entityManager.all([
-                ComponentType.Transform,
-                ComponentType.Light,
-            ]);
-
+            debugger;
+            const lights = entityManager.all([ComponentType.Light]);
+            console.log(lights);
             if (lights.length === 0) {
                 return;
             }
@@ -25,16 +23,25 @@ export function createLightingSystem(entityManager: EntityManager) {
 
                 if (material.lighting) {
                     // TODO: How do we handle multiple lights
-                    const lightInfo = lights[0];
-                    const lightTransform = lightInfo[0] as TransformComponent;
-                    const lightColor = lightInfo[0] as LightComponent;
+                    const light = lights[0][0] as LightComponent;
 
-                    material.uniforms.light = {
-                        position: lightTransform.translation,
-                        ambient: lightColor.ambient,
-                        diffuse: lightColor.diffuse,
-                        specular: lightColor.specular,
-                    };
+                    if (light.subtype === LightType.Basic) {
+                        const { position, ambient, diffuse, specular } = light;
+                        material.uniforms.light = {
+                            position,
+                            ambient,
+                            diffuse,
+                            specular,
+                        };
+                    } else if (light.subtype === LightType.Directional) {
+                        const { direction, ambient, diffuse, specular } = light;
+                        material.uniforms.light = {
+                            direction,
+                            ambient,
+                            diffuse,
+                            specular,
+                        };
+                    }
                 }
 
                 result = view.next();

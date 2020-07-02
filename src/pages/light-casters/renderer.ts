@@ -1,6 +1,6 @@
 import { PageOptions, WebGPUPage } from '../types';
 
-import { vec3, mat4 } from 'gl-matrix';
+import { vec3, mat4, quat } from 'gl-matrix';
 import { createRenderer } from 'toolkit/webgpu/renderer';
 import { createCamera, createFreeCameraController } from 'toolkit/camera';
 import {
@@ -17,11 +17,12 @@ import {
 } from 'toolkit/ecs/systems';
 import {
     createTransformComponent,
-    createCircularMovementComponent,
+    // createCircularMovementComponent,
     createLightComponent,
     createBasicMaterialComponent,
     createMeshGeometryComponent,
     createMaterialComponent,
+    createDirectionalLightComponent,
 } from 'toolkit/ecs/components';
 import { getBasicShaderInfo } from 'toolkit/webgpu/shaders/basic-shader';
 import {
@@ -33,6 +34,7 @@ import { Colors } from 'toolkit/materials';
 
 import cubeVertSrc from './shader.vert';
 import cubeFragSrc from './shader.frag';
+import { radians } from 'toolkit/math';
 
 export async function create(
     canvas: HTMLCanvasElement,
@@ -61,103 +63,72 @@ export async function create(
     );
 
     // light
-    const lightShader = shaderManager.create(getBasicShaderInfo(bufferManager));
-    const lightPos = vec3.fromValues(1.2, 1.0, 2.0);
+    // const lightShader = shaderManager.create(getBasicShaderInfo(bufferManager));
+    // const lightPos = vec3.fromValues(1.2, 1.0, 2.0);
+    const lightDir = vec3.fromValues(-0.2, -1.0, -0.3);
     const lightColor = {
         ambient: [0.2, 0.2, 0.2] as vec3,
         diffuse: [0.5, 0.5, 0.5] as vec3,
         specular: [1.0, 1.0, 1.0] as vec3,
     };
 
-    const lightEntity = entityManager.create();
-    entityManager.addComponent(
-        lightEntity,
-        createTransformComponent({
-            translation: lightPos,
-            scale: [0.1, 0.1, 0.1],
-        }),
-    );
+    // const lightEntity = entityManager.create();
     // entityManager.addComponent(
     //     lightEntity,
-    //     createCircularMovementComponent({
-    //         center: [0, 1.0, 0.0],
-    //         axis: [0, 1, 0],
-    //         radius: 1,
-    //         period: 4,
+    //     createTransformComponent({
+    //         translation: lightPos,
+    //         scale: [0.1, 0.1, 0.1],
     //     }),
     // );
-    entityManager.addComponent(
-        lightEntity,
-        createLightComponent({
-            ...lightColor,
-        }),
-    );
+    // // entityManager.addComponent(
+    // //     lightEntity,
+    // //     createCircularMovementComponent({
+    // //         center: [0, 1.0, 0.0],
+    // //         axis: [0, 1, 0],
+    // //         radius: 1,
+    // //         period: 4,
+    // //     }),
+    // // );
+    // entityManager.addComponent(
+    //     lightEntity,
+    //     createDirectionalLightComponent({
+    //         direction: lightDir,
+    //         ...lightColor,
+    //     }),
+    // );
+    //
+    // entityManager.addComponent(
+    //     lightEntity,
+    //     createBasicMaterialComponent({
+    //         shader: lightShader,
+    //         color: Colors.White,
+    //     }),
+    // );
+    // entityManager.addComponent(
+    //     lightEntity,
+    //     createMeshGeometryComponent({
+    //         buffers: [
+    //             {
+    //                 array: CUBE_VERTICES,
+    //                 attributes: [
+    //                     {
+    //                         type: BufferAttributeType.Float3,
+    //                         location: 0,
+    //                     },
+    //                 ],
+    //             },
+    //         ],
+    //     }),
+    // );
 
-    entityManager.addComponent(
-        lightEntity,
-        createBasicMaterialComponent({
-            shader: lightShader,
-            color: Colors.White,
-        }),
-    );
-    entityManager.addComponent(
-        lightEntity,
-        createMeshGeometryComponent({
-            buffers: [
-                {
-                    array: CUBE_VERTICES,
-                    attributes: [
-                        {
-                            type: BufferAttributeType.Float3,
-                            location: 0,
-                        },
-                    ],
-                },
-            ],
-        }),
-    );
-
-    // cube
-    const cubeEntity = entityManager.create();
-    entityManager.addComponent(
-        cubeEntity,
-        createTransformComponent({
-            translation: [0, 0, 0],
-        }),
-    );
-    entityManager.addComponent(
-        cubeEntity,
-        createMeshGeometryComponent({
-            buffers: [
-                {
-                    array: CUBE_VERTICES_WITH_NORMALS_WITH_UV,
-                    attributes: [
-                        {
-                            type: BufferAttributeType.Float3,
-                            location: 0,
-                        },
-                        {
-                            type: BufferAttributeType.Float3,
-                            location: 1,
-                        },
-                        {
-                            type: BufferAttributeType.Float2,
-                            location: 2,
-                        },
-                    ],
-                },
-            ],
-        }),
-    );
-
+    // cubes
     const materialUniforms = {
         view_pos: camera.position,
         material: {
-            specular: [0.5, 0.5, 0.5],
             shininess: 64,
         },
         light: {
-            position: lightPos,
+            direction: lightDir,
             ...lightColor,
         },
     };
@@ -165,9 +136,6 @@ export async function create(
     const viewProjectionBuffer = bufferManager.get(
         DefaultBuffers.ViewProjection,
     );
-    const modelBuffer = bufferManager.createUniformBuffer({
-        model: mat4.create(),
-    });
     const materialBuffer = bufferManager.createUniformBuffer(materialUniforms);
     const sampler = textureManager.createSampler({
         magFilter: 'linear',
@@ -181,68 +149,132 @@ export async function create(
         uri: '/images/container-specular.png',
         usage: GPUTextureUsage.SAMPLED,
     });
-    const cubeShader = shaderManager.create({
-        vertex: cubeVertSrc,
-        fragment: cubeFragSrc,
-        bindings: [
+
+    const cubeVertexBufferDescriptor = {
+        array: CUBE_VERTICES_WITH_NORMALS_WITH_UV,
+        attributes: [
             {
-                binding: 0,
-                visibility: GPUShaderStage.VERTEX,
-                type: 'uniform-buffer',
-                resource: viewProjectionBuffer,
+                type: BufferAttributeType.Float3,
+                location: 0,
             },
             {
-                binding: 1,
-                visibility: GPUShaderStage.VERTEX,
-                type: 'uniform-buffer',
-                resource: bufferManager.get(modelBuffer),
+                type: BufferAttributeType.Float3,
+                location: 1,
             },
             {
-                binding: 2,
-                visibility: GPUShaderStage.FRAGMENT,
-                type: 'uniform-buffer',
-                resource: bufferManager.get(materialBuffer),
-            },
-            {
-                binding: 3,
-                visibility: GPUShaderStage.FRAGMENT,
-                type: 'sampler',
-                resource: textureManager.getSampler(sampler),
-            },
-            {
-                binding: 4,
-                visibility: GPUShaderStage.FRAGMENT,
-                type: 'sampled-texture',
-                resource: textureManager
-                    .getTexture(diffuseTexture)
-                    .createView(),
-            },
-            {
-                binding: 5,
-                visibility: GPUShaderStage.FRAGMENT,
-                type: 'sampler',
-                resource: textureManager.getSampler(sampler),
-            },
-            {
-                binding: 6,
-                visibility: GPUShaderStage.FRAGMENT,
-                type: 'sampled-texture',
-                resource: textureManager
-                    .getTexture(specularTexture)
-                    .createView(),
+                type: BufferAttributeType.Float2,
+                location: 2,
             },
         ],
-    });
+    };
+    const cubeVertexBufferId = bufferManager.createVertexBuffer(
+        cubeVertexBufferDescriptor,
+    );
 
-    const cubeMaterialComponent = createMaterialComponent({
-        shader: cubeShader,
-        uniforms: materialUniforms,
-    });
-    entityManager.addComponent(cubeEntity, cubeMaterialComponent);
+    const cubePositions: vec3[] = [
+        [0.0, 0.0, 0.0],
+        [2.0, 5.0, -15.0],
+        [-1.5, -2.2, -2.5],
+        [-3.8, -2.0, -12.3],
+        [2.4, -0.4, -3.5],
+        [-1.7, 3.0, -7.5],
+        [1.3, -2.0, -2.5],
+        [1.5, 2.0, -2.5],
+        [1.5, 0.2, -1.5],
+        [-1.3, 1.0, -1.5],
+    ];
+
+    for (let i = 0; i < cubePositions.length; ++i) {
+        const cubeEntity = entityManager.create();
+        const angle = 20.0 * i;
+
+        entityManager.addComponent(
+            cubeEntity,
+            createTransformComponent({
+                translation: cubePositions[i],
+                rotation: {
+                    angle: radians(angle),
+                    axis: [1.0, 0.3, 0.5],
+                },
+            }),
+        );
+
+        entityManager.addComponent(
+            cubeEntity,
+            createMeshGeometryComponent({
+                buffers: [
+                    {
+                        id: cubeVertexBufferId,
+                        ...cubeVertexBufferDescriptor,
+                    },
+                ],
+            }),
+        );
+
+        const modelBuffer = bufferManager.createUniformBuffer({
+            model: mat4.create(),
+        });
+        const cubeShader = shaderManager.create({
+            vertex: cubeVertSrc,
+            fragment: cubeFragSrc,
+            bindings: [
+                {
+                    binding: 0,
+                    visibility: GPUShaderStage.VERTEX,
+                    type: 'uniform-buffer',
+                    resource: viewProjectionBuffer,
+                },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.VERTEX,
+                    type: 'uniform-buffer',
+                    resource: bufferManager.get(modelBuffer),
+                },
+                {
+                    binding: 2,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    type: 'uniform-buffer',
+                    resource: bufferManager.get(materialBuffer),
+                },
+                {
+                    binding: 3,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    type: 'sampler',
+                    resource: textureManager.getSampler(sampler),
+                },
+                {
+                    binding: 4,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    type: 'sampled-texture',
+                    resource: textureManager
+                        .getTexture(diffuseTexture)
+                        .createView(),
+                },
+                {
+                    binding: 5,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    type: 'sampler',
+                    resource: textureManager.getSampler(sampler),
+                },
+                {
+                    binding: 6,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    type: 'sampled-texture',
+                    resource: textureManager
+                        .getTexture(specularTexture)
+                        .createView(),
+                },
+            ],
+        });
+        const cubeMaterialComponent = createMaterialComponent({
+            shader: cubeShader,
+            uniforms: materialUniforms,
+        });
+        entityManager.addComponent(cubeEntity, cubeMaterialComponent);
+    }
 
     let rafId = -1;
     let lastTime = performance.now();
-
     const { onRenderBegin = () => {}, onRenderFinish = () => {} } = options;
     function render() {
         onRenderBegin();
