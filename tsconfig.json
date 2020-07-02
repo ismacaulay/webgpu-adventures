@@ -4,7 +4,7 @@
         "paths": {
             "toolkit": ["toolkit"],
             "rendering": ["rendering"],
-            "utils": ["utils"],
+            "utils": ["utils"]
         },
         "target": "es6",
         "sourceMap": true,
