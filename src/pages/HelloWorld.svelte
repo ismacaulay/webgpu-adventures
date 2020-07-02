@@ -12,7 +12,7 @@
             renderer.start();
 
         })();
-     
+
         return () => {
             if (renderer) {
                 renderer.destroy();

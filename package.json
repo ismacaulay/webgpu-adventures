@@ -1,39 +1,39 @@
 {
-  "name": "svelte-app",
-  "version": "1.0.0",
-  "scripts": {
-    "build": "rollup -c",
-    "dev": "rollup -c -w",
-    "start": "sirv public --single",
-    "test": "jest --config jest.config.js",
-    "build:shaders": "scripts/build-triangle-shaders.bat"
-  },
-  "devDependencies": {
-    "@rollup/plugin-commonjs": "11.0.2",
-    "@rollup/plugin-node-resolve": "^7.0.0",
-    "@rollup/plugin-typescript": "^4.1.1",
-    "@types/dat.gui": "^0.7.5",
-    "@types/gl-matrix": "^2.4.5",
-    "@types/jest": "^26.0.3",
-    "@types/page": "^1.8.0",
-    "@webgpu/types": "^0.0.24",
-    "dat.gui": "^0.7.7",
-    "jest": "^26.1.0",
-    "prettier": "^2.0.5",
-    "prettier-plugin-svelte": "^1.1.0",
-    "rollup": "^1.20.0",
-    "rollup-plugin-livereload": "^1.0.0",
-    "rollup-plugin-string": "^3.0.0",
-    "rollup-plugin-svelte": "^5.0.3",
-    "rollup-plugin-terser": "^5.1.2",
-    "svelte": "^3.0.0",
-    "ts-jest": "^26.1.1",
-    "typescript": "^3.9.2"
-  },
-  "dependencies": {
-    "gl-matrix": "^3.3.0",
-    "page": "^1.11.6",
-    "sirv-cli": "^0.4.4",
-    "tslib": "^1.12.0"
-  }
+    "name": "svelte-app",
+    "version": "1.0.0",
+    "scripts": {
+        "build": "webpack --mode=production",
+        "dev": "webpack --watch --mode=development",
+        "start": "webpack-dev-server --config webpack.config.js --history-api-fallback --content-base public",
+        "test": "jest --config jest.config.js"
+    },
+    "devDependencies": {
+        "@types/dat.gui": "^0.7.5",
+        "@types/gl-matrix": "^2.4.5",
+        "@types/jest": "^26.0.3",
+        "@types/page": "^1.8.0",
+        "@webgpu/types": "^0.0.24",
+        "css-loader": "^3.6.0",
+        "jest": "^26.1.0",
+        "mini-css-extract-plugin": "^0.9.0",
+        "prettier": "^2.0.5",
+        "prettier-plugin-svelte": "^1.1.0",
+        "raw-loader": "^4.0.1",
+        "style-loader": "^1.2.1",
+        "svelte-loader": "^2.13.6",
+        "ts-jest": "^26.1.1",
+        "ts-loader": "^7.0.5",
+        "tsconfig-paths-webpack-plugin": "^3.2.0",
+        "tslib": "^2.0.0",
+        "webpack": "^4.43.0",
+        "webpack-cli": "^3.3.12",
+        "webpack-dev-server": "^3.11.0"
+    },
+    "dependencies": {
+        "dat.gui": "^0.7.7",
+        "gl-matrix": "^3.3.0",
+        "page": "^1.11.6",
+        "svelte": "^3.23.2",
+        "typescript": "^3.9.6"
+    }
 }
