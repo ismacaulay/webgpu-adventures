@@ -4,13 +4,15 @@ export type Entity = number;
 
 type ComponentFlags = number;
 type ComponentMap = Map<ComponentType, Component>;
+export type ComponentList = Component[];
 
 export interface EntityManager {
     create(): Entity;
 
     addComponent(entity: Entity, component: Component): void;
-    all(components: ComponentType[]): Component[][];
-    view(components: ComponentType[]): Iterator<Component[]>;
+    get(id: number, components: ComponentType[]): ComponentList;
+    all(components: ComponentType[]): ComponentList[];
+    view(components: ComponentType[]): Iterator<ComponentList>;
 }
 
 export function createEntityManager(): EntityManager {
@@ -98,6 +100,20 @@ export function createEntityManager(): EntityManager {
             }
 
             components.set(component.type, component);
+        },
+
+        get(id: number, components: ComponentType[]) {
+            const entity = entityComponents.get(id);
+            if (!entity) {
+                throw `Unknown entity: ${id}`;
+            }
+
+            const result = [];
+            for (let i = 0; i < components.length; ++i) {
+                result.push(entity.get(components[i]) as Component);
+            }
+
+            return result;
         },
 
         all(components: ComponentType[]): Component[][] {

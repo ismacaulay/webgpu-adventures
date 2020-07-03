@@ -1,8 +1,12 @@
 import { UniformBuffer } from '../buffers';
 import { mat4 } from 'gl-matrix';
 import { BufferManager, DefaultBuffers } from 'toolkit/ecs/buffer-manager';
+import { ShaderBindingType, ShaderBinding } from './types';
+import { ShaderDescriptor } from 'toolkit/ecs';
 
-export function getBasicShaderInfo(bufferManager: BufferManager) {
+export function getBasicShaderInfo(
+    bufferManager: BufferManager,
+): ShaderDescriptor {
     const vertex = `
 #version 450
 
@@ -40,9 +44,6 @@ void main()
 }
 `;
 
-    const viewProjectionBuffer = bufferManager.get<UniformBuffer>(
-        DefaultBuffers.ViewProjection,
-    );
     const modelBuffer = bufferManager.createUniformBuffer({
         model: mat4.create(),
     });
@@ -50,23 +51,23 @@ void main()
         color: [0, 0, 0],
     });
 
-    const bindings = [
+    const bindings: ShaderBinding[] = [
         {
             binding: 0,
             visibility: GPUShaderStage.VERTEX,
-            type: 'uniform-buffer',
-            resource: viewProjectionBuffer,
+            type: ShaderBindingType.UniformBuffer,
+            resource: bufferManager.get(DefaultBuffers.ViewProjection),
         },
         {
             binding: 1,
             visibility: GPUShaderStage.VERTEX,
-            type: 'uniform-buffer',
+            type: ShaderBindingType.UniformBuffer,
             resource: bufferManager.get(modelBuffer),
         },
         {
             binding: 2,
             visibility: GPUShaderStage.FRAGMENT,
-            type: 'uniform-buffer',
+            type: ShaderBindingType.UniformBuffer,
             resource: bufferManager.get(materialBuffer),
         },
     ];

@@ -5,6 +5,7 @@ export enum LightType {
     Basic,
     Directional,
     Point,
+    Spot,
 }
 
 export interface BaseLight {
@@ -18,8 +19,6 @@ export interface BaseLight {
 
 export interface BasicLight extends BaseLight {
     subtype: LightType.Basic;
-
-    position: vec3;
 }
 
 export interface DirectionalLight extends BaseLight {
@@ -31,16 +30,26 @@ export interface DirectionalLight extends BaseLight {
 export interface PointLight extends BaseLight {
     subtype: LightType.Point;
 
-    position: vec3;
     constant: number;
     linear: number;
     quadratic: number;
 }
 
-export type LightComponent = BasicLight | DirectionalLight | PointLight;
+export interface SpotLight extends BaseLight {
+    subtype: LightType.Spot;
+
+    direction: vec3;
+    innerCutoff: number;
+    outerCutoff: number;
+}
+
+export type LightComponent =
+    | BasicLight
+    | DirectionalLight
+    | PointLight
+    | SpotLight;
 
 export function createLightComponent(initial: {
-    position: vec3;
     ambient?: vec3;
     diffuse?: vec3;
     specular?: vec3;
@@ -53,7 +62,6 @@ export function createLightComponent(initial: {
         type: ComponentType.Light,
         subtype: LightType.Basic,
 
-        position: initial.position,
         ambient,
         diffuse,
         specular,
@@ -82,7 +90,6 @@ export function createDirectionalLightComponent(initial: {
 }
 
 export function createPointLightComponent(initial: {
-    position: vec3;
     constant: number;
     linear: number;
     quadratic: number;
@@ -98,10 +105,35 @@ export function createPointLightComponent(initial: {
         type: ComponentType.Light,
         subtype: LightType.Point,
 
-        position: initial.position,
         constant: initial.constant,
         linear: initial.linear,
         quadratic: initial.quadratic,
+
+        ambient,
+        diffuse,
+        specular,
+    };
+}
+
+export function createSpotLightComponent(initial: {
+    direction: vec3;
+    innerCutoff: number;
+    outerCutoff: number;
+    ambient?: vec3;
+    diffuse?: vec3;
+    specular?: vec3;
+}): SpotLight {
+    const ambient = initial.ambient || [1.0, 1.0, 1.0];
+    const diffuse = initial.diffuse || [1.0, 1.0, 1.0];
+    const specular = initial.specular || [1.0, 1.0, 1.0];
+
+    return {
+        type: ComponentType.Light,
+        subtype: LightType.Spot,
+
+        direction: initial.direction,
+        innerCutoff: initial.innerCutoff,
+        outerCutoff: initial.outerCutoff,
 
         ambient,
         diffuse,

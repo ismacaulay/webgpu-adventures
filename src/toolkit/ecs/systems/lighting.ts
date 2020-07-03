@@ -4,12 +4,16 @@ import {
     MaterialComponent,
     LightComponent,
     LightType,
+    TransformComponent,
 } from '../components';
 
 export function createLightingSystem(entityManager: EntityManager) {
     return {
         update() {
-            const lights = entityManager.all([ComponentType.Light]);
+            const lights = entityManager.all([
+                ComponentType.Transform,
+                ComponentType.Light,
+            ]);
             if (lights.length === 0) {
                 return;
             }
@@ -21,12 +25,15 @@ export function createLightingSystem(entityManager: EntityManager) {
 
                 if (material.lighting) {
                     // TODO: How do we handle multiple lights
-                    const light = lights[0][0] as LightComponent;
+                    const transform = lights[0][0] as TransformComponent;
+                    const light = lights[0][1] as LightComponent;
 
                     if (light.subtype === LightType.Basic) {
-                        const { position, ambient, diffuse, specular } = light;
+                        const { ambient, diffuse, specular } = light;
+                        const { translation } = transform;
+
                         material.uniforms.light = {
-                            position,
+                            position: translation,
                             ambient,
                             diffuse,
                             specular,
@@ -40,8 +47,8 @@ export function createLightingSystem(entityManager: EntityManager) {
                             specular,
                         };
                     } else if (light.subtype === LightType.Point) {
+                        const { translation } = transform;
                         const {
-                            position,
                             ambient,
                             diffuse,
                             specular,
@@ -51,10 +58,30 @@ export function createLightingSystem(entityManager: EntityManager) {
                         } = light;
 
                         material.uniforms.light = {
-                            position,
+                            position: translation,
                             constant,
                             linear,
                             quadratic,
+                            ambient,
+                            diffuse,
+                            specular,
+                        };
+                    } else if (light.subtype === LightType.Spot) {
+                        const { translation } = transform;
+                        const {
+                            direction,
+                            innerCutoff,
+                            outerCutoff,
+                            ambient,
+                            diffuse,
+                            specular,
+                        } = light;
+
+                        material.uniforms.light = {
+                            position: translation,
+                            direction,
+                            innerCutoff,
+                            outerCutoff,
                             ambient,
                             diffuse,
                             specular,

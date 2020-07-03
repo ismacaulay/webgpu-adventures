@@ -18,7 +18,7 @@ import {
     createCircularMovementComponent,
 } from 'toolkit/ecs/components';
 import { CUBE_VERTICES, CUBE_NORMALS } from 'utils/cube-vertices';
-import { BufferAttributeType } from 'toolkit/webgpu/buffers';
+import { BufferAttributeType, UniformBuffer } from 'toolkit/webgpu/buffers';
 import { createRenderer } from 'toolkit/webgpu/renderer';
 import { createCamera, createFreeCameraController } from 'toolkit/camera';
 import { vec3, mat4 } from 'gl-matrix';
@@ -29,6 +29,7 @@ import phongFrag from '../../rendering/shaders/phong.frag';
 import { CommonMaterials } from 'toolkit/materials';
 
 import * as dat from 'dat.gui';
+import { ShaderBindingType } from 'toolkit/webgpu/shaders';
 
 export async function create(canvas: HTMLCanvasElement, options: any) {
     const renderer = await createRenderer(canvas);
@@ -64,7 +65,7 @@ export async function create(canvas: HTMLCanvasElement, options: any) {
         specular: [1.0, 1.0, 1.0] as vec3,
     };
 
-    const viewProjectionBuffer = bufferManager.get(
+    const viewProjectionBuffer = bufferManager.get<UniformBuffer>(
         DefaultBuffers.ViewProjection,
     );
     const modelBuffer = bufferManager.createUniformBuffer({
@@ -91,19 +92,19 @@ export async function create(canvas: HTMLCanvasElement, options: any) {
             {
                 binding: 0,
                 visibility: GPUShaderStage.VERTEX,
-                type: 'uniform-buffer',
+                type: ShaderBindingType.UniformBuffer,
                 resource: viewProjectionBuffer,
             },
             {
                 binding: 1,
                 visibility: GPUShaderStage.VERTEX,
-                type: 'uniform-buffer',
+                type: ShaderBindingType.UniformBuffer,
                 resource: bufferManager.get(modelBuffer),
             },
             {
                 binding: 2,
                 visibility: GPUShaderStage.FRAGMENT,
-                type: 'uniform-buffer',
+                type: ShaderBindingType.UniformBuffer,
                 resource: bufferManager.get(materialBuffer),
             },
         ],
@@ -129,10 +130,10 @@ export async function create(canvas: HTMLCanvasElement, options: any) {
     entityManager.addComponent(
         lightEntity,
         createLightComponent({
+            position: lightPos,
             ...lightColor,
         }),
     );
-
     entityManager.addComponent(
         lightEntity,
         createBasicMaterialComponent({
