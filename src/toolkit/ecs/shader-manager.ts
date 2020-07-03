@@ -1,14 +1,11 @@
 import glslangModule from 'toolkit/webgpu/shaders/glslang';
-import { createShader } from 'toolkit/webgpu/shaders';
-import { Buffer } from 'toolkit/webgpu/buffers';
+import {
+    ShaderBinding,
+    createShader,
+    cloneShader,
+} from 'toolkit/webgpu/shaders';
 
-export interface ShaderBinding {
-    binding: number;
-    visibility: number;
-    type: string;
-    resource: Buffer | GPUSampler | GPUTextureView;
-}
-export interface ShaderInfo {
+export interface ShaderDescriptor {
     vertex: string;
     fragment: string;
     bindings: ShaderBinding[];
@@ -16,7 +13,7 @@ export interface ShaderInfo {
 
 export interface ShaderManager {
     get(id: number): any;
-    create(info: ShaderInfo): number;
+    create(descriptor: ShaderDescriptor): number;
 }
 
 export async function createShaderManager(device: GPUDevice) {
@@ -24,7 +21,8 @@ export async function createShaderManager(device: GPUDevice) {
 
     const storage: any = {};
 
-    let next = 0;
+    let storageId = 0;
+    let shaderId = 0;
 
     return {
         get(id: number) {
@@ -36,18 +34,31 @@ export async function createShaderManager(device: GPUDevice) {
             return shader;
         },
 
-        create({ vertex, fragment, bindings }: ShaderInfo) {
-            const id = next;
-            next++;
-
+        create({ vertex, fragment, bindings }: ShaderDescriptor) {
             const shader = createShader(device, glslang, {
-                id,
+                id: shaderId,
                 vertex,
                 fragment,
                 bindings,
             });
+            shaderId++;
+
+            const id = storageId;
+            storageId++;
             storage[id] = shader;
             return id;
+        },
+
+        clone(id: number, bindings: ShaderBinding[]) {
+            const shader = storage[id];
+            if (!shader) {
+                throw new Error(`Unknown shader: ${id}`);
+            }
+
+            const next = storageId;
+            storageId++;
+            storage[next] = cloneShader(device, shader, bindings);
+            return next;
         },
     };
 }

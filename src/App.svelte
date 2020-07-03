@@ -8,6 +8,7 @@
     import Lighting from './pages/Lighting.svelte';
     import ECS from './pages/ecs/Page.svelte';
     import LightingMaps from './pages/lighting-maps/Page.svelte';
+    import LightCasters from './pages/light-casters/Page.svelte';
 
     const examples = [
         { title: 'hello-world', component: HelloWorld },
@@ -16,6 +17,7 @@
         { title: 'learn-opengl/transformations', component: RotatingCube },
         { title: 'learn-opengl/materials', component: Lighting },
         { title: 'learn-opengl/lighting-maps', component: LightingMaps },
+        { title: 'learn-opengl/light-casters', component: LightCasters },
     ];
 
     let page;

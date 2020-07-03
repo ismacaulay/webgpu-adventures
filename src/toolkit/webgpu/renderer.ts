@@ -183,7 +183,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
             passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
 
             // process the draw calls
-            const lastShaderId = -1;
+            let lastShaderId = -1;
             for (let i = 0; i < draws.length; ++i) {
                 const { shader, buffers, count } = draws[i];
 
@@ -191,12 +191,11 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
                     passEncoder.setPipeline(
                         createRenderPipeline(device, shader, buffers),
                     );
+                    lastShaderId = shader.id;
                 }
 
-                // TODO: Shaders should be able to share the same
-                // stages, but can have different bind groups.
-                // Bind groups dictate what buffers are bound
                 passEncoder.setBindGroup(0, shader.bindGroup);
+
                 buffers.forEach((buf: VertexBuffer, idx: number) => {
                     passEncoder.setVertexBuffer(idx, buf.buffer);
                 });

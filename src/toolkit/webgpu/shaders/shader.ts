@@ -1,4 +1,51 @@
 import { UniformBuffer, UniformDictionary } from '../buffers';
+import { ShaderBinding, Shader, ShaderBindingType } from './types';
+
+function processBindings(bindings: ShaderBinding[]) {
+    const entries: GPUBindGroupEntry[] = [];
+    const buffers: UniformBuffer[] = [];
+
+    for (let i = 0; i < bindings.length; ++i) {
+        const binding = bindings[i];
+        if (binding.type === ShaderBindingType.UniformBuffer) {
+            buffers.push(binding.resource);
+            entries.push({
+                binding: binding.binding,
+                resource: {
+                    buffer: binding.resource.buffer,
+                },
+            });
+        } else {
+            entries.push({
+                binding: binding.binding,
+                resource: binding.resource,
+            });
+        }
+    }
+
+    return {
+        buffers,
+        entries,
+    };
+}
+function updateBuffers(buffers: UniformBuffer[], uniforms: UniformDictionary) {
+    Object.entries(uniforms).forEach(([name, value]) => {
+        let found = false;
+        for (let i = 0; i < buffers.length; ++i) {
+            const buffer = buffers[i];
+            if (buffer.hasUniform(name)) {
+                buffer.updateUniform(name, value);
+
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            console.warn(`[shader] Tried to update unknown uniform: ${name}`);
+        }
+    });
+}
 
 export function createShader(
     device: GPUDevice,
@@ -9,86 +56,58 @@ export function createShader(
         fragment,
         bindings,
     }: { id: number; vertex: string; fragment: string; bindings: any[] },
-) {
-    const vertexModule: GPUShaderModule = device.createShaderModule({
-        code: glslang.compileGLSL(vertex, 'vertex'),
-    });
-
-    const fragmentModule: GPUShaderModule = device.createShaderModule({
-        code: glslang.compileGLSL(fragment, 'fragment'),
-    });
-
-    const layoutEntries = [];
-    const groupEntries = [];
-    const uniformBuffers: UniformBuffer[] = [];
-    for (let i = 0; i < bindings.length; ++i) {
-        const binding = bindings[i];
-        layoutEntries.push({
+): Shader {
+    const { buffers, entries } = processBindings(bindings);
+    const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
+        entries: bindings.map(binding => ({
             binding: binding.binding,
             visibility: binding.visibility,
             type: binding.type,
-        });
-
-        if (binding.type === 'uniform-buffer') {
-            groupEntries.push({
-                binding: binding.binding,
-                resource: {
-                    buffer: binding.resource.buffer,
-                },
-            });
-            uniformBuffers.push(binding.resource);
-        } else {
-            groupEntries.push({
-                binding: binding.binding,
-                resource: binding.resource,
-            });
-        }
-    }
-
-    const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
-        entries: layoutEntries,
-    });
-    const bindGroup: GPUBindGroup = device.createBindGroup({
-        layout: bindGroupLayout,
-        entries: groupEntries,
+        })),
     });
 
     return {
         id,
-        bindGroupLayout,
-        bindGroup,
-        buffers: uniformBuffers,
-
         stages: {
             vertexStage: {
-                module: vertexModule,
+                module: device.createShaderModule({
+                    code: glslang.compileGLSL(vertex, 'vertex'),
+                }),
                 entryPoint: 'main',
             },
             fragmentStage: {
-                module: fragmentModule,
+                module: device.createShaderModule({
+                    code: glslang.compileGLSL(fragment, 'fragment'),
+                }),
                 entryPoint: 'main',
             },
         },
 
-        update(uniforms: UniformDictionary) {
-            Object.entries(uniforms).forEach(([name, value]) => {
-                let found = false;
-                for (let i = 0; i < uniformBuffers.length; ++i) {
-                    const buffer = uniformBuffers[i];
-                    if (buffer.hasUniform(name)) {
-                        buffer.updateUniform(name, value);
+        bindGroupLayout,
+        bindGroup: device.createBindGroup({ layout: bindGroupLayout, entries }),
+        buffers,
 
-                        found = true;
-                        break;
-                    }
-                }
+        update: (uniforms: UniformDictionary) =>
+            updateBuffers(buffers, uniforms),
+    };
+}
 
-                if (!found) {
-                    console.warn(
-                        `[shader] Tried to update unknown uniform: ${name}`,
-                    );
-                }
-            });
-        },
+export function cloneShader(
+    device: GPUDevice,
+    shader: any,
+    bindings: ShaderBinding[],
+): Shader {
+    const { id, bindGroupLayout, stages } = shader;
+    const { buffers, entries } = processBindings(bindings);
+
+    return {
+        id,
+        stages,
+        bindGroupLayout,
+        bindGroup: device.createBindGroup({ layout: bindGroupLayout, entries }),
+        buffers,
+
+        update: (uniforms: UniformDictionary) =>
+            updateBuffers(buffers, uniforms),
     };
 }

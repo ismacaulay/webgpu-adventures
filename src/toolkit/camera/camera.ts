@@ -5,6 +5,8 @@ export interface Camera {
     readonly up: vec3;
     readonly target: vec3;
 
+    readonly direction: vec3;
+
     readonly viewMatrix: mat4;
     readonly projectionMatrix: mat4;
 
@@ -26,7 +28,7 @@ export function createCamera() {
     const target = vec3.create();
 
     const fov = glMatrix.toRadian(45);
-    let _aspect = 1;
+    let aspect = 1;
     const near = 0.1;
     const far = 1000;
 
@@ -35,7 +37,7 @@ export function createCamera() {
     }
 
     function updateProjectionMatrix() {
-        mat4.perspective(projectionMatrix, fov, _aspect, near, far);
+        mat4.perspective(projectionMatrix, fov, aspect, near, far);
     }
 
     updateViewMatrix();
@@ -46,15 +48,20 @@ export function createCamera() {
         up,
         target,
 
+        get direction() {
+            const dir = vec3.create();
+            return vec3.normalize(dir, vec3.sub(dir, target, position));
+        },
+
         viewMatrix,
         projectionMatrix,
 
         fov,
         get aspect() {
-            return _aspect;
+            return aspect;
         },
         set aspect(value: number) {
-            _aspect = value;
+            aspect = value;
         },
         near,
         far,

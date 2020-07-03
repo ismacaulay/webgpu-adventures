@@ -1,10 +1,15 @@
 import { ComponentType, Component } from './types';
-import { vec3, mat4 } from 'gl-matrix';
+import { vec3, mat4, quat } from 'gl-matrix';
 
 export interface TransformComponent extends Component {
     type: ComponentType.Transform;
 
     translation: vec3;
+    // TODO: this should be a quat
+    rotation: {
+        angle: number;
+        axis: vec3;
+    };
     scale: vec3;
 
     readonly matrix: mat4;
@@ -12,21 +17,32 @@ export interface TransformComponent extends Component {
 
 export function createTransformComponent(initial: {
     translation?: vec3;
+    rotation?: { angle: number; axis: vec3 };
     scale?: vec3;
 }): TransformComponent {
-    let _translation = initial.translation
+    let translation = initial.translation
         ? vec3.clone(initial.translation)
         : vec3.fromValues(0, 0, 0);
-    let _scale = initial.scale
+    let rotation = initial.rotation
+        ? {
+              angle: initial.rotation.angle,
+              axis: vec3.clone(initial.rotation.axis),
+          }
+        : {
+              angle: 0,
+              axis: vec3.create(),
+          };
+    let scale = initial.scale
         ? vec3.clone(initial.scale)
         : vec3.fromValues(1, 1, 1);
 
-    let _matrix = mat4.create();
+    const matrix = mat4.create();
 
     function updateMatrix() {
-        _matrix = mat4.create();
-        mat4.translate(_matrix, _matrix, _translation);
-        mat4.scale(_matrix, _matrix, _scale);
+        mat4.identity(matrix);
+        mat4.translate(matrix, matrix, translation);
+        mat4.rotate(matrix, matrix, rotation.angle, rotation.axis);
+        mat4.scale(matrix, matrix, scale);
     }
     updateMatrix();
 
@@ -34,23 +50,34 @@ export function createTransformComponent(initial: {
         type: ComponentType.Transform,
 
         set translation(t: vec3) {
-            _translation = vec3.clone(t);
+            translation = vec3.clone(t);
             updateMatrix();
         },
         get translation() {
-            return _translation;
+            return translation;
+        },
+
+        set rotation(r: any) {
+            rotation = {
+                angle: r.angle,
+                axis: vec3.clone(r.axis),
+            };
+            updateMatrix();
+        },
+        get rotation() {
+            return rotation;
         },
 
         set scale(s: vec3) {
-            _scale = vec3.clone(s);
+            scale = vec3.clone(s);
             updateMatrix();
         },
         get scale() {
-            return _scale;
+            return scale;
         },
 
         get matrix() {
-            return _matrix;
+            return matrix;
         },
     };
 }
