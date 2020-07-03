@@ -23,6 +23,7 @@ import {
     createMeshGeometryComponent,
     createMaterialComponent,
     createDirectionalLightComponent,
+    createPointLightComponent,
 } from 'toolkit/ecs/components';
 import { getBasicShaderInfo } from 'toolkit/webgpu/shaders/basic-shader';
 import {
@@ -63,63 +64,64 @@ export async function create(
     );
 
     // light
-    // const lightShader = shaderManager.create(getBasicShaderInfo(bufferManager));
-    // const lightPos = vec3.fromValues(1.2, 1.0, 2.0);
+    const lightShader = shaderManager.create(getBasicShaderInfo(bufferManager));
+    const lightPos = vec3.fromValues(1.2, 1.0, 2.0);
     const lightDir = vec3.fromValues(-0.2, -1.0, -0.3);
+
     const lightColor = {
         ambient: [0.2, 0.2, 0.2] as vec3,
         diffuse: [0.5, 0.5, 0.5] as vec3,
         specular: [1.0, 1.0, 1.0] as vec3,
     };
+    const directionalLightDescriptor = {
+        direction: lightDir,
+        ...lightColor,
+    };
+    const pointLightDescriptor = {
+        position: lightPos,
+        constant: 1.0,
+        linear: 0.09,
+        quadratic: 0.032,
+        ...lightColor,
+    };
 
-    // const lightEntity = entityManager.create();
-    // entityManager.addComponent(
-    //     lightEntity,
-    //     createTransformComponent({
-    //         translation: lightPos,
-    //         scale: [0.1, 0.1, 0.1],
-    //     }),
-    // );
-    // // entityManager.addComponent(
-    // //     lightEntity,
-    // //     createCircularMovementComponent({
-    // //         center: [0, 1.0, 0.0],
-    // //         axis: [0, 1, 0],
-    // //         radius: 1,
-    // //         period: 4,
-    // //     }),
-    // // );
-    // entityManager.addComponent(
-    //     lightEntity,
-    //     createDirectionalLightComponent({
-    //         direction: lightDir,
-    //         ...lightColor,
-    //     }),
-    // );
-    //
-    // entityManager.addComponent(
-    //     lightEntity,
-    //     createBasicMaterialComponent({
-    //         shader: lightShader,
-    //         color: Colors.White,
-    //     }),
-    // );
-    // entityManager.addComponent(
-    //     lightEntity,
-    //     createMeshGeometryComponent({
-    //         buffers: [
-    //             {
-    //                 array: CUBE_VERTICES,
-    //                 attributes: [
-    //                     {
-    //                         type: BufferAttributeType.Float3,
-    //                         location: 0,
-    //                     },
-    //                 ],
-    //             },
-    //         ],
-    //     }),
-    // );
+    const lightEntity = entityManager.create();
+    entityManager.addComponent(
+        lightEntity,
+        createTransformComponent({
+            translation: lightPos,
+            scale: [0.1, 0.1, 0.1],
+        }),
+    );
+    entityManager.addComponent(
+        lightEntity,
+        // createDirectionalLightComponent(directionalLightDescriptor),
+        createPointLightComponent(pointLightDescriptor),
+    );
+
+    entityManager.addComponent(
+        lightEntity,
+        createBasicMaterialComponent({
+            shader: lightShader,
+            color: Colors.White,
+        }),
+    );
+    entityManager.addComponent(
+        lightEntity,
+        createMeshGeometryComponent({
+            buffers: [
+                {
+                    array: CUBE_VERTICES,
+                    attributes: [
+                        {
+                            type: BufferAttributeType.Float3,
+                            location: 0,
+                        },
+                    ],
+                },
+            ],
+        }),
+    );
 
     // cubes
     const materialUniforms = {
@@ -128,8 +130,8 @@ export async function create(
             shininess: 64,
         },
         light: {
-            direction: lightDir,
-            ...lightColor,
+            // ...directionalLightDescriptor,
+            ...pointLightDescriptor,
         },
     };
 

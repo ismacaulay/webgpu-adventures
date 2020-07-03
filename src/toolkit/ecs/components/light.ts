@@ -4,6 +4,7 @@ import { ComponentType } from './types';
 export enum LightType {
     Basic,
     Directional,
+    Point,
 }
 
 export interface BaseLight {
@@ -27,7 +28,16 @@ export interface DirectionalLight extends BaseLight {
     direction: vec3;
 }
 
-export type LightComponent = BasicLight | DirectionalLight;
+export interface PointLight extends BaseLight {
+    subtype: LightType.Point;
+
+    position: vec3;
+    constant: number;
+    linear: number;
+    quadratic: number;
+}
+
+export type LightComponent = BasicLight | DirectionalLight | PointLight;
 
 export function createLightComponent(initial: {
     position: vec3;
@@ -65,6 +75,34 @@ export function createDirectionalLightComponent(initial: {
         subtype: LightType.Directional,
 
         direction: initial.direction,
+        ambient,
+        diffuse,
+        specular,
+    };
+}
+
+export function createPointLightComponent(initial: {
+    position: vec3;
+    constant: number;
+    linear: number;
+    quadratic: number;
+    ambient?: vec3;
+    diffuse?: vec3;
+    specular?: vec3;
+}): PointLight {
+    const ambient = initial.ambient || [1.0, 1.0, 1.0];
+    const diffuse = initial.diffuse || [1.0, 1.0, 1.0];
+    const specular = initial.specular || [1.0, 1.0, 1.0];
+
+    return {
+        type: ComponentType.Light,
+        subtype: LightType.Point,
+
+        position: initial.position,
+        constant: initial.constant,
+        linear: initial.linear,
+        quadratic: initial.quadratic,
+
         ambient,
         diffuse,
         specular,

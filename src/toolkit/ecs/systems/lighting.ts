@@ -9,9 +9,7 @@ import {
 export function createLightingSystem(entityManager: EntityManager) {
     return {
         update() {
-            debugger;
             const lights = entityManager.all([ComponentType.Light]);
-            console.log(lights);
             if (lights.length === 0) {
                 return;
             }
@@ -37,6 +35,26 @@ export function createLightingSystem(entityManager: EntityManager) {
                         const { direction, ambient, diffuse, specular } = light;
                         material.uniforms.light = {
                             direction,
+                            ambient,
+                            diffuse,
+                            specular,
+                        };
+                    } else if (light.subtype === LightType.Point) {
+                        const {
+                            position,
+                            ambient,
+                            diffuse,
+                            specular,
+                            constant,
+                            linear,
+                            quadratic,
+                        } = light;
+
+                        material.uniforms.light = {
+                            position,
+                            constant,
+                            linear,
+                            quadratic,
                             ambient,
                             diffuse,
                             specular,
