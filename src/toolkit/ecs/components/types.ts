@@ -7,8 +7,11 @@ export enum ComponentType {
     Material = 4,
     Movement = 8,
     Light = 16,
+    Script = 32,
 }
 
 export interface Component {
     type: ComponentType;
+
+    [key: string]: any;
 }

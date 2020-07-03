@@ -13,6 +13,8 @@ export interface EntityManager {
     get(id: number, components: ComponentType[]): ComponentList;
     all(components: ComponentType[]): ComponentList[];
     view(components: ComponentType[]): Iterator<ComponentList>;
+
+    destroy(): void;
 }
 
 export function createEntityManager(): EntityManager {
@@ -130,6 +132,11 @@ export function createEntityManager(): EntityManager {
 
         view(components: ComponentType[]): Iterator<Component[]> {
             return buildComponentIterator(components);
+        },
+
+        destroy() {
+            entityComponents.clear();
+            entityComponentFlags.clear();
         },
     };
 }

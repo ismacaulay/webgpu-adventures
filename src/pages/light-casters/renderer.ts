@@ -11,6 +11,7 @@ import {
     createTextureManager,
 } from 'toolkit/ecs';
 import {
+    createScriptSystem,
     createMovementSystem,
     createLightingSystem,
     createRenderSystem,
@@ -23,8 +24,11 @@ import {
     createMeshGeometryComponent,
     createMaterialComponent,
     // createDirectionalLightComponent,
-    createPointLightComponent,
+    // createPointLightComponent,
     createSpotLightComponent,
+    ComponentType,
+    TransformComponent,
+    SpotLight,
 } from 'toolkit/ecs/components';
 import { getBasicShaderInfo } from 'toolkit/webgpu/shaders/basic-shader';
 import {
@@ -38,7 +42,6 @@ import cubeVertSrc from './shader.vert';
 import cubeFragSrc from './shader.frag';
 import { radians } from 'toolkit/math';
 import { ShaderBindingType, ShaderBinding } from 'toolkit/webgpu/shaders';
-import { createFlashlightSystem } from './flashlight';
 
 export async function create(
     canvas: HTMLCanvasElement,
@@ -56,6 +59,7 @@ export async function create(
     const shaderManager = await createShaderManager(renderer.device);
     const textureManager = createTextureManager(renderer.device);
 
+    const scriptSystem = createScriptSystem(entityManager);
     const movementSystem = createMovementSystem(entityManager);
     const lightingSystem = createLightingSystem(entityManager);
     const renderSystem = createRenderSystem(
@@ -110,6 +114,21 @@ export async function create(
         // createPointLightComponent(pointLightDescriptor),
         createSpotLightComponent(spotLightDescriptor),
     );
+    entityManager.addComponent(lightEntity, {
+        type: ComponentType.Script,
+        update: () => {
+            const components = entityManager.get(lightEntity, [
+                ComponentType.Transform,
+                ComponentType.Light,
+            ]);
+
+            const transform = components[0] as TransformComponent;
+            const light = components[1] as SpotLight;
+
+            transform.translation = camera.position;
+            light.direction = camera.direction;
+        },
+    });
     entityManager.addComponent(
         lightEntity,
         createBasicMaterialComponent({
@@ -132,12 +151,6 @@ export async function create(
                 },
             ],
         }),
-    );
-
-    const flashlightSystem = createFlashlightSystem(
-        lightEntity,
-        entityManager,
-        camera,
     );
 
     // cubes
@@ -315,8 +328,7 @@ export async function create(
         camera.aspect = canvas.clientWidth / canvas.clientHeight;
         camera.updateProjectionMatrix();
 
-        flashlightSystem.update();
-
+        scriptSystem.update(dt);
         movementSystem.update(dt);
         lightingSystem.update();
         renderSystem.update();
@@ -334,6 +346,7 @@ export async function create(
 
             textureManager.destroy();
             bufferManager.destroy();
+            entityManager.destroy();
 
             cameraController.destroy();
         },
