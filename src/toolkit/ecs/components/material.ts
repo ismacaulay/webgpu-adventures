@@ -4,8 +4,7 @@ import { UniformDictionary } from 'toolkit/webgpu/buffers';
 
 export interface MaterialComponent extends Component {
     readonly shader: number;
-
-    readonly uniforms: any;
+    readonly uniforms: UniformDictionary;
 
     readonly lighting: boolean;
 }

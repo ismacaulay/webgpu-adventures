@@ -1,15 +1,10 @@
-import { requestGPU, configureSwapChain, createBuffer } from './utils';
-import CubeVertices from '../utils/cube-vertices';
-import { createTextureFromImage } from '../utils/img-loader';
+import { mat4, glMatrix } from 'gl-matrix';
+import { requestGPU, configureSwapChain, createBuffer } from 'toolkit/webgpu/utils';
+import CubeVertices from 'utils/cube-vertices';
+import { createTextureFromImage } from 'utils/img-loader';
 import glslangModule from 'toolkit/webgpu/shaders/glslang';
-// @ts-ignore
-import triangleVert from './shaders/cube.vert';
-// @ts-ignore
-import triangleFrag from './shaders/cube.frag';
-
-import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
-import { createCamera } from 'toolkit/camera/camera';
-import { vec3, mat4 } from 'gl-matrix';
+import triangleVert from './shader.vert';
+import triangleFrag from './shader.frag';
 
 export async function createCubeRenderer(canvas: HTMLCanvasElement) {
     const gpu = requestGPU();
@@ -22,11 +17,7 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         format: swapChainFormat,
     });
 
-    const positionsBuffer = createBuffer(
-        device,
-        CubeVertices,
-        GPUBufferUsage.VERTEX,
-    );
+    const positionsBuffer = createBuffer(device, CubeVertices, GPUBufferUsage.VERTEX);
     const positionBufferDescriptor: GPUVertexBufferLayoutDescriptor = {
         attributes: [
             {
@@ -49,17 +40,24 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         stepMode: 'vertex',
     };
 
-    const camera = createCamera();
-    vec3.set(camera.position, 0, 0, 3);
-    camera.updateViewMatrix();
+    const modelMatrix = mat4.create();
 
-    const cameraController = createFreeCameraController(canvas, camera);
+    const viewMatrix = mat4.create();
+    mat4.translate(viewMatrix, viewMatrix, [0, 0, -3]);
 
+    const projectionMatrix = mat4.create();
+    mat4.perspective(
+        projectionMatrix,
+        glMatrix.toRadian(45),
+        canvas.clientWidth / canvas.clientHeight,
+        0.1,
+        100.0,
+    );
     // prettier-ignore
     const uniforms = new Float32Array([
-        ...mat4.create(),
-        ...camera.viewMatrix,
-        ...camera.projectionMatrix,
+        ...modelMatrix,
+        ...viewMatrix,
+        ...projectionMatrix
     ]);
 
     const cubeTexture = await createTextureFromImage(
@@ -84,32 +82,30 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         fragmentUniforms,
         GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     );
-    const uniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout(
-        {
-            entries: [
-                {
-                    binding: 0,
-                    visibility: GPUShaderStage.VERTEX, // specify the stage which has access to the binding
-                    type: 'uniform-buffer',
-                },
-                {
-                    binding: 1,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    type: 'sampler',
-                },
-                {
-                    binding: 2,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    type: 'sampled-texture',
-                },
-                {
-                    binding: 3,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    type: 'uniform-buffer',
-                },
-            ],
-        },
-    );
+    const uniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
+        entries: [
+            {
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX, // specify the stage which has access to the binding
+                type: 'uniform-buffer',
+            },
+            {
+                binding: 1,
+                visibility: GPUShaderStage.FRAGMENT,
+                type: 'sampler',
+            },
+            {
+                binding: 2,
+                visibility: GPUShaderStage.FRAGMENT,
+                type: 'sampled-texture',
+            },
+            {
+                binding: 3,
+                visibility: GPUShaderStage.FRAGMENT,
+                type: 'uniform-buffer',
+            },
+        ],
+    });
     const uniformBindGroup: GPUBindGroup = device.createBindGroup({
         layout: uniformBindGroupLayout,
         entries: [
@@ -198,9 +194,7 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
             cullMode: 'none',
         },
     };
-    const pipeline: GPURenderPipeline = device.createRenderPipeline(
-        pipelineDescriptor,
-    );
+    const pipeline: GPURenderPipeline = device.createRenderPipeline(pipelineDescriptor);
 
     let colorTexture: GPUTexture = swapChain.getCurrentTexture();
     let colorTextureView: GPUTextureView = colorTexture.createView();
@@ -218,9 +212,6 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC,
     });
     const depthTextureView: GPUTextureView = depthTexture.createView();
-
-    const model = mat4.create();
-    let textureOpacity = 1.0;
 
     function encodeCommands(delta: number) {
         const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
@@ -244,49 +235,26 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
 
         const commandEncoder: GPUCommandEncoder = device.createCommandEncoder();
 
-        // prettier-ignore
-        const mvp = new Float32Array([
-            // model matrix
-            ...model,
-
-            // view Matrix
-            ...camera.viewMatrix,
-            // ...translate(identity(), [0, 0, -3.0]),
-
-            // projection Matrix
-            ...camera.projectionMatrix,
-        ]);
-        const uploadBuffer = createBuffer(device, mvp, GPUBufferUsage.COPY_SRC);
-        commandEncoder.copyBufferToBuffer(
-            uploadBuffer,
-            0,
-            uniformBuffer,
-            0,
-            mvp.byteLength,
+        mat4.rotate(modelMatrix, modelMatrix, delta * glMatrix.toRadian(45), [0.5, 1.0, 0.0]);
+        mat4.perspective(
+            projectionMatrix,
+            glMatrix.toRadian(45),
+            canvas.clientWidth / canvas.clientHeight,
+            0.1,
+            100.0,
         );
 
-        const fragmentUniforms = new Float32Array([textureOpacity]);
-        const fragmentUploadBuffer = createBuffer(
-            device,
-            fragmentUniforms,
-            GPUBufferUsage.COPY_SRC,
-        );
-        commandEncoder.copyBufferToBuffer(
-            fragmentUploadBuffer,
-            0,
-            fragmentUniformBuffer,
-            0,
-            fragmentUniforms.byteLength,
-        );
+        const matrices = Float32Array.from([...modelMatrix, ...viewMatrix, ...projectionMatrix]);
+        const uploadBuffer = createBuffer(device, matrices, GPUBufferUsage.COPY_SRC);
+        commandEncoder.copyBufferToBuffer(uploadBuffer, 0, uniformBuffer, 0, matrices.byteLength);
 
         const passEncoder: GPURenderPassEncoder = commandEncoder.beginRenderPass(
             renderPassDescriptor,
         );
-        passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
-        passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
-
         passEncoder.setPipeline(pipeline);
         passEncoder.setBindGroup(0, uniformBindGroup);
+        passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
+        passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
         passEncoder.setVertexBuffer(0, positionsBuffer);
         passEncoder.draw(36, 1, 0, 0);
         passEncoder.endPass();
@@ -294,7 +262,6 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
         device.defaultQueue.submit([commandEncoder.finish()]);
 
         uploadBuffer.destroy();
-        fragmentUploadBuffer.destroy();
     }
 
     let rafId: number;
@@ -302,11 +269,8 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
 
     function render() {
         const now = performance.now();
-        const dt = (now - lastTime) / 1000;
+        const dt = now - lastTime;
         lastTime = now;
-        cameraController.update(dt);
-        camera.updateViewMatrix();
-        camera.updateProjectionMatrix();
 
         colorTexture = swapChain.getCurrentTexture();
         colorTextureView = colorTexture.createView();
@@ -319,29 +283,26 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
 
     return {
         enableTextures(state: number) {
-            textureOpacity = state;
-            // const fragmentUniforms = new Float32Array([state]);
-            // const uploadBuffer = createBuffer(
-            //     device,
-            //     fragmentUniforms,
-            //     GPUBufferUsage.COPY_SRC,
-            // );
-            // const commandEncoder = device.createCommandEncoder();
-            // commandEncoder.copyBufferToBuffer(
-            //     uploadBuffer,
-            //     0,
-            //     fragmentUniformBuffer,
-            //     0,
-            //     fragmentUniforms.byteLength,
-            // );
-            // device.defaultQueue.submit([commandEncoder.finish()]);
+            const fragmentUniforms = new Float32Array([state]);
+            const uploadBuffer = createBuffer(device, fragmentUniforms, GPUBufferUsage.COPY_SRC);
+            const commandEncoder = device.createCommandEncoder();
+            // TODO: I dont think this is a good idea to submit a command
+            // outside the standard render loop. It seems to flicker alot
+            // compared to doing it in the render loop.
+            commandEncoder.copyBufferToBuffer(
+                uploadBuffer,
+                0,
+                fragmentUniformBuffer,
+                0,
+                fragmentUniforms.byteLength,
+            );
+            device.defaultQueue.submit([commandEncoder.finish()]);
         },
         destroy() {
             if (rafId) {
                 cancelAnimationFrame(rafId);
             }
 
-            cameraController.destroy();
             positionsBuffer.destroy();
             uniformBuffer.destroy();
             fragmentUniformBuffer.destroy();

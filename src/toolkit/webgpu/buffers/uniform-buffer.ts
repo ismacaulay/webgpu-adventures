@@ -1,21 +1,99 @@
-import { createBuffer } from 'rendering/utils';
+import { createBuffer } from '../utils';
 import {
     UniformValue,
-    UniformDictionary,
     UniformLocationDictionary,
     UniformBuffer,
     BufferType,
+    UniformBufferDescriptor,
+    UniformType,
+    UniformDictionary,
 } from './types';
 
-export function processUniforms(uniforms: UniformDictionary) {
-    let buffer: number[] = [];
-    let location = 0;
+function getSizeForUniformType(type: UniformType) {
+    switch (type) {
+        case UniformType.Scalar:
+            return 1;
+        case UniformType.Vec2:
+            return 2;
+        case UniformType.Vec3:
+            return 3;
+        case UniformType.Vec4:
+            return 4;
+        case UniformType.Mat2:
+        case UniformType.Mat2x3:
+        case UniformType.Mat2x4:
+            return 8;
+        case UniformType.Mat3x2:
+        case UniformType.Mat3:
+        case UniformType.Mat3x4:
+            return 12;
+        case UniformType.Mat4x2:
+        case UniformType.Mat4x3:
+        case UniformType.Mat4:
+            return 16;
+        default:
+            throw new Error(`Unknown uniform type: ${type}`);
+    }
+}
+
+function locationForValue(value: UniformType, offset: number) {
+    switch (value) {
+        case UniformType.Scalar:
+        case UniformType.Vec2:
+        case UniformType.Vec3:
+        case UniformType.Vec4:
+            return offset;
+        case UniformType.Mat2:
+            return { offset, c: 2, r: 2 };
+        case UniformType.Mat2x3:
+            return { offset, c: 2, r: 3 };
+        case UniformType.Mat2x4:
+            return { offset, c: 2, r: 4 };
+        case UniformType.Mat3x2:
+            return { offset, c: 3, r: 2 };
+        case UniformType.Mat3:
+            return { offset, c: 3, r: 3 };
+        case UniformType.Mat3x4:
+            return { offset, c: 3, r: 4 };
+        case UniformType.Mat4x2:
+            return { offset, c: 4, r: 2 };
+        case UniformType.Mat4x3:
+            return { offset, c: 4, r: 3 };
+        case UniformType.Mat4:
+            return { offset, c: 4, r: 4 };
+        default:
+            throw new Error(`Unknown matrix type: ${value}`);
+    }
+}
+
+function convertValueToBuffer(value: ArrayLike<number>, c: number, r: number) {
+    const buffer = new Float32Array(c * 4);
+    for (let i = 0; i < c; ++i) {
+        for (let j = 0; j < r; j++) {
+            buffer[4 * i + j] = value[r * i + j];
+        }
+    }
+    return buffer;
+}
+
+function computeTwoBytePadding(offset: number) {
+    if (offset % 2 !== 0) {
+        return 1;
+    }
+    return 0;
+}
+function computeFourBytePadding(offset: number) {
+    if (offset % 4 !== 0) {
+        return 4 - (offset % 4);
+    }
+    return 0;
+}
+
+export function processUniforms(uniforms: UniformBufferDescriptor) {
+    let offset = 0;
     const locations: UniformLocationDictionary = {};
 
-    function processUniformsRecursive(
-        uniforms: UniformDictionary,
-        keyBase = '',
-    ) {
+    function processUniformsRecursive(uniforms: UniformBufferDescriptor, keyBase = '') {
         const entries = Object.entries(uniforms);
 
         for (let i = 0; i < entries.length; ++i) {
@@ -26,95 +104,66 @@ export function processUniforms(uniforms: UniformDictionary) {
                 locationKey = `${keyBase}.${key}`;
             }
 
-            if (typeof value === 'number') {
-                locations[locationKey] = location;
-                buffer.push(value);
-                location += 1;
-            } else if (typeof value === 'boolean') {
-                locations[locationKey] = location;
-                buffer.push(+value);
-                location += 1;
-            } else if (Array.isArray(value) || value instanceof Float32Array) {
-                switch (value.length) {
-                    case 2:
-                        if (location % 2 !== 0) {
-                            buffer.push(0);
-                            location += 1;
-                        }
+            if (Array.isArray(value)) {
+                const [descriptor, length] = value;
+                if (typeof descriptor === 'object') {
+                    locations[locationKey] = true;
+                    for (let j = 0; j < length; ++j) {
+                        offset += computeFourBytePadding(offset);
 
-                        locations[locationKey] = location;
-                        buffer.push(...value);
-                        location += 2;
-                        break;
-                    case 3:
-                        if (location % 4 !== 0) {
-                            const padding = 4 - (location % 4);
-                            buffer.push(...Array(padding).fill(0));
-                            location += padding;
-                        }
-                        locations[locationKey] = location;
-                        buffer.push(...value);
-                        location += 3;
-                        break;
-                    case 4:
-                        if (location % 4 !== 0) {
-                            const padding = 4 - (location % 4);
-                            buffer.push(...Array(padding).fill(0));
-                            location += padding;
-                        }
-                        locations[locationKey] = location;
-                        buffer.push(...value);
-                        location += 4;
-                        break;
-                    case 16:
-                        // TODO: Base align this properly
-                        locations[locationKey] = location;
-                        buffer.push(...value);
-                        location += 16;
-                        break;
-                    default:
-                        throw new Error(
-                            `Unable to handle arrays of length: ${value.length}`,
-                        );
+                        const arrLocationKey = `${locationKey}[${j}]`;
+                        locations[arrLocationKey] = true;
+                        processUniformsRecursive(descriptor, arrLocationKey);
+
+                        offset += computeFourBytePadding(offset);
+                    }
+                } else {
+                    offset += computeFourBytePadding(offset);
+                    locations[locationKey] = true;
+
+                    for (let j = 0; j < length; ++j) {
+                        locations[`${locationKey}[${j}]`] = locationForValue(descriptor, offset);
+                        offset += getSizeForUniformType(descriptor);
+                        offset += computeFourBytePadding(offset);
+                    }
                 }
             } else if (typeof value === 'object') {
-                if (location % 4 !== 0) {
-                    const padding = 4 - (location % 4);
-                    buffer.push(...Array(padding).fill(0));
-                    location += padding;
-                }
+                offset += computeFourBytePadding(offset);
 
                 locations[locationKey] = true;
                 processUniformsRecursive(value, locationKey);
 
-                if (location % 4 !== 0) {
-                    const padding = 4 - (location % 4);
-                    buffer.push(...Array(padding).fill(0));
-                    location += padding;
+                offset += computeFourBytePadding(offset);
+            } else {
+                if (value === UniformType.Scalar) {
+                    // no padding
+                } else if (value === UniformType.Vec2) {
+                    offset += computeTwoBytePadding(offset);
+                } else if (value === UniformType.Vec3 || value === UniformType.Vec4) {
+                    offset += computeFourBytePadding(offset);
+                } else {
+                    // padding for matrix types
+                    offset += computeFourBytePadding(offset);
                 }
+
+                locations[locationKey] = locationForValue(value, offset);
+                offset += getSizeForUniformType(value);
             }
         }
     }
 
     processUniformsRecursive(uniforms);
-
-    return { buffer: Float32Array.from(buffer), locations };
+    return { buffer: new Float32Array(offset), locations };
 }
 
 export function createUniformBuffer(
     device: GPUDevice,
-    uniforms: UniformDictionary,
+    descriptor: UniformBufferDescriptor,
+    values?: UniformDictionary,
 ): UniformBuffer {
-    const { buffer, locations } = processUniforms(uniforms);
-
-    const gpuBuffer = createBuffer(
-        device,
-        buffer,
-        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    );
+    const { buffer, locations } = processUniforms(descriptor);
 
     let needsUpdate = false;
-
     function updateUniform(name: string, value: UniformValue) {
         const location = locations[name];
         if (location === undefined) {
@@ -122,27 +171,47 @@ export function createUniformBuffer(
         }
 
         if (typeof location === 'boolean') {
-            if (!(typeof value === 'object')) {
-                throw new Error(
-                    `Invalid value given for ${name}. Requires an object`,
-                );
+            if (Array.isArray(value)) {
+                value.forEach((v: UniformValue, idx: number) => {
+                    updateUniform(`${name}[${idx}]`, v);
+                });
+            } else {
+                Object.entries(value).forEach(([k, v]) => {
+                    updateUniform(`${name}.${k}`, v);
+                });
             }
 
-            Object.entries(value).forEach(([key, value]) => {
-                updateUniform(`${name}.${key}`, value);
-            });
-
             return;
+        } else if (typeof location === 'object') {
+            const { offset, c, r } = location;
+            buffer.set(convertValueToBuffer(value as ArrayLike<number>, c, r), offset);
         } else {
             if (typeof value === 'number') {
                 buffer.set([value], location);
             } else if (Array.isArray(value) || value instanceof Float32Array) {
-                buffer.set(value, location);
+                buffer.set(value as ArrayLike<number>, location);
+            } else if (typeof value === 'boolean') {
+                buffer.set([+value], location);
             }
         }
 
         needsUpdate = true;
     }
+
+    function updateUniforms(uniforms: UniformDictionary) {
+        Object.entries(uniforms).forEach(([key, value]) => updateUniform(key, value));
+    }
+
+    if (values) {
+        updateUniforms(values);
+        needsUpdate = false;
+    }
+
+    const gpuBuffer = createBuffer(
+        device,
+        buffer,
+        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    );
 
     return {
         type: BufferType.Uniform,
@@ -160,37 +229,7 @@ export function createUniformBuffer(
             return name in locations;
         },
         updateUniform,
-
-        updateBuffer(encoder?: GPUCommandEncoder) {
-            if (!needsUpdate) {
-                return;
-            }
-
-            const uploadBuffer = createBuffer(
-                device,
-                buffer,
-                GPUBufferUsage.COPY_SRC,
-            );
-
-            // TODO: How efficient is it to create a command encoder and submit it for each buffer update?
-            const enc = encoder || device.createCommandEncoder();
-            // TODO: we should do better than updating the whole buffer as maybe only a few bytes changed
-            enc.copyBufferToBuffer(
-                uploadBuffer,
-                0,
-                gpuBuffer,
-                0,
-                buffer.byteLength,
-            );
-
-            if (!encoder) {
-                device.defaultQueue.submit([enc.finish()]);
-            }
-
-            uploadBuffer.destroy();
-
-            needsUpdate = false;
-        },
+        updateUniforms,
 
         destroy() {
             gpuBuffer.destroy();

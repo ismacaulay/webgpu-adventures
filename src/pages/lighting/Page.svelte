@@ -1,8 +1,8 @@
 <script>
-    import { createLightingRenderer } from 'rendering/lighting-renderer';
+    import { createLightingRenderer } from './renderer';
     import { CommonMaterials } from 'toolkit/materials'
     import { onMount } from 'svelte';
-    import Canvas from '../components/Canvas.svelte';
+    import Canvas from 'components/Canvas.svelte';
     import * as dat from 'dat.gui';
 
     function uiModel() {

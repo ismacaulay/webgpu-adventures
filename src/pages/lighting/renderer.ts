@@ -1,9 +1,7 @@
 import glslangModule from 'toolkit/webgpu/shaders/glslang';
-import { requestGPU, configureSwapChain } from './utils';
+import { requestGPU, configureSwapChain } from 'toolkit/webgpu/utils';
 import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS } from 'utils/cube-vertices';
-
 import { createShader } from 'toolkit/webgpu/shaders/shader';
-
 import cubePhongVert from './shaders/lighting.vert';
 // import cubePhongFrag from './shaders/lighting.frag';
 import cubePhongMaterialFrag from './shaders/lighting-material.frag';
@@ -16,11 +14,9 @@ import { createFreeCameraController } from 'toolkit/camera/free-camera-controlle
 import { createCamera } from 'toolkit/camera/camera';
 import { createUniformBuffer } from 'toolkit/webgpu/buffers/uniform-buffer';
 import { createMeshRenderer } from 'toolkit/webgpu/meshRenderer';
-import {
-    createVertexBuffer,
-    BufferAttributeType,
-} from 'toolkit/webgpu/buffers';
+import { createVertexBuffer, BufferAttributeType, UniformType } from 'toolkit/webgpu/buffers';
 import { vec3, mat4 } from 'gl-matrix';
+import { copyBufferToBuffer } from 'toolkit/webgpu/utils';
 
 interface Material {
     ambient: [number, number, number];
@@ -63,21 +59,47 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     );
 
     const viewProjectionUBO = createUniformBuffer(device, {
-        view: camera.viewMatrix,
-        projection: camera.projectionMatrix,
+        view: UniformType.Mat4,
+        projection: UniformType.Mat4,
     });
+    viewProjectionUBO.updateUniform('view', camera.viewMatrix);
+    viewProjectionUBO.updateUniform('projection', camera.projectionMatrix);
 
     // prettier-ignore
     const cubeVertexUBO = createUniformBuffer(device, {
-        model: mat4.create()
+        model: UniformType.Mat4,
 
         // // gouraud shading
         // light_color: [1.0, 1.0, 1.0],
         // light_pos: lightPos.value,
         // view_pos: camera.position.value,
+    }, {
+        model: mat4.create(),
     })
 
     const cubeFragmentUBO = createUniformBuffer(device, {
+        // object_color: [1.0, 0.5, 0.31],
+
+        // phong shading
+        // light_color: [1.0, 1.0, 1.0],
+        // light_pos: lightPos.value,
+        view_pos: UniformType.Vec3,
+
+        // material system
+        material: {
+            ambient: UniformType.Vec3,
+            diffuse: UniformType.Vec3,
+            specular: UniformType.Vec3,
+            shininess: UniformType.Scalar,
+        },
+        light: {
+            position: UniformType.Vec3,
+            ambient: UniformType.Vec3,
+            diffuse: UniformType.Vec3,
+            specular: UniformType.Vec3,
+        },
+    });
+    cubeFragmentUBO.updateUniforms({
         // object_color: [1.0, 0.5, 0.31],
 
         // phong shading
@@ -149,12 +171,21 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
     mat4.scale(lightModelMatrix, lightModelMatrix, [0.2, 0.2, 0.2]);
 
     const lightVertexUBO = createUniformBuffer(device, {
+        model: UniformType.Mat4,
+    });
+    lightVertexUBO.updateUniforms({
         model: lightModelMatrix,
     });
 
-    const lightFragmentUBO = createUniformBuffer(device, {
-        light_color: [1.0, 1.0, 1.0],
-    });
+    const lightFragmentUBO = createUniformBuffer(
+        device,
+        {
+            light_color: UniformType.Vec3,
+        },
+        {
+            light_color: [1.0, 1.0, 1.0],
+        },
+    );
 
     const lightShader = createShader(device, glslang, {
         id: 1,
@@ -226,25 +257,17 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         camera.updateProjectionMatrix();
         viewProjectionUBO.updateUniform('view', camera.viewMatrix);
         viewProjectionUBO.updateUniform('projection', camera.projectionMatrix);
-        viewProjectionUBO.updateBuffer();
 
         lightRotation += delta;
         lightRotation %= 2 * Math.PI;
 
-        vec3.set(
-            lightPos,
-            1.0 * Math.sin(lightRotation),
-            1.0,
-            1.0 * Math.cos(lightRotation),
-        );
-        mat4.fromRotationTranslationScale(
-            lightModelMatrix,
-            [0, 0, 0, 0],
-            lightPos,
-            [0.2, 0.2, 0.2],
-        );
+        vec3.set(lightPos, 1.0 * Math.sin(lightRotation), 1.0, 1.0 * Math.cos(lightRotation));
+        mat4.fromRotationTranslationScale(lightModelMatrix, [0, 0, 0, 0], lightPos, [
+            0.2,
+            0.2,
+            0.2,
+        ]);
         lightVertexUBO.updateUniform('model', lightModelMatrix);
-        lightVertexUBO.updateBuffer();
 
         // gouraud shading
         // cubeVertexUBO.updateUniform('light_pos', lightPos.value);
@@ -254,9 +277,23 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         // phong shading
         cubeFragmentUBO.updateUniform('light.position', lightPos);
         cubeFragmentUBO.updateUniform('view_pos', camera.position);
-        cubeFragmentUBO.updateBuffer();
 
         const commandEncoder: GPUCommandEncoder = device.createCommandEncoder();
+        const cleanups = [
+            copyBufferToBuffer(
+                device,
+                commandEncoder,
+                viewProjectionUBO.data,
+                viewProjectionUBO.buffer,
+            ),
+            copyBufferToBuffer(device, commandEncoder, lightVertexUBO.data, lightVertexUBO.buffer),
+            copyBufferToBuffer(
+                device,
+                commandEncoder,
+                cubeFragmentUBO.data,
+                cubeFragmentUBO.buffer,
+            ),
+        ];
 
         const passEncoder: GPURenderPassEncoder = commandEncoder.beginRenderPass(
             renderPassDescriptor,
@@ -270,6 +307,8 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         passEncoder.endPass();
 
         device.defaultQueue.submit([commandEncoder.finish()]);
+
+        cleanups.forEach(fn => fn());
     }
 
     let rafId: number;
@@ -280,6 +319,9 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         const dt = (now - lastTime) / 1000;
         lastTime = now;
         cameraController.update(dt);
+
+        camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        camera.updateProjectionMatrix();
 
         colorTexture = swapChain.getCurrentTexture();
         colorTextureView = colorTexture.createView();
@@ -294,14 +336,8 @@ export async function createLightingRenderer(canvas: HTMLCanvasElement) {
         setMaterial(material: Material) {
             cubeFragmentUBO.updateUniform('material.ambient', material.ambient);
             cubeFragmentUBO.updateUniform('material.diffuse', material.diffuse);
-            cubeFragmentUBO.updateUniform(
-                'material.specular',
-                material.specular,
-            );
-            cubeFragmentUBO.updateUniform(
-                'material.shininess',
-                material.shininess,
-            );
+            cubeFragmentUBO.updateUniform('material.specular', material.specular);
+            cubeFragmentUBO.updateUniform('material.shininess', material.shininess);
         },
         destroy() {
             if (rafId) {

@@ -1,12 +1,10 @@
-import { UniformBuffer } from '../buffers';
+import { UniformBuffer, UniformType } from '../buffers';
 import { mat4 } from 'gl-matrix';
 import { BufferManager, DefaultBuffers } from 'toolkit/ecs/buffer-manager';
 import { ShaderBindingType, ShaderBinding } from './types';
 import { ShaderDescriptor } from 'toolkit/ecs';
 
-export function getBasicShaderInfo(
-    bufferManager: BufferManager,
-): ShaderDescriptor {
+export function getBasicShaderInfo(bufferManager: BufferManager): ShaderDescriptor {
     const vertex = `
 #version 450
 
@@ -44,12 +42,22 @@ void main()
 }
 `;
 
-    const modelBuffer = bufferManager.createUniformBuffer({
-        model: mat4.create(),
-    });
-    const materialBuffer = bufferManager.createUniformBuffer({
-        color: [0, 0, 0],
-    });
+    const modelBuffer = bufferManager.createUniformBuffer(
+        {
+            model: UniformType.Mat4,
+        },
+        {
+            model: mat4.create(),
+        },
+    );
+    const materialBuffer = bufferManager.createUniformBuffer(
+        {
+            color: UniformType.Vec3,
+        },
+        {
+            color: [0, 0, 0],
+        },
+    );
 
     const bindings: ShaderBinding[] = [
         {

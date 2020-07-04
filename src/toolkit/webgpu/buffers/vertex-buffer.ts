@@ -1,10 +1,5 @@
-import { createBuffer } from 'rendering/utils';
-import {
-    BufferAttributeType,
-    BufferAttribute,
-    VertexBuffer,
-    BufferType,
-} from './types';
+import { createBuffer } from '../utils';
+import { BufferAttributeType, BufferAttribute, VertexBuffer, BufferType } from './types';
 
 function getSizeForType(type: BufferAttributeType) {
     switch (type) {
@@ -52,9 +47,7 @@ export function createVertexBuffer(
     attributes: BufferAttribute[],
     data: Float32Array,
 ): VertexBuffer {
-    const { attributes: gpuAttributes, stride } = buildGPUVertexAttributes(
-        attributes,
-    );
+    const { attributes: gpuAttributes, stride } = buildGPUVertexAttributes(attributes);
 
     const descriptor: GPUVertexBufferLayoutDescriptor = {
         attributes: gpuAttributes,

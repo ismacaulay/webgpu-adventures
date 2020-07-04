@@ -3,29 +3,18 @@
  * It is extremely verbose so that all of the typing information can be specified
  * for every step of building the rendering pipeline.
  */
-/// <reference path="../../node_modules/@webgpu/types/dist/index.d.ts" />
-
 import glslangModule from 'toolkit/webgpu/shaders/glslang';
-// @ts-ignore
-import triangleVert from './shaders/triangle.vert';
-// @ts-ignore
-import triangleFrag from './shaders/triangle.frag';
+import triangleVert from './triangle.vert';
+import triangleFrag from './triangle.frag';
 
-export function createBuffer(
-    device: GPUDevice,
-    src: Float32Array | Uint16Array,
-    usage: number,
-) {
+export function createBuffer(device: GPUDevice, src: Float32Array | Uint16Array, usage: number) {
     // create a buffer
     //  the simplest way is to create a mapped buffer, then write the array to the mapping
     //  you can also create a buffer, then request the mapping afterwards (not sure how to yet)
     //  finally, you can use copyBufferToBuffer to copy the data from one buffer to another
 
     const descriptor: GPUBufferDescriptor = { size: src.byteLength, usage };
-    const [buffer, mapping]: [
-        GPUBuffer,
-        ArrayBuffer,
-    ] = device.createBufferMapped(descriptor);
+    const [buffer, mapping]: [GPUBuffer, ArrayBuffer] = device.createBufferMapped(descriptor);
     // write the data to the mapped buffer
     new (src as any).constructor(mapping).set(src);
     // the buffer needs to be unmapped before it can be submitted to the queue
@@ -74,9 +63,7 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
         device,
         format: 'bgra8unorm',
     };
-    const swapchain: GPUSwapChain = context.configureSwapChain(
-        swapChainDescriptor,
-    );
+    const swapchain: GPUSwapChain = context.configureSwapChain(swapChainDescriptor);
 
     // create some framebuffer attachments
     //      these are the output textures to write to. these could
@@ -94,9 +81,7 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
         format: 'depth24plus-stencil8',
         usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC,
     };
-    const depthTexture: GPUTexture = device.createTexture(
-        depthTextureDescriptor,
-    );
+    const depthTexture: GPUTexture = device.createTexture(depthTextureDescriptor);
     const depthTextureView: GPUTextureView = depthTexture.createView();
 
     let colorTexture: GPUTexture = swapchain.getCurrentTexture();
@@ -109,11 +94,7 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
         1.0, -1.0, 0.0,
         0.0, 1.0, 0.0,
     ]);
-    const positionBuffer = createBuffer(
-        device,
-        positions,
-        GPUBufferUsage.VERTEX,
-    );
+    const positionBuffer = createBuffer(device, positions, GPUBufferUsage.VERTEX);
 
     // prettier-ignore
     const colors = new Float32Array([
@@ -154,28 +135,22 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
         0.0, 0.0, 1.0, 0.0,
         0.0, 0.0, 0.0, 1.0,
     ]);
-    const uniformBuffer: GPUBuffer = createBuffer(
-        device,
-        uniforms,
-        GPUBufferUsage.UNIFORM,
-    );
+    const uniformBuffer: GPUBuffer = createBuffer(device, uniforms, GPUBufferUsage.UNIFORM);
 
     // create a pipeline layout to describe where the uniform will be when executing a graphics pipeline
     //
     // a GPUBindGroupLayout defines the interface between a set of resource bound in the GPUBindGroup and
     // their accessibility in shader stages. A GPUBindGroupLayoutEntry describes a single shader resource
     // binding to be included in a GPUBindGroupLayout
-    const uniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout(
-        {
-            entries: [
-                {
-                    binding: 0,
-                    visibility: GPUShaderStage.VERTEX, // specify the stage which has access to the binding
-                    type: 'uniform-buffer',
-                },
-            ],
-        },
-    );
+    const uniformBindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({
+        entries: [
+            {
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX, // specify the stage which has access to the binding
+                type: 'uniform-buffer',
+            },
+        ],
+    });
     // a GPUBindGroup defines a set of resources to be bound together in a group and how the resources
     // how the resources are used in shader stages
     const uniformBindGroup: GPUBindGroup = device.createBindGroup({
@@ -286,9 +261,7 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
         vertexState,
         rasterizationState,
     };
-    const pipeline: GPURenderPipeline = device.createRenderPipeline(
-        pipelineDescriptor,
-    );
+    const pipeline: GPURenderPipeline = device.createRenderPipeline(pipelineDescriptor);
 
     // command encoder
     //      command encoders encode all the draw commands you intend to execute in groups of

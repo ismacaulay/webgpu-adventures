@@ -26,10 +26,7 @@ export function createRenderSystem(
                 DefaultBuffers.ViewProjection,
             );
             viewProjectionBuffer.updateUniform('view', camera.viewMatrix);
-            viewProjectionBuffer.updateUniform(
-                'projection',
-                camera.projectionMatrix,
-            );
+            viewProjectionBuffer.updateUniform('projection', camera.projectionMatrix);
             renderer.submit({
                 type: CommandType.CopySrcToDst,
                 src: viewProjectionBuffer.data,

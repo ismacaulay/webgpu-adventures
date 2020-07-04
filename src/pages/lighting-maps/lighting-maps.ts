@@ -17,27 +17,20 @@ import {
 } from 'toolkit/ecs/systems';
 import {
     createTransformComponent,
-    createCircularMovementComponent,
-    createLightComponent,
     createBasicMaterialComponent,
     createMeshGeometryComponent,
     createMaterialComponent,
 } from 'toolkit/ecs/components';
 import { getBasicShaderInfo } from 'toolkit/webgpu/shaders/basic-shader';
-import {
-    CUBE_VERTICES,
-    CUBE_VERTICES_WITH_NORMALS_WITH_UV,
-} from 'utils/cube-vertices';
-import { BufferAttributeType } from 'toolkit/webgpu/buffers';
+import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS_WITH_UV } from 'utils/cube-vertices';
+import { BufferAttributeType, UniformType, UniformBuffer } from 'toolkit/webgpu/buffers';
 import { Colors } from 'toolkit/materials';
 
 import cubeVertSrc from './shader.vert';
 import cubeFragSrc from './shader.frag';
+import { ShaderBindingType } from 'toolkit/webgpu/shaders';
 
-export async function create(
-    canvas: HTMLCanvasElement,
-    options: PageOptions,
-): Promise<WebGPUPage> {
+export async function create(canvas: HTMLCanvasElement, options: PageOptions): Promise<WebGPUPage> {
     const renderer = await createRenderer(canvas);
 
     const camera = createCamera();
@@ -51,7 +44,6 @@ export async function create(
     const textureManager = createTextureManager(renderer.device);
 
     const movementSystem = createMovementSystem(entityManager);
-    const lightingSystem = createLightingSystem(entityManager);
     const renderSystem = createRenderSystem(
         entityManager,
         shaderManager,
@@ -86,12 +78,6 @@ export async function create(
     //         period: 4,
     //     }),
     // );
-    entityManager.addComponent(
-        lightEntity,
-        createLightComponent({
-            ...lightColor,
-        }),
-    );
 
     entityManager.addComponent(
         lightEntity,
@@ -162,13 +148,32 @@ export async function create(
         },
     };
 
-    const viewProjectionBuffer = bufferManager.get(
-        DefaultBuffers.ViewProjection,
+    const viewProjectionBuffer = bufferManager.get<UniformBuffer>(DefaultBuffers.ViewProjection);
+    const modelBuffer = bufferManager.createUniformBuffer(
+        {
+            model: UniformType.Mat4,
+        },
+        {
+            model: mat4.create(),
+        },
     );
-    const modelBuffer = bufferManager.createUniformBuffer({
-        model: mat4.create(),
-    });
-    const materialBuffer = bufferManager.createUniformBuffer(materialUniforms);
+    const materialBuffer = bufferManager.createUniformBuffer(
+        {
+            view_pos: UniformType.Vec3,
+            material: {
+                specular: UniformType.Vec3,
+                shininess: UniformType.Scalar,
+            },
+            light: {
+                position: UniformType.Vec3,
+                ambient: UniformType.Vec3,
+                diffuse: UniformType.Vec3,
+                specular: UniformType.Vec3,
+            },
+        },
+
+        materialUniforms,
+    );
     const sampler = textureManager.createSampler({
         magFilter: 'linear',
         minFilter: 'linear',
@@ -188,48 +193,44 @@ export async function create(
             {
                 binding: 0,
                 visibility: GPUShaderStage.VERTEX,
-                type: 'uniform-buffer',
+                type: ShaderBindingType.UniformBuffer,
                 resource: viewProjectionBuffer,
             },
             {
                 binding: 1,
                 visibility: GPUShaderStage.VERTEX,
-                type: 'uniform-buffer',
+                type: ShaderBindingType.UniformBuffer,
                 resource: bufferManager.get(modelBuffer),
             },
             {
                 binding: 2,
                 visibility: GPUShaderStage.FRAGMENT,
-                type: 'uniform-buffer',
+                type: ShaderBindingType.UniformBuffer,
                 resource: bufferManager.get(materialBuffer),
             },
             {
                 binding: 3,
                 visibility: GPUShaderStage.FRAGMENT,
-                type: 'sampler',
+                type: ShaderBindingType.Sampler,
                 resource: textureManager.getSampler(sampler),
             },
             {
                 binding: 4,
                 visibility: GPUShaderStage.FRAGMENT,
-                type: 'sampled-texture',
-                resource: textureManager
-                    .getTexture(diffuseTexture)
-                    .createView(),
+                type: ShaderBindingType.SampledTexture,
+                resource: textureManager.getTexture(diffuseTexture).createView(),
             },
             {
                 binding: 5,
                 visibility: GPUShaderStage.FRAGMENT,
-                type: 'sampler',
+                type: ShaderBindingType.Sampler,
                 resource: textureManager.getSampler(sampler),
             },
             {
                 binding: 6,
                 visibility: GPUShaderStage.FRAGMENT,
-                type: 'sampled-texture',
-                resource: textureManager
-                    .getTexture(specularTexture)
-                    .createView(),
+                type: ShaderBindingType.SampledTexture,
+                resource: textureManager.getTexture(specularTexture).createView(),
             },
         ],
     });
@@ -258,7 +259,6 @@ export async function create(
         camera.updateProjectionMatrix();
 
         movementSystem.update(dt);
-        lightingSystem.update();
         renderSystem.update();
 
         onRenderFinish();
@@ -276,6 +276,8 @@ export async function create(
             bufferManager.destroy();
 
             cameraController.destroy();
+
+            renderer.destroy();
         },
     };
 }

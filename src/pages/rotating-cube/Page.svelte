@@ -1,8 +1,8 @@
 <script>
-    import { createCubeRenderer } from 'rendering/cube-renderer';
     import { onMount } from 'svelte';
-    import Canvas from '../components/Canvas.svelte';
     import * as dat from 'dat.gui';
+    import Canvas from 'components/Canvas.svelte';
+    import { createCubeRenderer } from './renderer';
 
     function controls() {
         this.texture = 1;
