@@ -3,6 +3,7 @@ import {
     ShaderBinding,
     createShader,
     cloneShader,
+    Shader,
 } from 'toolkit/webgpu/shaders';
 
 export interface ShaderDescriptor {
@@ -12,7 +13,7 @@ export interface ShaderDescriptor {
 }
 
 export interface ShaderManager {
-    get(id: number): any;
+    get(id: number): Shader;
     create(descriptor: ShaderDescriptor): number;
 }
 

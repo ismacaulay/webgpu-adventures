@@ -10,7 +10,6 @@ struct Light {
 
     // for point light
     /* vec3 position; */
-    /*  */
     /* float kc; */
     /* float kl; */
     /* float kq; */
@@ -48,7 +47,6 @@ layout(location = 0) out vec4 o_color;
 void main()
 {
     vec3 normal = normalize(v_normal);
-    vec3 light_dir = normalize(light.position - v_frag_pos);
 
     // directional light
     /* vec3 light_dir = normalize(-light.direction); */
@@ -56,17 +54,14 @@ void main()
     // point light
     /* vec3 light_dir = normalize(light.position - v_frag_pos); */
     /* float distance = length(light.position - v_frag_pos); */
-
-    /* float c = light.kc; */
-    /* float l = light.kl * distance; */
-    /* float q = light.kq * distance * distance; */
-    /* float attenuation = 1.0 / (c + l + q); */
-    /* float attenuation = 1.0 / (light.kc + light.kl * distance + light.kq * distance * distance); */
+    /* float attenuation = 1.0 / (light.kc + (light.kl * distance) + (light.kq * distance * distance)); */
 
     // spot light
+    vec3 light_dir = normalize(light.position - v_frag_pos);
     float theta = dot(light_dir, normalize(-light.direction));
     float intensity = clamp((theta - light.outerCutoff) / (light.innerCutoff - light.outerCutoff), 0.0, 1.0);
 
+    // lighting calc
     vec3 view_dir = normalize(view_pos - v_frag_pos);
     vec3 reflect_dir = reflect(-light_dir, v_normal);
 
@@ -81,7 +76,7 @@ void main()
     float spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32);
     vec3 specular = spec_map_color * spec * light.specular;
 
-    /* // point light */
+    // point light
     /* ambient *= attenuation; */
     /* diffuse *= attenuation; */
     /* specular *= attenuation; */

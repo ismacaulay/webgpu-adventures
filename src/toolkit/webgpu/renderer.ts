@@ -1,4 +1,4 @@
-import { configureSwapChain, requestGPU, createBuffer } from 'rendering/utils';
+import { configureSwapChain, requestGPU, createBuffer } from './utils';
 import { VertexBuffer } from './buffers';
 
 export interface RendererSubmission {
@@ -35,11 +35,7 @@ export interface Renderer {
     finish(): void;
 }
 
-function createRenderPipeline(
-    device: GPUDevice,
-    shader: any,
-    vertexBuffers: VertexBuffer[],
-) {
+function createRenderPipeline(device: GPUDevice, shader: any, vertexBuffers: VertexBuffer[]) {
     const layout: GPUPipelineLayout = device.createPipelineLayout({
         bindGroupLayouts: [shader.bindGroupLayout],
     });
@@ -126,18 +122,8 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
                     commands.push((encoder: GPUCommandEncoder) => {
                         const { src, dst, size } = command;
 
-                        const uploadBuffer = createBuffer(
-                            device,
-                            src,
-                            GPUBufferUsage.COPY_SRC,
-                        );
-                        encoder.copyBufferToBuffer(
-                            uploadBuffer,
-                            0,
-                            dst,
-                            0,
-                            size,
-                        );
+                        const uploadBuffer = createBuffer(device, src, GPUBufferUsage.COPY_SRC);
+                        encoder.copyBufferToBuffer(uploadBuffer, 0, dst, 0, size);
 
                         return () => {
                             uploadBuffer.destroy();
@@ -154,6 +140,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
             const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
                 attachment: colorTextureView,
                 loadValue: { r: 0, g: 0, b: 0, a: 1 },
+                // loadValue: { r: 1, g: 1, b: 1, a: 1 },
                 storeOp: 'store',
             };
 
@@ -175,9 +162,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
             const cleanups = commands.map(fn => fn(commandEncoder));
             commands = [];
 
-            const passEncoder = commandEncoder.beginRenderPass(
-                renderPassDescriptor,
-            );
+            const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
             passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
             passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
@@ -188,9 +173,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
                 const { shader, buffers, count } = draws[i];
 
                 if (shader.id !== lastShaderId) {
-                    passEncoder.setPipeline(
-                        createRenderPipeline(device, shader, buffers),
-                    );
+                    passEncoder.setPipeline(createRenderPipeline(device, shader, buffers));
                     lastShaderId = shader.id;
                 }
 
@@ -208,6 +191,10 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
             device.defaultQueue.submit([commandEncoder.finish()]);
 
             cleanups.forEach(fn => fn());
+        },
+
+        destroy() {
+            depthTexture.destroy();
         },
     };
 }

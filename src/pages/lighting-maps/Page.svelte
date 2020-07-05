@@ -9,7 +9,6 @@
     let canvas;
     onMount(() => {
         let page;
-        let unmounted = false;
 
         (async () => {
             const stats = new Stats();
@@ -26,17 +25,9 @@
                     stats.end();
                 },
             });
-
-            // if we unmount before page has resolved, we will just destroy the page
-            if (unmounted) {
-                page.destroy();
-            }
-
         })();
 
         return () => {
-            unmounted = true;
-
             if (page) {
                 page.destroy();
             }

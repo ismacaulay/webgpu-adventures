@@ -1,5 +1,5 @@
 <script>
-    import { webGPUSupported } from '../rendering/utils'
+    import { webGPUSupported } from 'toolkit/webgpu/utils'
     let element;
 
     export function getElement() {

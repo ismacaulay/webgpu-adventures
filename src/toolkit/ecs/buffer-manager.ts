@@ -3,9 +3,11 @@ import {
     createVertexBuffer as createWebGPUVertexBuffer,
     Buffer,
     createUniformBuffer,
+    UniformBufferDescriptor,
+    UniformType,
     UniformDictionary,
 } from 'toolkit/webgpu/buffers';
-import { mat4 } from 'gl-matrix';
+import { createIdProvider } from './id-provider';
 
 export interface VertexBufferInfo {
     id?: number;
@@ -15,7 +17,7 @@ export interface VertexBufferInfo {
 
 export interface BufferManager {
     createVertexBuffer(info: VertexBufferInfo): number;
-    createUniformBuffer(uniforms: UniformDictionary): number;
+    createUniformBuffer(uniforms: UniformBufferDescriptor, initial?: UniformDictionary): number;
 
     get<T extends Buffer>(id: number): T;
     destroy(): void;
@@ -33,26 +35,18 @@ interface BufferStorage {
 
 export function createBufferManager(device: GPUDevice): BufferManager {
     let storage: BufferStorage = {};
-    let next = DefaultBuffers.Count;
+    const generator = createIdProvider(DefaultBuffers.Count);
 
     return {
         createVertexBuffer(info: VertexBufferInfo) {
-            const id = next;
-            next++;
-
-            storage[id] = createWebGPUVertexBuffer(
-                device,
-                info.attributes,
-                info.array,
-            );
+            const id = generator.next();
+            storage[id] = createWebGPUVertexBuffer(device, info.attributes, info.array);
             return id;
         },
 
-        createUniformBuffer(uniforms: UniformDictionary) {
-            const id = next;
-            next++;
-
-            storage[id] = createUniformBuffer(device, uniforms);
+        createUniformBuffer(uniforms: UniformBufferDescriptor, initial?: UniformDictionary) {
+            const id = generator.next();
+            storage[id] = createUniformBuffer(device, uniforms, initial);
             return id;
         },
 
@@ -62,8 +56,8 @@ export function createBufferManager(device: GPUDevice): BufferManager {
             if (!buffer) {
                 if (id === DefaultBuffers.ViewProjection) {
                     buffer = createUniformBuffer(device, {
-                        view: mat4.create(),
-                        projection: mat4.create(),
+                        view: UniformType.Mat4,
+                        projection: UniformType.Mat4,
                     });
                     storage[id] = buffer;
                 } else {

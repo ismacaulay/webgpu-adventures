@@ -1,3 +1,5 @@
+import { mat2, mat3, mat4, vec2, vec3, vec4 } from 'gl-matrix';
+
 export enum BufferType {
     Vertex,
     Uniform,
@@ -32,16 +34,17 @@ export interface VertexBuffer extends Buffer {
 export type UniformValue =
     | boolean
     | number
-    | number[]
-    | Float32Array
-    | UniformDictionary;
+    | ArrayLike<number>
+    | ArrayLike<number>[]
+    | UniformDictionary
+    | UniformDictionary[];
 
 export interface UniformDictionary {
     [key: string]: UniformValue;
 }
 
 export interface UniformLocationDictionary {
-    [key: string]: number | boolean;
+    [key: string]: number | boolean | { offset: number; c: number; r: number };
 }
 
 export interface UniformBuffer extends Buffer {
@@ -50,6 +53,30 @@ export interface UniformBuffer extends Buffer {
     needsUpdate: boolean;
     hasUniform(name: string): boolean;
     updateUniform(name: string, value: UniformValue): void;
-    updateBuffer(encoder?: GPUCommandEncoder): void;
+    updateUniforms(uniforms: UniformDictionary): void;
     destroy(): void;
+}
+
+export enum UniformType {
+    Scalar,
+    Vec2,
+    Vec3,
+    Vec4,
+    Mat2,
+    Mat2x3,
+    Mat2x4,
+    Mat3x2,
+    Mat3,
+    Mat3x4,
+    Mat4x2,
+    Mat4x3,
+    Mat4,
+}
+
+export interface UniformBufferDescriptor {
+    [key: string]:
+        | UniformType
+        | UniformBufferDescriptor
+        | [UniformType, number]
+        | [UniformBufferDescriptor, number];
 }

@@ -18,17 +18,10 @@ import {
 } from 'toolkit/ecs/systems';
 import {
     createTransformComponent,
-    // createCircularMovementComponent,
-    // createLightComponent,
     createBasicMaterialComponent,
     createMeshGeometryComponent,
     createMaterialComponent,
-    // createDirectionalLightComponent,
-    // createPointLightComponent,
-    // createSpotLightComponent,
     ComponentType,
-    TransformComponent,
-    // SpotLight,
 } from 'toolkit/ecs/components';
 import { getBasicShaderInfo } from 'toolkit/webgpu/shaders/basic-shader';
 import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS_WITH_UV } from 'utils/cube-vertices';
@@ -36,7 +29,7 @@ import {
     BufferAttributeType,
     UniformBuffer,
     UniformType,
-    UniformDictionary,
+    UniformBufferDescriptor,
 } from 'toolkit/webgpu/buffers';
 import { Colors } from 'toolkit/materials';
 
@@ -44,6 +37,14 @@ import cubeVertSrc from './shader.vert';
 import cubeFragSrc from './shader.frag';
 import { radians } from 'toolkit/math';
 import { ShaderBindingType, ShaderBinding } from 'toolkit/webgpu/shaders';
+
+import {
+    createLightManager,
+    LightType,
+    DirectionalLight,
+    PointLight,
+    SpotLight,
+} from 'toolkit/ecs/light-manager';
 
 export async function create(canvas: HTMLCanvasElement, options: PageOptions): Promise<WebGPUPage> {
     const renderer = await createRenderer(canvas);
@@ -54,13 +55,14 @@ export async function create(canvas: HTMLCanvasElement, options: PageOptions): P
     const cameraController = createFreeCameraController(canvas, camera);
 
     const entityManager = createEntityManager();
+    const lightManager = createLightManager();
     const bufferManager = createBufferManager(renderer.device);
     const shaderManager = await createShaderManager(renderer.device);
     const textureManager = createTextureManager(renderer.device);
 
     const scriptSystem = createScriptSystem(entityManager);
     const movementSystem = createMovementSystem(entityManager);
-    // const lightingSystem = createLightingSystem(entityManager);
+    const lightingSystem = createLightingSystem(entityManager, lightManager, shaderManager, camera);
     const renderSystem = createRenderSystem(
         entityManager,
         shaderManager,
@@ -69,111 +71,176 @@ export async function create(canvas: HTMLCanvasElement, options: PageOptions): P
         camera,
     );
 
-    // light
-    const lightShader = shaderManager.create(getBasicShaderInfo(bufferManager));
-    const lightPos = vec3.fromValues(1.2, 1.0, 2.0);
+    const viewProjectionBuffer = bufferManager.get<UniformBuffer>(DefaultBuffers.ViewProjection);
 
-    const lightColor = {
-        ambient: [0.2, 0.2, 0.2] as vec3,
-        diffuse: [0.5, 0.5, 0.5] as vec3,
-        specular: [1.0, 1.0, 1.0] as vec3,
+    // TODO: Maybe we should just be able to add lights to the
+    // lighting system instead of the entity system?!
+
+    const directionalLightDescriptor: DirectionalLight = {
+        type: LightType.Directional,
+        direction: vec3.fromValues(-0.2, -1.0, -0.3),
+        ambient: vec3.fromValues(0.05, 0.05, 0.05),
+        diffuse: vec3.fromValues(0.4, 0.4, 0.4),
+        specular: vec3.fromValues(0.5, 0.5, 0.5),
     };
+    lightManager.create(directionalLightDescriptor);
 
-    // const directionalLightDescriptor = {
-    //     direction: [-0.2, -1.0, -0.3],
-    //     ...lightColor,
-    // };
-    // const pointLightDescriptor = {
-    //     position: lightPos,
-    //     kc: 1.0,
-    //     kl: 0.09,
-    //     kq: 0.032,
-    //     ...lightColor,
-    // };
+    const pointLightDescriptors: PointLight[] = [
+        {
+            type: LightType.Point,
+            position: vec3.fromValues(0.7, 0.2, 2.0),
+            kc: 1.0,
+            kl: 0.09,
+            kq: 0.032,
+            ambient: vec3.fromValues(0.05, 0.05, 0.05),
+            diffuse: vec3.fromValues(0.8, 0.8, 0.8),
+            specular: vec3.fromValues(1.0, 1.0, 1.0),
+        },
+        {
+            type: LightType.Point,
+            position: vec3.fromValues(2.3, -3.3, -4.0),
+            kc: 1.0,
+            kl: 0.09,
+            kq: 0.032,
+            ambient: vec3.fromValues(0.05, 0.05, 0.05),
+            diffuse: vec3.fromValues(0.8, 0.8, 0.8),
+            specular: vec3.fromValues(1.0, 1.0, 1.0),
+        },
+        {
+            type: LightType.Point,
+            position: vec3.fromValues(-4.0, 2.0, -12.0),
+            kc: 1.0,
+            kl: 0.09,
+            kq: 0.032,
+            ambient: vec3.fromValues(0.05, 0.05, 0.05),
+            diffuse: vec3.fromValues(0.8, 0.8, 0.8),
+            specular: vec3.fromValues(1.0, 1.0, 1.0),
+        },
+        {
+            type: LightType.Point,
+            position: vec3.fromValues(0.0, 0.0, -3.0),
+            kc: 1.0,
+            kl: 0.09,
+            kq: 0.032,
+            ambient: vec3.fromValues(0.05, 0.05, 0.05),
+            diffuse: vec3.fromValues(0.8, 0.8, 0.8),
+            specular: vec3.fromValues(1.0, 1.0, 1.0),
+        },
+    ];
+
+    const lightVertexBufferDescriptor = {
+        array: CUBE_VERTICES,
+        attributes: [
+            {
+                type: BufferAttributeType.Float3,
+                location: 0,
+            },
+        ],
+    };
+    const lightVertexBuffer = bufferManager.createVertexBuffer(lightVertexBufferDescriptor);
+
+    for (let i = 0; i < pointLightDescriptors.length; ++i) {
+        const descriptor = pointLightDescriptors[i];
+        lightManager.create(descriptor);
+
+        // TODO: Clone this shader
+        const lightShader = shaderManager.create(getBasicShaderInfo(bufferManager));
+        const entity = entityManager.create();
+        entityManager.addComponent(
+            entity,
+            createTransformComponent({
+                translation: descriptor.position,
+                scale: [0.1, 0.1, 0.1],
+            }),
+        );
+        entityManager.addComponent(
+            entity,
+            createBasicMaterialComponent({
+                shader: lightShader,
+                color: Colors.White,
+            }),
+        );
+        entityManager.addComponent(
+            entity,
+            createMeshGeometryComponent({
+                buffers: [{ id: lightVertexBuffer, ...lightVertexBufferDescriptor }],
+            }),
+        );
+    }
 
     const spotLightDescriptor = {
+        type: LightType.Spot,
         position: camera.position,
         direction: camera.direction,
-        innerCutoff: Math.cos(radians(12.5)),
-        outerCutoff: Math.cos(radians(17.5)),
-        ...lightColor,
+        inner_cutoff: Math.cos(radians(12.5)),
+        outer_cutoff: Math.cos(radians(15.0)),
+        kc: 1.0,
+        kl: 0.09,
+        kq: 0.032,
+        ambient: vec3.fromValues(0.0, 0.0, 0.0),
+        diffuse: vec3.fromValues(1.0, 1.0, 1.0),
+        specular: vec3.fromValues(1.0, 1.0, 1.0),
     };
+    const spotLight = lightManager.create(spotLightDescriptor);
 
-    const lightEntity = entityManager.create();
-    entityManager.addComponent(
-        lightEntity,
-        createTransformComponent({
-            translation: lightPos,
-            scale: [0.1, 0.1, 0.1],
-        }),
-    );
-    entityManager.addComponent(
-        lightEntity,
-        createBasicMaterialComponent({
-            shader: lightShader,
-            color: Colors.White,
-        }),
-    );
-    entityManager.addComponent(
-        lightEntity,
-        createMeshGeometryComponent({
-            buffers: [
-                {
-                    array: CUBE_VERTICES,
-                    attributes: [
-                        {
-                            type: BufferAttributeType.Float3,
-                            location: 0,
-                        },
-                    ],
-                },
-            ],
-        }),
-    );
-
-    // cubes
-    const materialUniforms = {
-        view_pos: camera.position,
-        material: {
-            shininess: 64,
+    const spotLightEntity = entityManager.create();
+    entityManager.addComponent(spotLightEntity, {
+        type: ComponentType.Script,
+        update: () => {
+            const light = lightManager.get<SpotLight>(spotLight);
+            light.position = camera.position;
+            light.direction = camera.direction;
         },
-        light: {
-            // ...directionalLightDescriptor,
-            // ...pointLightDescriptor,
-            ...spotLightDescriptor,
-        },
-    };
+    });
 
-    const viewProjectionBuffer = bufferManager.get<UniformBuffer>(DefaultBuffers.ViewProjection);
-    const materialBuffer = bufferManager.createUniformBuffer(
-        {
-            view_pos: UniformType.Vec3,
-            material: {
-                shininess: UniformType.Scalar,
-            },
-            light: {
-                // directional light
-                // direction: UniformType.Vec3,
-
-                // point light
-                // position: UniformType.Vec3,
-                // kc: UniformType.Scalar,
-                // kl: UniformType.Scalar,
-                // kq: UniformType.Scalar,
-
-                // spotlight
-                position: UniformType.Vec3,
+    const lightUniformsDecscriptor: UniformBufferDescriptor = {
+        dir_lights: [
+            {
                 direction: UniformType.Vec3,
-                innerCutoff: UniformType.Scalar,
-                outerCutoff: UniformType.Scalar,
-
                 ambient: UniformType.Vec3,
                 diffuse: UniformType.Vec3,
                 specular: UniformType.Vec3,
             },
+            1,
+        ],
+        point_lights: [
+            {
+                position: UniformType.Vec3,
+                kc: UniformType.Scalar,
+                kl: UniformType.Scalar,
+                kq: UniformType.Scalar,
+                ambient: UniformType.Vec3,
+                diffuse: UniformType.Vec3,
+                specular: UniformType.Vec3,
+            },
+            pointLightDescriptors.length,
+        ],
+        spot_lights: [
+            {
+                position: UniformType.Vec3,
+                direction: UniformType.Vec3,
+                inner_cutoff: UniformType.Scalar,
+                outer_cutoff: UniformType.Scalar,
+                kc: UniformType.Scalar,
+                kl: UniformType.Scalar,
+                kq: UniformType.Scalar,
+                ambient: UniformType.Vec3,
+                diffuse: UniformType.Vec3,
+                specular: UniformType.Vec3,
+            },
+            1,
+        ],
+    };
+    const lightUniformBuffer = bufferManager.createUniformBuffer(lightUniformsDecscriptor);
+
+    const materialUniformsDescriptor: UniformBufferDescriptor = {
+        view_pos: UniformType.Vec3,
+        material: {
+            shininess: UniformType.Scalar,
         },
-        materialUniforms,
-    );
+    };
+    const materialBuffer = bufferManager.createUniformBuffer(materialUniformsDescriptor);
+
     const sampler = textureManager.createSampler({
         magFilter: 'linear',
         minFilter: 'linear',
@@ -247,14 +314,9 @@ export async function create(canvas: HTMLCanvasElement, options: PageOptions): P
             }),
         );
 
-        const modelBuffer = bufferManager.createUniformBuffer(
-            {
-                model: UniformType.Mat4,
-            },
-            {
-                model: mat4.create(),
-            },
-        );
+        const modelBuffer = bufferManager.createUniformBuffer({
+            model: UniformType.Mat4,
+        });
         const bindings: ShaderBinding[] = [
             {
                 binding: 0,
@@ -277,23 +339,29 @@ export async function create(canvas: HTMLCanvasElement, options: PageOptions): P
             {
                 binding: 3,
                 visibility: GPUShaderStage.FRAGMENT,
+                type: ShaderBindingType.UniformBuffer,
+                resource: bufferManager.get(lightUniformBuffer),
+            },
+            {
+                binding: 4,
+                visibility: GPUShaderStage.FRAGMENT,
                 type: ShaderBindingType.Sampler,
                 resource: textureManager.getSampler(sampler),
             },
             {
-                binding: 4,
+                binding: 5,
                 visibility: GPUShaderStage.FRAGMENT,
                 type: ShaderBindingType.SampledTexture,
                 resource: textureManager.getTexture(diffuseTexture).createView(),
             },
             {
-                binding: 5,
+                binding: 6,
                 visibility: GPUShaderStage.FRAGMENT,
                 type: ShaderBindingType.Sampler,
                 resource: textureManager.getSampler(sampler),
             },
             {
-                binding: 6,
+                binding: 7,
                 visibility: GPUShaderStage.FRAGMENT,
                 type: ShaderBindingType.SampledTexture,
                 resource: textureManager.getTexture(specularTexture).createView(),
@@ -310,19 +378,9 @@ export async function create(canvas: HTMLCanvasElement, options: PageOptions): P
         }
         const cubeMaterialComponent = createMaterialComponent({
             shader: cubeShader,
-            uniforms: materialUniforms,
+            uniforms: {},
         });
         entityManager.addComponent(cubeEntity, cubeMaterialComponent);
-        entityManager.addComponent(cubeEntity, {
-            type: ComponentType.Script,
-            update() {
-                // spot light
-                (cubeMaterialComponent.uniforms.light as UniformDictionary).position =
-                    camera.position;
-                (cubeMaterialComponent.uniforms.light as UniformDictionary).direction =
-                    camera.direction;
-            },
-        });
     }
 
     let rafId = -1;
@@ -343,7 +401,7 @@ export async function create(canvas: HTMLCanvasElement, options: PageOptions): P
 
         scriptSystem.update(dt);
         movementSystem.update(dt);
-        // lightingSystem.update();
+        lightingSystem.update();
         renderSystem.update();
 
         onRenderFinish();
@@ -360,6 +418,7 @@ export async function create(canvas: HTMLCanvasElement, options: PageOptions): P
             textureManager.destroy();
             bufferManager.destroy();
             entityManager.destroy();
+            lightManager.destroy();
 
             cameraController.destroy();
         },

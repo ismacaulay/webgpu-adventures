@@ -2,13 +2,14 @@
 
     import router from 'page';
     import Home from './pages/Home.svelte';
-    import HelloWorld from './pages/HelloWorld.svelte';
-    import Cube from './pages/Cube.svelte';
-    import RotatingCube from './pages/RotatingCube.svelte';
-    import Lighting from './pages/Lighting.svelte';
+    import HelloWorld from './pages/hello-world/Page.svelte';
     import ECS from './pages/ecs/Page.svelte';
+    import Cube from './pages/cube/Page.svelte';
+    import RotatingCube from './pages/rotating-cube/Page.svelte';
+    import Lighting from './pages/lighting/Page.svelte';
     import LightingMaps from './pages/lighting-maps/Page.svelte';
     import LightCasters from './pages/light-casters/Page.svelte';
+    import MultipleLights from './pages/multiple-lights/Page.svelte';
 
     const examples = [
         { title: 'hello-world', component: HelloWorld },
@@ -18,6 +19,7 @@
         { title: 'learn-opengl/materials', component: Lighting },
         { title: 'learn-opengl/lighting-maps', component: LightingMaps },
         { title: 'learn-opengl/light-casters', component: LightCasters },
+        { title: 'learn-opengl/multiple-lights', component: MultipleLights },
     ];
 
     let page;
