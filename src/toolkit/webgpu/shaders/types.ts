@@ -27,10 +27,7 @@ export interface SampledTextureBinding extends BaseBinding {
     resource: GPUTextureView;
 }
 
-export type ShaderBinding =
-    | UniformBufferBinding
-    | SamplerBinding
-    | SampledTextureBinding;
+export type ShaderBinding = UniformBufferBinding | SamplerBinding | SampledTextureBinding;
 
 export interface Shader {
     id: number;
@@ -42,4 +39,7 @@ export interface Shader {
     buffers: UniformBuffer[];
 
     update(uniforms: UniformDictionary): void;
+
+    depthWrite: boolean;
+    depthFunc: GPUCompareFunction;
 }

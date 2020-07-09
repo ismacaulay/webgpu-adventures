@@ -28,6 +28,7 @@ function processBindings(bindings: ShaderBinding[]) {
         entries,
     };
 }
+
 function updateBuffers(buffers: UniformBuffer[], uniforms: UniformDictionary) {
     Object.entries(uniforms).forEach(([name, value]) => {
         let found = false;
@@ -66,6 +67,9 @@ export function createShader(
         })),
     });
 
+    let depthWrite = true;
+    let depthFunc: GPUCompareFunction = 'less';
+
     return {
         id,
         stages: {
@@ -87,17 +91,28 @@ export function createShader(
         bindGroup: device.createBindGroup({ layout: bindGroupLayout, entries }),
         buffers,
 
-        update: (uniforms: UniformDictionary) =>
-            updateBuffers(buffers, uniforms),
+        update: (uniforms: UniformDictionary) => updateBuffers(buffers, uniforms),
+
+        get depthWrite() {
+            return depthWrite;
+        },
+        set depthWrite(value: boolean) {
+            depthWrite = value;
+        },
+
+        get depthFunc() {
+            return depthFunc;
+        },
+        set depthFunc(value: GPUCompareFunction) {
+            depthFunc = value;
+        },
     };
 }
 
-export function cloneShader(
-    device: GPUDevice,
-    shader: any,
-    bindings: ShaderBinding[],
-): Shader {
+export function cloneShader(device: GPUDevice, shader: Shader, bindings: ShaderBinding[]): Shader {
     const { id, bindGroupLayout, stages } = shader;
+    let { depthFunc, depthWrite } = shader;
+
     const { buffers, entries } = processBindings(bindings);
 
     return {
@@ -107,7 +122,20 @@ export function cloneShader(
         bindGroup: device.createBindGroup({ layout: bindGroupLayout, entries }),
         buffers,
 
-        update: (uniforms: UniformDictionary) =>
-            updateBuffers(buffers, uniforms),
+        update: (uniforms: UniformDictionary) => updateBuffers(buffers, uniforms),
+
+        get depthWrite() {
+            return depthWrite;
+        },
+        set depthWrite(value: boolean) {
+            depthWrite = value;
+        },
+
+        get depthFunc() {
+            return depthFunc;
+        },
+        set depthFunc(value: GPUCompareFunction) {
+            depthFunc = value;
+        },
     };
 }
