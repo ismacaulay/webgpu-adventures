@@ -1,10 +1,5 @@
 import glslangModule from 'toolkit/webgpu/shaders/glslang';
-import {
-    ShaderBinding,
-    createShader,
-    cloneShader,
-    Shader,
-} from 'toolkit/webgpu/shaders';
+import { ShaderBinding, createShader, cloneShader, Shader } from 'toolkit/webgpu/shaders';
 
 export interface ShaderDescriptor {
     vertex: string;
@@ -15,12 +10,17 @@ export interface ShaderDescriptor {
 export interface ShaderManager {
     get(id: number): Shader;
     create(descriptor: ShaderDescriptor): number;
+    destroy(): void;
+}
+
+interface ShaderStorage {
+    [key: number]: Shader;
 }
 
 export async function createShaderManager(device: GPUDevice) {
     const glslang = await glslangModule();
 
-    const storage: any = {};
+    let storage: ShaderStorage = {};
 
     let storageId = 0;
     let shaderId = 0;
@@ -60,6 +60,10 @@ export async function createShaderManager(device: GPUDevice) {
             storageId++;
             storage[next] = cloneShader(device, shader, bindings);
             return next;
+        },
+
+        destroy() {
+            storage = {};
         },
     };
 }

@@ -1,5 +1,7 @@
 import { configureSwapChain, requestGPU, createBuffer } from './utils';
 import { VertexBuffer } from './buffers';
+import { Color } from 'toolkit/materials';
+import { Shader } from './shaders';
 
 export interface RendererSubmission {
     shader: any;
@@ -35,7 +37,7 @@ export interface Renderer {
     finish(): void;
 }
 
-function createRenderPipeline(device: GPUDevice, shader: any, vertexBuffers: VertexBuffer[]) {
+function createRenderPipeline(device: GPUDevice, shader: Shader, vertexBuffers: VertexBuffer[]) {
     const layout: GPUPipelineLayout = device.createPipelineLayout({
         bindGroupLayouts: [shader.bindGroupLayout],
     });
@@ -64,8 +66,8 @@ function createRenderPipeline(device: GPUDevice, shader: any, vertexBuffers: Ver
         ],
 
         depthStencilState: {
-            depthWriteEnabled: true,
-            depthCompare: 'less',
+            depthWriteEnabled: shader.depthWrite,
+            depthCompare: shader.depthFunc,
             format: 'depth24plus-stencil8',
         },
 
@@ -107,6 +109,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
 
     let commands: any[] = [];
     let draws: any[] = [];
+    let clearColor = [0, 0, 0];
 
     return {
         device,
@@ -139,7 +142,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
 
             const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
                 attachment: colorTextureView,
-                loadValue: { r: 0, g: 0, b: 0, a: 1 },
+                loadValue: { r: clearColor[0], g: clearColor[1], b: clearColor[2], a: 1 },
                 // loadValue: { r: 1, g: 1, b: 1, a: 1 },
                 storeOp: 'store',
             };
@@ -195,6 +198,10 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
 
         destroy() {
             depthTexture.destroy();
+        },
+
+        set clearColor(value: Color) {
+            clearColor = value;
         },
     };
 }
