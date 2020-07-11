@@ -77,6 +77,7 @@ export function createRenderSystem(
 
                 renderer.submit({
                     type: CommandType.Draw,
+                    priority: material.drawOrder,
                     shader,
                     buffers: vbs,
                     count: geometry.count,
