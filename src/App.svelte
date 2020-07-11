@@ -10,6 +10,7 @@
     import LightCasters from './pages/light-casters/Page.svelte';
     import MultipleLights from './pages/multiple-lights/Page.svelte';
     import DepthTesting from './pages/depth-testing/Page.svelte';
+    import StencilTesting from './pages/stencil-testing/Page.svelte';
 
     const examples = [
         { title: 'hello-world', component: HelloWorld },
@@ -21,6 +22,7 @@
         { title: 'learn-opengl/light-casters', component: LightCasters },
         { title: 'learn-opengl/multiple-lights', component: MultipleLights },
         { title: 'learn-opengl/depth-testing', component: DepthTesting },
+        { title: 'learn-opengl/stencil-testing', component: StencilTesting },
     ];
 
     let page;

@@ -70,6 +70,22 @@ export function createShader(
     let depthWrite = true;
     let depthFunc: GPUCompareFunction = 'less';
 
+    let stencilFront: GPUStencilStateFaceDescriptor = {
+        compare: 'always',
+        failOp: 'keep',
+        depthFailOp: 'keep',
+        passOp: 'keep',
+    };
+    let stencilBack: GPUStencilStateFaceDescriptor = {
+        compare: 'always',
+        failOp: 'keep',
+        depthFailOp: 'keep',
+        passOp: 'keep',
+    };
+    let stencilWriteMask = 0xff;
+    let stencilReadMask = 0xff;
+    let stencilValue = 1;
+
     return {
         id,
         stages: {
@@ -106,12 +122,60 @@ export function createShader(
         set depthFunc(value: GPUCompareFunction) {
             depthFunc = value;
         },
+
+        get stencilFront() {
+            return stencilFront;
+        },
+        set stencilFront(value: GPUStencilStateFaceDescriptor) {
+            stencilFront = value;
+        },
+
+        get stencilBack() {
+            return stencilBack;
+        },
+        set stencilBack(value: GPUStencilStateFaceDescriptor) {
+            stencilBack = value;
+        },
+
+        get stencilWriteMask() {
+            return stencilWriteMask;
+        },
+        set stencilWriteMask(value: number) {
+            stencilWriteMask = value;
+        },
+
+        get stencilReadMask() {
+            return stencilReadMask;
+        },
+        set stencilReadMask(value: number) {
+            stencilReadMask = value;
+        },
+
+        get stencilValue() {
+            return stencilValue;
+        },
+        set stencilValue(value: number) {
+            stencilValue = value;
+        },
     };
 }
 
+// NOTE: Watch out with cloning shaders. They end up with the same id and if you change
+//       anything up the unfiforms in your uniform buffer it will impact all shaders that
+//       were cloned. This is cannot be easily changed because the current renderer only
+//       builds and sets the pipeline if the shader id changed, which it doesnt.
 export function cloneShader(device: GPUDevice, shader: Shader, bindings: ShaderBinding[]): Shader {
     const { id, bindGroupLayout, stages } = shader;
-    let { depthFunc, depthWrite } = shader;
+
+    let {
+        depthFunc,
+        depthWrite,
+        stencilWriteMask,
+        stencilValue,
+        stencilReadMask,
+        stencilFront,
+        stencilBack,
+    } = shader;
 
     const { buffers, entries } = processBindings(bindings);
 
@@ -136,6 +200,41 @@ export function cloneShader(device: GPUDevice, shader: Shader, bindings: ShaderB
         },
         set depthFunc(value: GPUCompareFunction) {
             depthFunc = value;
+        },
+
+        get stencilFront() {
+            return stencilFront;
+        },
+        set stencilFront(value: GPUStencilStateFaceDescriptor) {
+            stencilFront = value;
+        },
+
+        get stencilBack() {
+            return stencilBack;
+        },
+        set stencilBack(value: GPUStencilStateFaceDescriptor) {
+            stencilBack = value;
+        },
+
+        get stencilWriteMask() {
+            return stencilWriteMask;
+        },
+        set stencilWriteMask(value: number) {
+            stencilWriteMask = value;
+        },
+
+        get stencilReadMask() {
+            return stencilReadMask;
+        },
+        set stencilReadMask(value: number) {
+            stencilReadMask = value;
+        },
+
+        get stencilValue() {
+            return stencilValue;
+        },
+        set stencilValue(value: number) {
+            stencilValue = value;
         },
     };
 }

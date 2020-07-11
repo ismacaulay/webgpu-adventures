@@ -42,4 +42,10 @@ export interface Shader {
 
     depthWrite: boolean;
     depthFunc: GPUCompareFunction;
+
+    stencilFront: GPUStencilStateFaceDescriptor;
+    stencilBack: GPUStencilStateFaceDescriptor;
+    stencilWriteMask: number;
+    stencilReadMask: number;
+    stencilValue: number;
 }
