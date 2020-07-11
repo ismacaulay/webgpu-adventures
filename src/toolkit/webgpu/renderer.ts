@@ -17,6 +17,7 @@ export enum CommandType {
 export interface DrawCommand {
     type: CommandType.Draw;
 
+    priority: number;
     shader: any;
     buffers: VertexBuffer[];
     count: number;
@@ -69,6 +70,11 @@ function createRenderPipeline(device: GPUDevice, shader: Shader, vertexBuffers: 
             depthWriteEnabled: shader.depthWrite,
             depthCompare: shader.depthFunc,
             format: 'depth24plus-stencil8',
+
+            stencilFront: shader.stencilFront,
+            stencilBack: shader.stencilBack,
+            stencilWriteMask: shader.stencilWriteMask,
+            stencilReadMask: shader.stencilReadMask,
         },
 
         vertexState: {
@@ -108,7 +114,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
     const depthTextureView: GPUTextureView = depthTexture.createView();
 
     let commands: any[] = [];
-    let draws: any[] = [];
+    let draws: DrawCommand[] = [];
     let clearColor = [0, 0, 0];
 
     return {
@@ -151,7 +157,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
                 attachment: depthTextureView,
                 depthLoadValue: 1,
                 depthStoreOp: 'store',
-                stencilLoadValue: 'load',
+                stencilLoadValue: 0,
                 stencilStoreOp: 'store',
             };
             const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -165,15 +171,26 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
             const cleanups = commands.map(fn => fn(commandEncoder));
             commands = [];
 
-            const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+            let passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
             passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
             passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
 
+            draws.sort((d1, d2) => {
+                const first = d1.priority || Number.MAX_VALUE;
+                const second = d2.priority || Number.MAX_VALUE;
+
+                if (first === second) {
+                    return 0;
+                }
+
+                return first < second ? -1 : 1;
+            });
+
             // process the draw calls
             let lastShaderId = -1;
             for (let i = 0; i < draws.length; ++i) {
-                const { shader, buffers, count } = draws[i];
+                const { shader, buffers, count, priority } = draws[i];
 
                 if (shader.id !== lastShaderId) {
                     passEncoder.setPipeline(createRenderPipeline(device, shader, buffers));
@@ -186,12 +203,15 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
                     passEncoder.setVertexBuffer(idx, buf.buffer);
                 });
 
+                passEncoder.setStencilReference(shader.stencilValue);
+
                 passEncoder.draw(count, 1, 0, 0);
             }
-            draws = [];
 
             passEncoder.endPass();
             device.defaultQueue.submit([commandEncoder.finish()]);
+
+            draws = [];
 
             cleanups.forEach(fn => fn());
         },

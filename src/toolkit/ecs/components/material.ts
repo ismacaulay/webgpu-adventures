@@ -7,6 +7,8 @@ export interface MaterialComponent extends Component {
     readonly uniforms: UniformDictionary;
 
     readonly lighting: boolean;
+
+    readonly drawOrder: number;
 }
 
 export function createBasicMaterialComponent(initial: {
@@ -19,6 +21,7 @@ export function createBasicMaterialComponent(initial: {
         type: ComponentType.Material,
         shader,
         lighting: false,
+        drawOrder: Number.MAX_VALUE,
         uniforms: {
             color,
         },
@@ -28,14 +31,17 @@ export function createBasicMaterialComponent(initial: {
 export function createMaterialComponent({
     shader,
     uniforms,
+    drawOrder = Number.MAX_VALUE,
 }: {
     shader: number;
     uniforms: UniformDictionary;
+    drawOrder?: number;
 }): MaterialComponent {
     return {
         type: ComponentType.Material,
         shader,
         lighting: true,
         uniforms,
+        drawOrder,
     };
 }
