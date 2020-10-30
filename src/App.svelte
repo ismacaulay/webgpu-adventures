@@ -11,6 +11,7 @@
     import MultipleLights from './pages/multiple-lights/Page.svelte';
     import DepthTesting from './pages/depth-testing/Page.svelte';
     import StencilTesting from './pages/stencil-testing/Page.svelte';
+    import Blending from './pages/blending/Page.svelte';
 
     const examples = [
         { title: 'hello-world', component: HelloWorld },
@@ -23,6 +24,7 @@
         { title: 'learn-opengl/multiple-lights', component: MultipleLights },
         { title: 'learn-opengl/depth-testing', component: DepthTesting },
         { title: 'learn-opengl/stencil-testing', component: StencilTesting },
+        { title: 'learn-opengl/blending', component: Blending },
     ];
 
     let page;
