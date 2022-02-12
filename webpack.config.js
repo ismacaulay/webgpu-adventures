@@ -74,7 +74,12 @@ module.exports = (env, argv) => {
         ],
         devtool: prod ? false : 'source-map',
         devServer: {
-            writeToDisk: true,
+            historyApiFallback: true,
+            static: {
+                directory: path.join(__dirname, 'public'),
+            },
+            compress: true,
+            port: 9000,
         },
     };
     return config;
