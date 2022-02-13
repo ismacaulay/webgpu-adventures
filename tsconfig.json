@@ -1,26 +1,26 @@
 {
-    "extends": "@tsconfig/svelte/tsconfig.json",
+  "extends": "@tsconfig/svelte/tsconfig.json",
 
-    "compilerOptions": {
-        "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"],
+  "compilerOptions": {
+    "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"],
 
-        "baseUrl": "./src",
-        "paths": {
-            "toolkit": ["toolkit"],
-            "rendering": ["rendering"],
-            "utils": ["utils"],
-            "types": ["types"]
-        },
-        "target": "es6",
-        "sourceMap": true,
-        "module": "esnext",
-        "moduleResolution": "node",
-        "removeComments": true,
-        "preserveConstEnums": true,
-        "noImplicitAny": true,
-        "strictNullChecks": true,
-        "strictPropertyInitialization": true
+    "baseUrl": "./src",
+    "paths": {
+      "toolkit": ["toolkit"],
+      "rendering": ["rendering"],
+      "utils": ["utils"],
+      "types": ["types"]
     },
-    "include": ["src/**/*"],
-    "exclude": ["node_modules/*", "__sapper__/*", "public/*"]
+    "target": "es6",
+    "sourceMap": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules/*", "__sapper__/*", "public/*"]
 }

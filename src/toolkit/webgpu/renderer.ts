@@ -4,224 +4,224 @@ import { Color } from 'toolkit/materials';
 import { Shader } from './shaders';
 
 export interface RendererSubmission {
-    shader: any;
-    buffers: VertexBuffer[];
-    count: number;
+  shader: any;
+  buffers: VertexBuffer[];
+  count: number;
 }
 
 export enum CommandType {
-    Draw,
-    CopySrcToDst,
+  Draw,
+  CopySrcToDst,
 }
 
 export interface DrawCommand {
-    type: CommandType.Draw;
+  type: CommandType.Draw;
 
-    priority: number;
-    shader: any;
-    buffers: VertexBuffer[];
-    count: number;
+  priority: number;
+  shader: any;
+  buffers: VertexBuffer[];
+  count: number;
 }
 
 export interface CopySrcToDstCommand {
-    type: CommandType.CopySrcToDst;
+  type: CommandType.CopySrcToDst;
 
-    src: Float32Array;
-    dst: GPUBuffer;
-    size: number;
+  src: Float32Array;
+  dst: GPUBuffer;
+  size: number;
 }
 export type RendererCommand = DrawCommand | CopySrcToDstCommand;
 
 export interface Renderer {
-    begin(): void;
-    submit(command: RendererCommand): void;
-    finish(): void;
+  begin(): void;
+  submit(command: RendererCommand): void;
+  finish(): void;
 }
 
 function createRenderPipeline(device: GPUDevice, shader: Shader, vertexBuffers: VertexBuffer[]) {
-    const layout: GPUPipelineLayout = device.createPipelineLayout({
-        bindGroupLayouts: [shader.bindGroupLayout],
-    });
+  const layout: GPUPipelineLayout = device.createPipelineLayout({
+    bindGroupLayouts: [shader.bindGroupLayout],
+  });
 
-    return device.createRenderPipeline({
-        layout: layout,
+  return device.createRenderPipeline({
+    layout: layout,
 
-        ...shader.stages,
+    ...shader.stages,
 
-        primitiveTopology: 'triangle-list',
-        colorStates: [
-            {
-                format: 'bgra8unorm',
-                alphaBlend: {
-                    srcFactor: 'src-alpha',
-                    dstFactor: 'one-minus-src-alpha',
-                    operation: 'add',
-                },
-                colorBlend: {
-                    srcFactor: 'src-alpha',
-                    dstFactor: 'one-minus-src-alpha',
-                    operation: 'add',
-                },
-                writeMask: GPUColorWrite.ALL,
-            },
-        ],
-
-        depthStencilState: {
-            depthWriteEnabled: shader.depthWrite,
-            depthCompare: shader.depthFunc,
-            format: 'depth24plus-stencil8',
-
-            stencilFront: shader.stencilFront,
-            stencilBack: shader.stencilBack,
-            stencilWriteMask: shader.stencilWriteMask,
-            stencilReadMask: shader.stencilReadMask,
+    primitiveTopology: 'triangle-list',
+    colorStates: [
+      {
+        format: 'bgra8unorm',
+        alphaBlend: {
+          srcFactor: 'src-alpha',
+          dstFactor: 'one-minus-src-alpha',
+          operation: 'add',
         },
+        colorBlend: {
+          srcFactor: 'src-alpha',
+          dstFactor: 'one-minus-src-alpha',
+          operation: 'add',
+        },
+        writeMask: GPUColorWrite.ALL,
+      },
+    ],
 
-        vertexState: {
-            indexFormat: 'uint16',
-            vertexBuffers: vertexBuffers.map(vb => vb.descriptor),
-        },
-        rasterizationState: {
-            frontFace: 'ccw',
-            cullMode: 'none',
-        },
-    });
+    depthStencilState: {
+      depthWriteEnabled: shader.depthWrite,
+      depthCompare: shader.depthFunc,
+      format: 'depth24plus-stencil8',
+
+      stencilFront: shader.stencilFront,
+      stencilBack: shader.stencilBack,
+      stencilWriteMask: shader.stencilWriteMask,
+      stencilReadMask: shader.stencilReadMask,
+    },
+
+    vertexState: {
+      indexFormat: 'uint16',
+      vertexBuffers: vertexBuffers.map((vb) => vb.descriptor),
+    },
+    rasterizationState: {
+      frontFace: 'ccw',
+      cullMode: 'none',
+    },
+  });
 }
 
 export async function createRenderer(canvas: HTMLCanvasElement) {
-    const gpu = requestGPU();
-    const adapter = await gpu.requestAdapter();
-    const device = await adapter.requestDevice();
+  const gpu = requestGPU();
+  const adapter = await gpu.requestAdapter();
+  const device = await adapter.requestDevice();
 
-    const swapChainFormat: GPUTextureFormat = 'bgra8unorm';
-    const swapChain = configureSwapChain(canvas, {
-        device,
-        format: swapChainFormat,
-    });
+  const swapChainFormat: GPUTextureFormat = 'bgra8unorm';
+  const swapChain = configureSwapChain(canvas, {
+    device,
+    format: swapChainFormat,
+  });
 
-    const depthTexture: GPUTexture = device.createTexture({
-        size: {
-            width: canvas.width,
-            height: canvas.height,
-            depth: 1,
-        },
-        mipLevelCount: 1,
-        sampleCount: 1,
-        dimension: '2d',
-        format: 'depth24plus-stencil8',
-        usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC,
-    });
-    const depthTextureView: GPUTextureView = depthTexture.createView();
+  const depthTexture: GPUTexture = device.createTexture({
+    size: {
+      width: canvas.width,
+      height: canvas.height,
+      depth: 1,
+    },
+    mipLevelCount: 1,
+    sampleCount: 1,
+    dimension: '2d',
+    format: 'depth24plus-stencil8',
+    usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+  });
+  const depthTextureView: GPUTextureView = depthTexture.createView();
 
-    let commands: any[] = [];
-    let draws: DrawCommand[] = [];
-    let clearColor = [0, 0, 0];
+  let commands: any[] = [];
+  let draws: DrawCommand[] = [];
+  let clearColor = [0, 0, 0];
 
-    return {
-        device,
+  return {
+    device,
 
-        begin() {},
-        submit(command: RendererCommand) {
-            switch (command.type) {
-                case CommandType.Draw: {
-                    draws.push(command);
-                    break;
-                }
-                case CommandType.CopySrcToDst: {
-                    commands.push((encoder: GPUCommandEncoder) => {
-                        const { src, dst, size } = command;
+    begin() {},
+    submit(command: RendererCommand) {
+      switch (command.type) {
+        case CommandType.Draw: {
+          draws.push(command);
+          break;
+        }
+        case CommandType.CopySrcToDst: {
+          commands.push((encoder: GPUCommandEncoder) => {
+            const { src, dst, size } = command;
 
-                        const uploadBuffer = createBuffer(device, src, GPUBufferUsage.COPY_SRC);
-                        encoder.copyBufferToBuffer(uploadBuffer, 0, dst, 0, size);
+            const uploadBuffer = createBuffer(device, src, GPUBufferUsage.COPY_SRC);
+            encoder.copyBufferToBuffer(uploadBuffer, 0, dst, 0, size);
 
-                        return () => {
-                            uploadBuffer.destroy();
-                        };
-                    });
-                    break;
-                }
-            }
-        },
-        finish() {
-            const colorTexture = swapChain.getCurrentTexture();
-            const colorTextureView = colorTexture.createView();
-
-            const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
-                attachment: colorTextureView,
-                loadValue: { r: clearColor[0], g: clearColor[1], b: clearColor[2], a: 1 },
-                // loadValue: { r: 1, g: 1, b: 1, a: 1 },
-                storeOp: 'store',
+            return () => {
+              uploadBuffer.destroy();
             };
+          });
+          break;
+        }
+      }
+    },
+    finish() {
+      const colorTexture = swapChain.getCurrentTexture();
+      const colorTextureView = colorTexture.createView();
 
-            const depthAttachment: GPURenderPassDepthStencilAttachmentDescriptor = {
-                attachment: depthTextureView,
-                depthLoadValue: 1,
-                depthStoreOp: 'store',
-                stencilLoadValue: 0,
-                stencilStoreOp: 'store',
-            };
-            const renderPassDescriptor: GPURenderPassDescriptor = {
-                colorAttachments: [colorAttachment],
-                depthStencilAttachment: depthAttachment,
-            };
+      const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
+        attachment: colorTextureView,
+        loadValue: { r: clearColor[0], g: clearColor[1], b: clearColor[2], a: 1 },
+        // loadValue: { r: 1, g: 1, b: 1, a: 1 },
+        storeOp: 'store',
+      };
 
-            const commandEncoder = device.createCommandEncoder();
+      const depthAttachment: GPURenderPassDepthStencilAttachmentDescriptor = {
+        attachment: depthTextureView,
+        depthLoadValue: 1,
+        depthStoreOp: 'store',
+        stencilLoadValue: 0,
+        stencilStoreOp: 'store',
+      };
+      const renderPassDescriptor: GPURenderPassDescriptor = {
+        colorAttachments: [colorAttachment],
+        depthStencilAttachment: depthAttachment,
+      };
 
-            // encode all upload commands
-            const cleanups = commands.map(fn => fn(commandEncoder));
-            commands = [];
+      const commandEncoder = device.createCommandEncoder();
 
-            let passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+      // encode all upload commands
+      const cleanups = commands.map((fn) => fn(commandEncoder));
+      commands = [];
 
-            passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
-            passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
+      let passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
-            draws.sort((d1, d2) => {
-                const first = d1.priority || Number.MAX_VALUE;
-                const second = d2.priority || Number.MAX_VALUE;
+      passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
+      passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
 
-                if (first === second) {
-                    return 0;
-                }
+      draws.sort((d1, d2) => {
+        const first = d1.priority || Number.MAX_VALUE;
+        const second = d2.priority || Number.MAX_VALUE;
 
-                return first < second ? -1 : 1;
-            });
+        if (first === second) {
+          return 0;
+        }
 
-            // process the draw calls
-            let lastShaderId = -1;
-            for (let i = 0; i < draws.length; ++i) {
-                const { shader, buffers, count, priority } = draws[i];
+        return first < second ? -1 : 1;
+      });
 
-                if (shader.id !== lastShaderId) {
-                    passEncoder.setPipeline(createRenderPipeline(device, shader, buffers));
-                    lastShaderId = shader.id;
-                }
+      // process the draw calls
+      let lastShaderId = -1;
+      for (let i = 0; i < draws.length; ++i) {
+        const { shader, buffers, count, priority } = draws[i];
 
-                passEncoder.setBindGroup(0, shader.bindGroup);
+        if (shader.id !== lastShaderId) {
+          passEncoder.setPipeline(createRenderPipeline(device, shader, buffers));
+          lastShaderId = shader.id;
+        }
 
-                buffers.forEach((buf: VertexBuffer, idx: number) => {
-                    passEncoder.setVertexBuffer(idx, buf.buffer);
-                });
+        passEncoder.setBindGroup(0, shader.bindGroup);
 
-                passEncoder.setStencilReference(shader.stencilValue);
+        buffers.forEach((buf: VertexBuffer, idx: number) => {
+          passEncoder.setVertexBuffer(idx, buf.buffer);
+        });
 
-                passEncoder.draw(count, 1, 0, 0);
-            }
+        passEncoder.setStencilReference(shader.stencilValue);
 
-            passEncoder.endPass();
-            device.defaultQueue.submit([commandEncoder.finish()]);
+        passEncoder.draw(count, 1, 0, 0);
+      }
 
-            draws = [];
+      passEncoder.endPass();
+      device.defaultQueue.submit([commandEncoder.finish()]);
 
-            cleanups.forEach(fn => fn());
-        },
+      draws = [];
 
-        destroy() {
-            depthTexture.destroy();
-        },
+      cleanups.forEach((fn) => fn());
+    },
 
-        set clearColor(value: Color) {
-            clearColor = value;
-        },
-    };
+    destroy() {
+      depthTexture.destroy();
+    },
+
+    set clearColor(value: Color) {
+      clearColor = value;
+    },
+  };
 }

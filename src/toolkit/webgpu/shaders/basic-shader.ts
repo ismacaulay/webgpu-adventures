@@ -5,7 +5,7 @@ import { ShaderBindingType, ShaderBinding } from './types';
 import { ShaderDescriptor } from 'toolkit/ecs';
 
 export function getBasicShaderInfo(bufferManager: BufferManager): ShaderDescriptor {
-    const vertex = `
+  const vertex = `
 #version 450
 
 layout(location = 0) in vec3 position;
@@ -27,7 +27,7 @@ void main()
 }
 `;
 
-    const fragment = `
+  const fragment = `
 #version 450
 layout(std140, set = 0, binding = 2) uniform Material
 {
@@ -42,47 +42,47 @@ void main()
 }
 `;
 
-    const modelBuffer = bufferManager.createUniformBuffer(
-        {
-            model: UniformType.Mat4,
-        },
-        {
-            model: mat4.create(),
-        },
-    );
-    const materialBuffer = bufferManager.createUniformBuffer(
-        {
-            color: UniformType.Vec3,
-        },
-        {
-            color: [0, 0, 0],
-        },
-    );
+  const modelBuffer = bufferManager.createUniformBuffer(
+    {
+      model: UniformType.Mat4,
+    },
+    {
+      model: mat4.create(),
+    },
+  );
+  const materialBuffer = bufferManager.createUniformBuffer(
+    {
+      color: UniformType.Vec3,
+    },
+    {
+      color: [0, 0, 0],
+    },
+  );
 
-    const bindings: ShaderBinding[] = [
-        {
-            binding: 0,
-            visibility: GPUShaderStage.VERTEX,
-            type: ShaderBindingType.UniformBuffer,
-            resource: bufferManager.get(DefaultBuffers.ViewProjection),
-        },
-        {
-            binding: 1,
-            visibility: GPUShaderStage.VERTEX,
-            type: ShaderBindingType.UniformBuffer,
-            resource: bufferManager.get(modelBuffer),
-        },
-        {
-            binding: 2,
-            visibility: GPUShaderStage.FRAGMENT,
-            type: ShaderBindingType.UniformBuffer,
-            resource: bufferManager.get(materialBuffer),
-        },
-    ];
+  const bindings: ShaderBinding[] = [
+    {
+      binding: 0,
+      visibility: GPUShaderStage.VERTEX,
+      type: ShaderBindingType.UniformBuffer,
+      resource: bufferManager.get(DefaultBuffers.ViewProjection),
+    },
+    {
+      binding: 1,
+      visibility: GPUShaderStage.VERTEX,
+      type: ShaderBindingType.UniformBuffer,
+      resource: bufferManager.get(modelBuffer),
+    },
+    {
+      binding: 2,
+      visibility: GPUShaderStage.FRAGMENT,
+      type: ShaderBindingType.UniformBuffer,
+      resource: bufferManager.get(materialBuffer),
+    },
+  ];
 
-    return {
-        vertex,
-        fragment,
-        bindings,
-    };
+  return {
+    vertex,
+    fragment,
+    bindings,
+  };
 }

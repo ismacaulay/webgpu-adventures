@@ -3,44 +3,44 @@ import { VertexBufferInfo } from '../buffer-manager';
 import { getCountForType } from 'toolkit/webgpu/buffers/vertex-buffer';
 
 export enum GeometryType {
-    Mesh = 'mesh',
+  Mesh = 'mesh',
 }
 
 export interface GeometryComponent extends Component {
-    type: ComponentType.Geometry;
+  type: ComponentType.Geometry;
 
-    geometryType: GeometryType;
-    buffers: VertexBufferInfo[];
-    count: number;
+  geometryType: GeometryType;
+  buffers: VertexBufferInfo[];
+  count: number;
 }
 
 export interface MeshGeometryComponent extends GeometryComponent {
-    geometryType: GeometryType.Mesh;
+  geometryType: GeometryType.Mesh;
 }
 
 export function createMeshGeometryComponent(initial: {
-    buffers: VertexBufferInfo[];
+  buffers: VertexBufferInfo[];
 }): MeshGeometryComponent {
-    const { buffers } = initial;
+  const { buffers } = initial;
 
-    // TODO: Improve validation of the component
-    if (buffers.length === 0) {
-        throw new Error('[MeshGeometryComponent] No buffers provided');
-    }
+  // TODO: Improve validation of the component
+  if (buffers.length === 0) {
+    throw new Error('[MeshGeometryComponent] No buffers provided');
+  }
 
-    const buffer = buffers[0];
-    let valuesPerVertex = 0;
-    const attrs = buffer.attributes;
-    for (let i = 0; i < attrs.length; i++) {
-        valuesPerVertex += getCountForType(attrs[i].type);
-    }
-    const count = buffer.array.length / valuesPerVertex;
+  const buffer = buffers[0];
+  let valuesPerVertex = 0;
+  const attrs = buffer.attributes;
+  for (let i = 0; i < attrs.length; i++) {
+    valuesPerVertex += getCountForType(attrs[i].type);
+  }
+  const count = buffer.array.length / valuesPerVertex;
 
-    return {
-        type: ComponentType.Geometry,
+  return {
+    type: ComponentType.Geometry,
 
-        geometryType: GeometryType.Mesh,
-        buffers: initial.buffers,
-        count,
-    };
+    geometryType: GeometryType.Mesh,
+    buffers: initial.buffers,
+    count,
+  };
 }

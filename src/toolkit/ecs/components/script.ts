@@ -1,7 +1,7 @@
-import {ComponentType, Component} from "./types";
+import { ComponentType, Component } from './types';
 
 export interface ScriptComponent extends Component {
-    type: ComponentType.Script,
+  type: ComponentType.Script;
 
-    update: (dt?: number) => void;
+  update: (dt?: number) => void;
 }

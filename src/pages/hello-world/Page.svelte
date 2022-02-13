@@ -1,25 +1,23 @@
 <script>
-    import { onMount } from 'svelte';
-    import Canvas from 'components/Canvas.svelte';
-    import { createTriangleRenderer } from './renderer';
+  import { onMount } from 'svelte';
+  import Canvas from 'components/Canvas.svelte';
+  import { createTriangleRenderer } from './renderer';
 
-    let canvas;
-    onMount(() => {
-        let renderer;
+  let canvas;
+  onMount(() => {
+    let renderer;
 
-        (async () => {
-            renderer = await createTriangleRenderer(canvas.getElement());
-            renderer.start();
+    (async () => {
+      renderer = await createTriangleRenderer(canvas.getElement());
+      renderer.start();
+    })();
 
-        })();
-
-        return () => {
-            if (renderer) {
-                renderer.destroy();
-            }
-        };
-    });
+    return () => {
+      if (renderer) {
+        renderer.destroy();
+      }
+    };
+  });
 </script>
 
-<Canvas bind:this={canvas}/>
-
+<Canvas bind:this={canvas} />
