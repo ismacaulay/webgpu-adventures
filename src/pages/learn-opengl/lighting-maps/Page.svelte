@@ -1,21 +1,21 @@
 <script>
   import { onMount } from 'svelte';
-  import { create } from './renderer';
+  import { create } from './lighting-maps.ts';
   import Stats from 'toolkit/stats';
 
-  import Canvas from '../../components/Canvas.svelte';
+  import Canvas from '../../../components/Canvas.svelte';
 
   let container;
   let canvas;
   onMount(() => {
-    let renderer;
+    let page;
 
     (async () => {
       const stats = new Stats();
       stats.showPanel(0);
       container.appendChild(stats.dom);
 
-      renderer = await create(canvas.getElement(), {
+      page = await create(canvas.getElement(), {
         onRenderBegin: () => {
           stats.begin();
         },
@@ -27,8 +27,8 @@
     })();
 
     return () => {
-      if (renderer) {
-        renderer.destroy();
+      if (page) {
+        page.destroy();
       }
     };
   });

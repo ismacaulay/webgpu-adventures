@@ -3,7 +3,7 @@
   import { create } from './renderer';
   import Stats from 'toolkit/stats';
 
-  import Canvas from '../../components/Canvas.svelte';
+  import Canvas from '../../../components/Canvas.svelte';
 
   let container;
   let canvas;

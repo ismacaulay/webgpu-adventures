@@ -1,4 +1,4 @@
-import { PageOptions, WebGPUPage } from '../types';
+import { PageOptions, WebGPUPage } from '../../types';
 
 import { vec3 } from 'gl-matrix';
 import { createRenderer } from 'toolkit/webgpu/renderer';
@@ -21,6 +21,7 @@ import { BufferAttributeType, UniformBuffer, UniformType } from 'toolkit/webgpu/
 
 import cubeVertSrc from './shader.vert';
 import cubeFragSrc from './shader.frag';
+import singleColorFragSrc from './singleColor.frag';
 import { ShaderBindingType, ShaderBinding } from 'toolkit/webgpu/shaders';
 
 export async function create(canvas: HTMLCanvasElement, options: PageOptions): Promise<WebGPUPage> {
@@ -84,7 +85,8 @@ export async function create(canvas: HTMLCanvasElement, options: PageOptions): P
     [2.0, 0.0, 0.0],
   ];
 
-  let shaderId: number = -1;
+  let shaderId = -1;
+  let singleColorShaderId = -1;
   const bindings: ShaderBinding[] = [
     {
       binding: 0,
@@ -106,6 +108,16 @@ export async function create(canvas: HTMLCanvasElement, options: PageOptions): P
       resource: textureManager.getTexture(marbleTexture).createView(),
     },
   ];
+  const outlineBindings: ShaderBinding[] = [
+    {
+      binding: 0,
+      visibility: GPUShaderStage.VERTEX,
+      type: ShaderBindingType.UniformBuffer,
+      resource: viewProjectionBuffer,
+    },
+    undefined as unknown as ShaderBinding,
+  ];
+
   for (let i = 0; i < cubePositions.length; ++i) {
     const cubeEntity = entityManager.create();
 
@@ -115,7 +127,6 @@ export async function create(canvas: HTMLCanvasElement, options: PageOptions): P
         translation: cubePositions[i],
       }),
     );
-
     entityManager.addComponent(
       cubeEntity,
       createMeshGeometryComponent({
@@ -150,10 +161,98 @@ export async function create(canvas: HTMLCanvasElement, options: PageOptions): P
     const cubeMaterialComponent = createMaterialComponent({
       shader: shaderId,
       uniforms: {},
+      drawOrder: 1,
     });
     const shader = shaderManager.get(shaderId);
     shader.depthFunc = depthFunc;
+    shader.stencilWriteMask = 0xff;
+    shader.stencilReadMask = 0xff;
+    shader.stencilValue = 1;
+    shader.stencilFront = {
+      compare: 'always',
+      failOp: 'keep',
+      depthFailOp: 'keep',
+      passOp: 'replace',
+    };
+    shader.stencilBack = {
+      compare: 'always',
+      failOp: 'keep',
+      depthFailOp: 'keep',
+      passOp: 'replace',
+    };
     entityManager.addComponent(cubeEntity, cubeMaterialComponent);
+
+    // ----------------------------------
+    // cube outline
+    // ----------------------------------
+    const cubeOutline = entityManager.create();
+    entityManager.addComponent(
+      cubeOutline,
+      createTransformComponent({
+        translation: cubePositions[i],
+        scale: [1.1, 1.1, 1.1],
+      }),
+    );
+
+    entityManager.addComponent(
+      cubeOutline,
+      createMeshGeometryComponent({
+        buffers: [
+          {
+            id: cubeVertexBufferId,
+            ...cubeVertexBufferDescriptor,
+          },
+        ],
+      }),
+    );
+
+    const outlineModelBuffer = bufferManager.createUniformBuffer({
+      model: UniformType.Mat4,
+    });
+
+    outlineBindings[1] = {
+      binding: 1,
+      visibility: GPUShaderStage.VERTEX,
+      type: ShaderBindingType.UniformBuffer,
+      resource: bufferManager.get(outlineModelBuffer),
+    };
+
+    if (singleColorShaderId === -1) {
+      singleColorShaderId = shaderManager.create({
+        vertex: cubeVertSrc,
+        fragment: singleColorFragSrc,
+        bindings: outlineBindings,
+      });
+    } else {
+      singleColorShaderId = shaderManager.clone(singleColorShaderId, outlineBindings);
+    }
+    const outlineShader = shaderManager.get(singleColorShaderId);
+    outlineShader.depthWrite = false;
+    outlineShader.depthFunc = 'always';
+    outlineShader.stencilValue = 1;
+    outlineShader.stencilReadMask = 0xff;
+    outlineShader.stencilWriteMask = 0x00;
+    outlineShader.stencilFront = {
+      compare: 'not-equal',
+      failOp: 'keep',
+      depthFailOp: 'keep',
+      passOp: 'keep',
+    };
+    outlineShader.stencilBack = {
+      compare: 'not-equal',
+      failOp: 'keep',
+      depthFailOp: 'keep',
+      passOp: 'keep',
+    };
+    outlineShader.stencilWriteMask = 0xff;
+    entityManager.addComponent(
+      cubeOutline,
+      createMaterialComponent({
+        shader: singleColorShaderId,
+        drawOrder: 5,
+        uniforms: {},
+      }),
+    );
   }
 
   // prettier-ignore
@@ -208,14 +307,36 @@ export async function create(canvas: HTMLCanvasElement, options: PageOptions): P
     resource: textureManager.getTexture(metalTexture).createView(),
   };
 
-  shaderId = shaderManager.clone(shaderId, bindings);
+  shaderId = shaderManager.create({
+    vertex: cubeVertSrc,
+    fragment: cubeFragSrc,
+    bindings,
+  });
   const shader = shaderManager.get(shaderId);
+  shader.depthWrite = true;
   shader.depthFunc = depthFunc;
+  shader.stencilReadMask = 0xff;
+  shader.stencilWriteMask = 0x00;
+  shader.stencilValue = 1;
+  shader.stencilFront = {
+    compare: 'always',
+    failOp: 'keep',
+    depthFailOp: 'keep',
+    passOp: 'keep',
+  };
+  shader.stencilFront = {
+    compare: 'always',
+    failOp: 'keep',
+    depthFailOp: 'keep',
+    passOp: 'keep',
+  };
+
   entityManager.addComponent(
     planeEntity,
     createMaterialComponent({
       shader: shaderId,
       uniforms: {},
+      drawOrder: 1,
     }),
   );
 
