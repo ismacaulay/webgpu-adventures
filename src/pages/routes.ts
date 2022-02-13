@@ -1,5 +1,5 @@
 import HelloWorld from './hello-world/Page.svelte';
-// import ECS from './pages/ecs/Page.svelte';
+import ECS from './ecs/Page.svelte';
 // import Cube from './pages/learn-opengl/cube/Page.svelte';
 // import RotatingCube from './pages/learn-opengl/rotating-cube/Page.svelte';
 // import Lighting from './pages/learn-opengl/lighting/Page.svelte';
@@ -11,7 +11,7 @@ import HelloWorld from './hello-world/Page.svelte';
 
 export default [
   { title: 'hello-world', component: HelloWorld },
-  // { title: 'ecs', component: ECS },
+  { title: 'ecs', component: ECS },
   // { title: 'learn-opengl/basics', component: Cube },
   // { title: 'learn-opengl/transformations', component: RotatingCube },
   // { title: 'learn-opengl/materials', component: Lighting },

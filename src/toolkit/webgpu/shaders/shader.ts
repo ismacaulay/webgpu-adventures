@@ -1,5 +1,5 @@
 import { UniformBuffer, UniformDictionary } from '../buffers';
-import { ShaderBinding, Shader, ShaderBindingType } from './types';
+import { ShaderBinding, Shader, ShaderBindingType, ShaderDescriptor } from './types';
 
 function processBindings(bindings: ShaderBinding[]) {
   const entries: GPUBindGroupEntry[] = [];
@@ -50,13 +50,12 @@ function updateBuffers(buffers: UniformBuffer[], uniforms: UniformDictionary) {
 
 export function createShader(
   device: GPUDevice,
-  glslang: any,
   {
     id,
     vertex,
     fragment,
     bindings,
-  }: { id: number; vertex: string; fragment: string; bindings: any[] },
+  }: { id: number; descriptor: ShaderDescriptor ; bindings: any[] },
 ): Shader {
   const { buffers, entries } = processBindings(bindings);
   const bindGroupLayout: GPUBindGroupLayout = device.createBindGroupLayout({

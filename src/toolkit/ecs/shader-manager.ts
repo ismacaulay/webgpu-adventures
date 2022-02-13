@@ -1,11 +1,10 @@
-import glslangModule from 'toolkit/webgpu/shaders/glslang';
-import { ShaderBinding, createShader, cloneShader, Shader } from 'toolkit/webgpu/shaders';
-
-export interface ShaderDescriptor {
-  vertex: string;
-  fragment: string;
-  bindings: ShaderBinding[];
-}
+import {
+  ShaderBinding,
+  createShader,
+  cloneShader,
+  Shader,
+  ShaderDescriptor,
+} from 'toolkit/webgpu/shaders';
 
 export interface ShaderManager {
   get(id: number): Shader;
@@ -18,8 +17,6 @@ interface ShaderStorage {
 }
 
 export async function createShaderManager(device: GPUDevice) {
-  const glslang = await glslangModule();
-
   let storage: ShaderStorage = {};
 
   let storageId = 0;

@@ -20,7 +20,8 @@
     "preserveConstEnums": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
-    "strictPropertyInitialization": true
+    "strictPropertyInitialization": true,
+    "isolatedModules": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules/*", "__sapper__/*", "public/*"]

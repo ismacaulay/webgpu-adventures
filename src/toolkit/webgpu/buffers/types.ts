@@ -1,33 +1,39 @@
-import { mat2, mat3, mat4, vec2, vec3, vec4 } from 'gl-matrix';
-
 export enum BufferType {
   Vertex,
   Uniform,
+  Index,
 }
 
-export interface Buffer {
+export interface BaseBuffer {
   type: BufferType;
 
   readonly buffer: GPUBuffer;
-  readonly data: Float32Array;
 
   destroy(): void;
 }
 
-export enum BufferAttributeType {
-  Float2 = 'float2',
-  Float3 = 'float3',
+export enum BufferAttributeFormat {
+  Float32 = 'float32',
+  Float32x2 = 'float32x2',
+  Float32x3 = 'float32x3',
 }
 
 export interface BufferAttribute {
-  type: BufferAttributeType;
+  format: BufferAttributeFormat;
   location: number;
 }
 
-export interface VertexBuffer extends Buffer {
+export interface VertexBufferDescriptor {
+  id?: number;
+  array: Float32Array;
+  attributes: BufferAttribute[];
+}
+
+export interface VertexBuffer extends BaseBuffer {
   type: BufferType.Vertex;
 
-  readonly descriptor: GPUVertexBufferLayoutDescriptor;
+  readonly data: Float32Array;
+  readonly layout: GPUVertexBufferLayout;
   readonly count: number;
 }
 
@@ -47,7 +53,7 @@ export interface UniformLocationDictionary {
   [key: string]: number | boolean | { offset: number; c: number; r: number };
 }
 
-export interface UniformBuffer extends Buffer {
+export interface UniformBuffer extends BaseBuffer {
   type: BufferType.Uniform;
 
   needsUpdate: boolean;
@@ -80,3 +86,18 @@ export interface UniformBufferDescriptor {
     | [UniformType, number]
     | [UniformBufferDescriptor, number];
 }
+
+export interface IndexBufferDescriptor {
+  id?: number;
+  array: Uint16Array | Uint32Array;
+}
+
+export interface IndexBuffer extends BaseBuffer {
+  type: BufferType.Index;
+
+  readonly data: Uint16Array | Uint32Array;
+
+  format: GPUIndexFormat;
+}
+
+export type Buffer = VertexBuffer | UniformBuffer | IndexBuffer;

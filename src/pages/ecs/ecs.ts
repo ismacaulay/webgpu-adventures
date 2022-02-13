@@ -23,36 +23,35 @@ import {
   UniformDictionary,
 } from 'toolkit/webgpu/buffers';
 import { createRenderer } from 'toolkit/webgpu/renderer';
-import { createCamera, createFreeCameraController } from 'toolkit/camera';
 import { vec3, mat4 } from 'gl-matrix';
 import { Colors } from 'toolkit/materials/color';
 import { getBasicShaderInfo } from 'toolkit/webgpu/shaders/basic-shader';
 import { CommonMaterials } from 'toolkit/materials';
 import { ShaderBindingType } from 'toolkit/webgpu/shaders';
+import { createCameraController } from 'toolkit/camera/camera-controller';
 
-import phongVertex from './phong.vert';
-import phongFrag from './phong.frag';
+// import phongVertex from './phong.vert';
+// import phongFrag from './phong.frag';
 
 export async function create(canvas: HTMLCanvasElement, options: any) {
+  const cameraController = createCameraController(canvas);
   const renderer = await createRenderer(canvas);
 
-  const camera = createCamera();
-  vec3.set(camera.position, 0, 0, 3);
-  camera.updateViewMatrix();
-  const cameraController = createFreeCameraController(canvas, camera);
+  vec3.set(cameraController.camera.position, 0, 0, 3);
+  cameraController.camera.updateViewMatrix();
 
   const entityManager = createEntityManager();
   const bufferManager = createBufferManager(renderer.device);
   const shaderManager = await createShaderManager(renderer.device);
-  const scriptSystem = createScriptSystem(entityManager);
+  // const scriptSystem = createScriptSystem(entityManager);
 
-  const movementSystem = createMovementSystem(entityManager);
+  // const movementSystem = createMovementSystem(entityManager);
   const renderSystem = createRenderSystem(
     entityManager,
     shaderManager,
     bufferManager,
     renderer,
-    camera,
+    cameraController.camera,
   );
 
   const viewProjectionBuffer = bufferManager.get<UniformBuffer>(DefaultBuffers.ViewProjection);
@@ -60,7 +59,7 @@ export async function create(canvas: HTMLCanvasElement, options: any) {
   // TODO: Shaders should be shareable. To do that, they should need
   // to share the layout (since they have the same source), but the
   // uniform buffers need to be unique (other than shared buffers)
-  const lightShader = shaderManager.create(getBasicShaderInfo(bufferManager));
+  // const lightShader = shaderManager.create(getBasicShaderInfo(bufferManager));
 
   const lightPos = vec3.fromValues(1.2, 1.0, 2.0);
   const lightColor = {
@@ -78,7 +77,7 @@ export async function create(canvas: HTMLCanvasElement, options: any) {
     },
   );
   const materialUniforms = {
-    view_pos: camera.position,
+    view_pos: cameraController.camera.position,
     material: {
       ambient: [0.0215, 0.1745, 0.0215],
       diffuse: [0.07568, 0.61424, 0.07568],
@@ -133,46 +132,46 @@ export async function create(canvas: HTMLCanvasElement, options: any) {
     ],
   });
 
-  const lightEntity = entityManager.create();
-  entityManager.addComponent(
-    lightEntity,
-    createTransformComponent({
-      translation: [1.2, 1.0, 2.0],
-      scale: [0.1, 0.1, 0.1],
-    }),
-  );
-  entityManager.addComponent(
-    lightEntity,
-    createCircularMovementComponent({
-      center: [0, 1.0, 0.0],
-      axis: [0, 1, 0],
-      radius: 1,
-      period: 4,
-    }),
-  );
-  entityManager.addComponent(
-    lightEntity,
-    createBasicMaterialComponent({
-      shader: lightShader,
-      color: Colors.White,
-    }),
-  );
-  entityManager.addComponent(
-    lightEntity,
-    createMeshGeometryComponent({
-      buffers: [
-        {
-          array: CUBE_VERTICES,
-          attributes: [
-            {
-              type: BufferAttributeType.Float3,
-              location: 0,
-            },
-          ],
-        },
-      ],
-    }),
-  );
+  // const lightEntity = entityManager.create();
+  // entityManager.addComponent(
+  //   lightEntity,
+  //   createTransformComponent({
+  //     translation: [1.2, 1.0, 2.0],
+  //     scale: [0.1, 0.1, 0.1],
+  //   }),
+  // );
+  // entityManager.addComponent(
+  //   lightEntity,
+  //   createCircularMovementComponent({
+  //     center: [0, 1.0, 0.0],
+  //     axis: [0, 1, 0],
+  //     radius: 1,
+  //     period: 4,
+  //   }),
+  // );
+  // entityManager.addComponent(
+  //   lightEntity,
+  //   createBasicMaterialComponent({
+  //     shader: lightShader,
+  //     color: Colors.White,
+  //   }),
+  // );
+  // entityManager.addComponent(
+  //   lightEntity,
+  //   createMeshGeometryComponent({
+  //     buffers: [
+  //       {
+  //         array: CUBE_VERTICES,
+  //         attributes: [
+  //           {
+  //             type: BufferAttributeType.Float3,
+  //             location: 0,
+  //           },
+  //         ],
+  //       },
+  //     ],
+  //   }),
+  // );
 
   const cubeEntity = entityManager.create();
   entityManager.addComponent(
@@ -212,15 +211,15 @@ export async function create(canvas: HTMLCanvasElement, options: any) {
     uniforms: materialUniforms,
   });
   entityManager.addComponent(cubeEntity, cubeMaterialComponent);
-  entityManager.addComponent(cubeEntity, {
-    type: ComponentType.Script,
-    update() {
-      const transform = entityManager.get(lightEntity, [
-        ComponentType.Transform,
-      ])[0] as TransformComponent;
-      (cubeMaterialComponent.uniforms.light as UniformDictionary).position = transform.translation;
-    },
-  });
+  // entityManager.addComponent(cubeEntity, {
+  //   type: ComponentType.Script,
+  //   update() {
+  //     const transform = entityManager.get(lightEntity, [
+  //       ComponentType.Transform,
+  //     ])[0] as TransformComponent;
+  //     (cubeMaterialComponent.uniforms.light as UniformDictionary).position = transform.translation;
+  //   },
+  // });
 
   let rafId: number;
   let lastTime = performance.now();
@@ -231,14 +230,14 @@ export async function create(canvas: HTMLCanvasElement, options: any) {
     const dt = (now - lastTime) / 1000;
     lastTime = now;
 
-    cameraController.update(dt);
+    cameraController.update();
 
     // TODO: Dont do this every frame
-    camera.aspect = canvas.clientWidth / canvas.clientHeight;
-    camera.updateProjectionMatrix();
+    cameraController.camera.aspect = canvas.clientWidth / canvas.clientHeight;
+    cameraController.camera.updateProjectionMatrix();
 
-    scriptSystem.update(dt);
-    movementSystem.update(dt);
+    // scriptSystem.update(dt);
+    // movementSystem.update(dt);
     renderSystem.update();
 
     options.onRenderFinish();
@@ -246,14 +245,14 @@ export async function create(canvas: HTMLCanvasElement, options: any) {
   }
   render();
 
-  const model = {
-    material: Object.keys(CommonMaterials)[0],
-  };
-  const gui = new dat.GUI();
-  const materialSelectionController = gui.add(model, 'material', Object.keys(CommonMaterials));
-  materialSelectionController.onChange((material: string) => {
-    cubeMaterialComponent.uniforms.material = CommonMaterials[material];
-  });
+  // const model = {
+  //   material: Object.keys(CommonMaterials)[0],
+  // };
+  // const gui = new dat.GUI();
+  // const materialSelectionController = gui.add(model, 'material', Object.keys(CommonMaterials));
+  // materialSelectionController.onChange((material: string) => {
+  //   cubeMaterialComponent.uniforms.material = CommonMaterials[material];
+  // });
 
   return {
     destroy() {
@@ -261,7 +260,7 @@ export async function create(canvas: HTMLCanvasElement, options: any) {
         cancelAnimationFrame(rafId);
       }
 
-      gui.destroy();
+      // gui.destroy();
 
       cameraController.destroy();
       bufferManager.destroy();

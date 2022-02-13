@@ -1,5 +1,5 @@
 import { Component, ComponentType } from './types';
-import { VertexBufferInfo } from '../buffer-manager';
+import { VertexBufferDescriptor } from '../buffer-manager';
 import { getCountForType } from 'toolkit/webgpu/buffers/vertex-buffer';
 
 export enum GeometryType {
@@ -10,7 +10,7 @@ export interface GeometryComponent extends Component {
   type: ComponentType.Geometry;
 
   geometryType: GeometryType;
-  buffers: VertexBufferInfo[];
+  buffers: VertexBufferDescriptor[];
   count: number;
 }
 
@@ -19,7 +19,7 @@ export interface MeshGeometryComponent extends GeometryComponent {
 }
 
 export function createMeshGeometryComponent(initial: {
-  buffers: VertexBufferInfo[];
+  buffers: VertexBufferDescriptor[];
 }): MeshGeometryComponent {
   const { buffers } = initial;
 

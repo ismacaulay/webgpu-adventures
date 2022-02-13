@@ -49,3 +49,35 @@ export interface Shader {
   stencilReadMask: number;
   stencilValue: number;
 }
+
+interface ShaderBindingDescriptor {
+  type: ShaderBindingType;
+  resource: number;
+}
+
+interface BaseShaderDescriptor {
+  bindings: ShaderBindingDescriptor[];
+}
+
+export interface SingleSourceShaderDescriptor extends BaseShaderDescriptor {
+  source: string;
+  vertex: {
+    entryPoint: string;
+  };
+  fragment: {
+    entryPoint: string;
+  };
+}
+
+export interface MultiSourceShaderDescriptor extends BaseShaderDescriptor {
+  vertex: {
+    source: string;
+    entryPoint: string;
+  };
+  fragment: {
+    source: string;
+    entryPoint: string;
+  };
+}
+
+export type ShaderDescriptor = SingleSourceShaderDescriptor | MultiSourceShaderDescriptor;

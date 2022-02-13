@@ -1,25 +1,22 @@
 import {
-  BufferAttribute,
-  createVertexBuffer as createWebGPUVertexBuffer,
-  Buffer,
+  createVertexBuffer,
+  BaseBuffer,
   createUniformBuffer,
   UniformBufferDescriptor,
   UniformType,
   UniformDictionary,
+  IndexBufferDescriptor,
+  VertexBufferDescriptor,
 } from 'toolkit/webgpu/buffers';
+import { createIndexBuffer } from 'toolkit/webgpu/buffers/index-buffer';
 import { createIdProvider } from './id-provider';
 
-export interface VertexBufferInfo {
-  id?: number;
-  attributes: BufferAttribute[];
-  array: Float32Array;
-}
-
 export interface BufferManager {
-  createVertexBuffer(info: VertexBufferInfo): number;
+  createVertexBuffer(info: VertexBufferDescriptor): number;
   createUniformBuffer(uniforms: UniformBufferDescriptor, initial?: UniformDictionary): number;
+  createIndexBuffer(descriptor: IndexBufferDescriptor): number;
 
-  get<T extends Buffer>(id: number): T;
+  get<T extends BaseBuffer>(id: number): T;
   destroy(): void;
 }
 
@@ -30,7 +27,7 @@ export enum DefaultBuffers {
 }
 
 interface BufferStorage {
-  [key: number]: Buffer;
+  [key: number]: BaseBuffer;
 }
 
 export function createBufferManager(device: GPUDevice): BufferManager {
@@ -38,9 +35,9 @@ export function createBufferManager(device: GPUDevice): BufferManager {
   const generator = createIdProvider(DefaultBuffers.Count);
 
   return {
-    createVertexBuffer(info: VertexBufferInfo) {
+    createVertexBuffer(info: VertexBufferDescriptor) {
       const id = generator.next();
-      storage[id] = createWebGPUVertexBuffer(device, info.attributes, info.array);
+      storage[id] = createVertexBuffer(device, info.attributes, info.array);
       return id;
     },
 
@@ -50,7 +47,13 @@ export function createBufferManager(device: GPUDevice): BufferManager {
       return id;
     },
 
-    get<T extends Buffer>(id: number): T {
+    createIndexBuffer(descriptor: IndexBufferDescriptor) {
+      const id = generator.next();
+      storage[id] = createIndexBuffer(device, descriptor);
+      return id;
+    },
+
+    get<T extends BaseBuffer>(id: number): T {
       let buffer = storage[id];
 
       if (!buffer) {
@@ -69,7 +72,7 @@ export function createBufferManager(device: GPUDevice): BufferManager {
     },
 
     destroy() {
-      Object.values(storage).forEach((buffer: Buffer) => {
+      Object.values(storage).forEach((buffer: BaseBuffer) => {
         buffer.destroy();
       });
       storage = {};

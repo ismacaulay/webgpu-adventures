@@ -1,7 +1,7 @@
-import { configureSwapChain, requestGPU, createBuffer } from './utils';
-import { VertexBuffer } from './buffers';
-import { Color } from 'toolkit/materials';
-import { Shader } from './shaders';
+import { createBuffer } from './utils';
+import type { VertexBuffer } from './buffers';
+import type { Color } from 'toolkit/materials';
+import type { Shader } from './shaders';
 
 export interface RendererSubmission {
   shader: any;
@@ -89,29 +89,49 @@ function createRenderPipeline(device: GPUDevice, shader: Shader, vertexBuffers: 
 }
 
 export async function createRenderer(canvas: HTMLCanvasElement) {
-  const gpu = requestGPU();
+  const gpu: GPU | undefined = navigator.gpu;
+  if (!gpu) {
+    throw new Error('WebGPU not supported in this browser');
+  }
+
   const adapter = await gpu.requestAdapter();
-  const device = await adapter.requestDevice();
+  if (!adapter) {
+    throw new Error('Unable to request adapter');
+  }
 
-  const swapChainFormat: GPUTextureFormat = 'bgra8unorm';
-  const swapChain = configureSwapChain(canvas, {
+  const device: GPUDevice = await adapter.requestDevice();
+  const context = canvas.getContext('webgpu') as GPUCanvasContext;
+
+  // setup the context
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  let presentationSize = [
+    canvas.clientWidth * devicePixelRatio,
+    canvas.clientHeight * devicePixelRatio,
+  ];
+  const presentationFormat = context.getPreferredFormat(adapter);
+  context.configure({
     device,
-    format: swapChainFormat,
+    size: presentationSize,
+    format: presentationFormat,
   });
 
-  const depthTexture: GPUTexture = device.createTexture({
-    size: {
-      width: canvas.width,
-      height: canvas.height,
-      depth: 1,
-    },
-    mipLevelCount: 1,
-    sampleCount: 1,
-    dimension: '2d',
-    format: 'depth24plus-stencil8',
-    usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+  // setup the render target
+  let renderTarget = device.createTexture({
+    size: presentationSize,
+    sampleCount: 4,
+    format: presentationFormat,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
   });
-  const depthTextureView: GPUTextureView = depthTexture.createView();
+  let renderTargetView = renderTarget.createView();
+
+  // create the depth texture
+  let depthTexture = device.createTexture({
+    size: presentationSize,
+    format: 'depth24plus',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    sampleCount: 4,
+  });
+  let depthTextureView = depthTexture.createView();
 
   let commands: any[] = [];
   let draws: DrawCommand[] = [];
@@ -131,11 +151,11 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
           commands.push((encoder: GPUCommandEncoder) => {
             const { src, dst, size } = command;
 
-            const uploadBuffer = createBuffer(device, src, GPUBufferUsage.COPY_SRC);
-            encoder.copyBufferToBuffer(uploadBuffer, 0, dst, 0, size);
+            // const uploadBuffer = createBuffer(device, src, GPUBufferUsage.COPY_SRC);
+            // encoder.copyBufferToBuffer(uploadBuffer, 0, dst, 0, size);
 
             return () => {
-              uploadBuffer.destroy();
+              // uploadBuffer.destroy();
             };
           });
           break;
@@ -143,26 +163,54 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
       }
     },
     finish() {
-      const colorTexture = swapChain.getCurrentTexture();
-      const colorTextureView = colorTexture.createView();
+      if (
+        canvas.clientWidth !== presentationSize[0] ||
+        canvas.clientHeight !== presentationSize[1]
+      ) {
+        presentationSize = [
+          canvas.clientWidth * devicePixelRatio,
+          canvas.clientHeight * devicePixelRatio,
+        ];
+        context.configure({
+          device,
+          size: presentationSize,
+          format: presentationFormat,
+        });
+        renderTarget.destroy();
+        renderTarget = device.createTexture({
+          size: presentationSize,
+          sampleCount: 4,
+          format: presentationFormat,
+          usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+        renderTargetView = renderTarget.createView();
+        depthTexture.destroy();
+        depthTexture = device.createTexture({
+          size: presentationSize,
+          format: 'depth24plus',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT,
+          sampleCount: 4,
+        });
+        depthTextureView = depthTexture.createView();
+      }
 
-      const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
-        attachment: colorTextureView,
-        loadValue: { r: clearColor[0], g: clearColor[1], b: clearColor[2], a: 1 },
-        // loadValue: { r: 1, g: 1, b: 1, a: 1 },
-        storeOp: 'store',
-      };
+      const renderPassDescriptor = {
+        colorAttachments: [
+          {
+            view: renderTargetView,
+            resolveTarget: context.getCurrentTexture().createView(),
+            loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+            storeOp: 'store',
+          },
+        ],
+        depthStencilAttachment: {
+          view: depthTextureView,
 
-      const depthAttachment: GPURenderPassDepthStencilAttachmentDescriptor = {
-        attachment: depthTextureView,
-        depthLoadValue: 1,
-        depthStoreOp: 'store',
-        stencilLoadValue: 0,
-        stencilStoreOp: 'store',
-      };
-      const renderPassDescriptor: GPURenderPassDescriptor = {
-        colorAttachments: [colorAttachment],
-        depthStencilAttachment: depthAttachment,
+          depthLoadValue: 1.0,
+          depthStoreOp: 'store',
+          stencilLoadValue: 0,
+          stencilStoreOp: 'store',
+        },
       };
 
       const commandEncoder = device.createCommandEncoder();
@@ -171,6 +219,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
       const cleanups = commands.map((fn) => fn(commandEncoder));
       commands = [];
 
+      // @ts-ignore
       let passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
       passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
@@ -208,8 +257,8 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
         passEncoder.draw(count, 1, 0, 0);
       }
 
-      passEncoder.endPass();
-      device.defaultQueue.submit([commandEncoder.finish()]);
+      passEncoder.end();
+      device.queue.submit([commandEncoder.finish()]);
 
       draws = [];
 
