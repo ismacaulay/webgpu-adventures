@@ -1,46 +1,49 @@
-import { Component, ComponentType } from './types';
-import { VertexBufferDescriptor } from '../buffer-manager';
-import { getCountForType } from 'toolkit/webgpu/buffers/vertex-buffer';
+import { BaseComponent, ComponentType } from './types';
+import type { VertexBufferDescriptor, IndexBufferDescriptor } from 'toolkit/webgpu/buffers';
+import { createBaseComponent } from './base';
 
 export enum GeometryType {
   Mesh = 'mesh',
 }
 
-export interface GeometryComponent extends Component {
+export interface BaseGeometryComponent extends BaseComponent {
   type: ComponentType.Geometry;
-
   geometryType: GeometryType;
+
   buffers: VertexBufferDescriptor[];
   count: number;
 }
 
-export interface MeshGeometryComponent extends GeometryComponent {
-  geometryType: GeometryType.Mesh;
+export interface MeshGeometryComponent extends BaseGeometryComponent {
+  indices?: IndexBufferDescriptor;
+  count: number;
 }
+export type GeometryComponent = MeshGeometryComponent;
 
-export function createMeshGeometryComponent(initial: {
+export function createMeshGeometryComponent({
+  indices,
+  buffers,
+  count,
+}: {
+  indices?: Uint16Array | Uint32Array;
   buffers: VertexBufferDescriptor[];
+  count: number;
 }): MeshGeometryComponent {
-  const { buffers } = initial;
-
-  // TODO: Improve validation of the component
-  if (buffers.length === 0) {
-    throw new Error('[MeshGeometryComponent] No buffers provided');
+  let indexDescriptor: IndexBufferDescriptor | undefined = undefined;
+  if (indices) {
+    indexDescriptor = {
+      array: indices,
+    };
   }
-
-  const buffer = buffers[0];
-  let valuesPerVertex = 0;
-  const attrs = buffer.attributes;
-  for (let i = 0; i < attrs.length; i++) {
-    valuesPerVertex += getCountForType(attrs[i].type);
-  }
-  const count = buffer.array.length / valuesPerVertex;
 
   return {
     type: ComponentType.Geometry,
-
     geometryType: GeometryType.Mesh,
-    buffers: initial.buffers,
+    ...createBaseComponent(),
+
+    indices: indexDescriptor,
+    buffers,
+
     count,
   };
 }

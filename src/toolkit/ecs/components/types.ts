@@ -1,6 +1,3 @@
-// TODO: This should probably be configurable based on
-// the application requirements. It probably also shouldnt
-// be a bit field since that will limit us to 32 (64?) components
 export enum ComponentType {
   Transform = 1,
   Geometry = 2,
@@ -10,8 +7,8 @@ export enum ComponentType {
   Script = 32,
 }
 
-export interface Component {
+export interface BaseComponent {
   type: ComponentType;
 
-  [key: string]: any;
+  needsUpdate: boolean;
 }

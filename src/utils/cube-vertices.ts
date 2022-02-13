@@ -1,5 +1,5 @@
 // prettier-ignore
-const CUBE_VERTICES_WITH_COLOR_WITH_UV = Float32Array.from([
+export const CUBE_VERTICES_WITH_COLOR_WITH_UV = Float32Array.from([
     // position       color          uv
     -0.5, -0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0,
      0.5, -0.5, -0.5, 1.0, 0.0, 0.0, 1.0, 0.0,
@@ -271,5 +271,3 @@ export const CUBE_VERTICES_WITH_UV = Float32Array.from([
     -0.5,  0.5,  0.5, 0.0, 0.0,
     -0.5,  0.5, -0.5, 0.0, 1.0
 ]);
-
-export default CUBE_VERTICES_WITH_COLOR_WITH_UV;

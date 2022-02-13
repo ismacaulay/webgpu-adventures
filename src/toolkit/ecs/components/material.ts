@@ -1,47 +1,65 @@
-import { Colors, Color } from 'toolkit/materials/color';
-import { Component, ComponentType } from './types';
-import { UniformDictionary } from 'toolkit/webgpu/buffers';
+import { BaseComponent, ComponentType } from './types';
+import type { UniformDictionary } from 'toolkit/webgpu/buffers';
+import { createBaseComponent } from './base';
 
-export interface MaterialComponent extends Component {
+export interface ShaderMaterialComponent extends BaseComponent {
+  type: ComponentType.Material;
+
   readonly shader: number;
   readonly uniforms: UniformDictionary;
 
-  readonly lighting: boolean;
+  // readonly lighting: boolean;
 
-  readonly drawOrder: number;
+  // readonly drawOrder: number;
 }
 
-export function createBasicMaterialComponent(initial: {
-  shader: number;
-  color?: Color;
-}): MaterialComponent {
-  const { shader, color = Colors.Red } = initial;
+// export function createBasicMaterialComponent(initial: {
+//   shader: number;
+//   color?: Color;
+// }): MaterialComponent {
+//   const { shader, color = Colors.Red } = initial;
 
-  return {
-    type: ComponentType.Material,
-    shader,
-    lighting: false,
-    drawOrder: Number.MAX_VALUE,
-    uniforms: {
-      color,
-    },
-  };
-}
+//   return {
+//     type: ComponentType.Material,
+//     shader,
+//     lighting: false,
+//     drawOrder: Number.MAX_VALUE,
+//     uniforms: {
+//       color,
+//     },
+//   };
+// }
 
-export function createMaterialComponent({
+// export function createMaterialComponent({
+//   shader,
+//   uniforms,
+//   drawOrder = Number.MAX_VALUE,
+// }: {
+//   shader: number;
+//   uniforms: UniformDictionary;
+//   drawOrder?: number;
+// }): MaterialComponent {
+//   return {
+//     type: ComponentType.Material,
+//     shader,
+//     lighting: true,
+//     uniforms,
+//     drawOrder,
+//   };
+// }
+
+export function createShaderMaterialComponent({
   shader,
   uniforms,
-  drawOrder = Number.MAX_VALUE,
 }: {
   shader: number;
-  uniforms: UniformDictionary;
-  drawOrder?: number;
-}): MaterialComponent {
+  uniforms?: UniformDictionary;
+}): ShaderMaterialComponent {
   return {
     type: ComponentType.Material,
+    ...createBaseComponent(),
+
     shader,
-    lighting: true,
-    uniforms,
-    drawOrder,
+    uniforms: uniforms || {},
   };
 }

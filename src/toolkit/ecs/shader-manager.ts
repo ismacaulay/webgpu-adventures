@@ -16,7 +16,7 @@ interface ShaderStorage {
   [key: number]: Shader;
 }
 
-export async function createShaderManager(device: GPUDevice) {
+export function createShaderManager(device: GPUDevice) {
   let storage: ShaderStorage = {};
 
   let storageId = 0;
@@ -33,18 +33,18 @@ export async function createShaderManager(device: GPUDevice) {
     },
 
     create({ vertex, fragment, bindings }: ShaderDescriptor) {
-      const shader = createShader(device, glslang, {
-        id: shaderId,
-        vertex,
-        fragment,
-        bindings,
-      });
-      shaderId++;
-
-      const id = storageId;
-      storageId++;
-      storage[id] = shader;
-      return id;
+      throw new Error('shaderManager not implemented');
+      // const shader = createShader(device, glslang, {
+      //   id: shaderId,
+      //   vertex,
+      //   fragment,
+      //   bindings,
+      // });
+      // shaderId++;
+      // const id = storageId;
+      // storageId++;
+      // storage[id] = shader;
+      // return id;
     },
 
     clone(id: number, bindings: ShaderBinding[]) {

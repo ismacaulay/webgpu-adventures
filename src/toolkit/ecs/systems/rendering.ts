@@ -10,8 +10,9 @@ import {
   GeometryComponent,
 } from '../components';
 import { BufferManager, DefaultBuffers } from '../buffer-manager';
+import type { CameraController } from 'toolkit/camera/types';
 
-export function createRenderSystem(
+export function createRenderSystemOld(
   entityManager: EntityManager,
   shaderManager: ShaderManager,
   bufferManager: BufferManager,
@@ -86,5 +87,19 @@ export function createRenderSystem(
 
       renderer.finish();
     },
+  };
+}
+
+export function createRenderSystem(
+  renderer: Renderer,
+  cameraController: CameraController,
+  managers: {
+    entityManager: EntityManager;
+    bufferManager: BufferManager;
+    shaderManager: ShaderManager;
+  },
+) {
+  return {
+    update() {},
   };
 }
