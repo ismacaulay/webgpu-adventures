@@ -6,10 +6,11 @@
 
     "baseUrl": "./src",
     "paths": {
-      "toolkit": ["toolkit"],
-      "rendering": ["rendering"],
-      "utils": ["utils"],
-      "types": ["types"]
+      "components": ["./components"],
+      "toolkit": ["./toolkit"],
+      "rendering": ["./rendering"],
+      "utils": ["./utils"],
+      "types": ["./types"]
     },
     "target": "es6",
     "sourceMap": true,

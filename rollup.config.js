@@ -7,31 +7,31 @@ import { string } from 'rollup-plugin-string';
 import sveltePreprocess from 'svelte-preprocess';
 import typescript from '@rollup/plugin-typescript';
 import css from 'rollup-plugin-css-only';
-import serve from 'rollup-plugin-serve'
+import alias from '@rollup/plugin-alias';
 
 const production = !process.env.ROLLUP_WATCH;
 
-// function serve() {
-//   let server;
+function serve() {
+  let server;
 
-//   function toExit() {
-//     if (server) server.kill(0);
-//   }
+  function toExit() {
+    if (server) server.kill(0);
+  }
 
-//   return {
-//     writeBundle() {
-//       if (server) return;
-//       // eslint-disable-next-line
-//       server = require('child_process').spawn('npm', ['run', 'start', '--', '--dev'], {
-//         stdio: ['ignore', 'inherit', 'inherit'],
-//         shell: true,
-//       });
+  return {
+    writeBundle() {
+      if (server) return;
+      // eslint-disable-next-line
+      server = require('child_process').spawn('npm', ['run', 'start', '--', '--dev'], {
+        stdio: ['ignore', 'inherit', 'inherit'],
+        shell: true,
+      });
 
-//       process.on('SIGTERM', toExit);
-//       process.on('exit', toExit);
-//     },
-//   };
-// }
+      process.on('SIGTERM', toExit);
+      process.on('exit', toExit);
+    },
+  };
+}
 
 export default {
   input: 'src/main.ts',
@@ -48,6 +48,14 @@ export default {
         // enable run-time checks when not in production
         dev: !production,
       },
+    }),
+    alias({
+      entries: [
+        {
+          find: 'components',
+          replacement: 'src/components',
+        },
+      ],
     }),
     // we'll extract any component CSS out into
     // a separate file - better for performance
@@ -74,10 +82,7 @@ export default {
 
     // In dev mode, call `npm run start` once
     // the bundle has been generated
-    !production && serve({
-        contentBase: ['public'],
-        historyApiFallback: true,
-    }),
+    !production && serve(),
 
     // Watch the `public` directory and refresh the
     // browser on changes when not in production
