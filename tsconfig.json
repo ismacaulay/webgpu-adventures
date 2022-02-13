@@ -10,7 +10,6 @@
         "sourceMap": true,
         "module": "esnext",
         "moduleResolution": "node",
-        "allowJs": true,
         "removeComments": true,
         "preserveConstEnums": true,
         "noImplicitAny": true,

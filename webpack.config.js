@@ -39,7 +39,7 @@ module.exports = (env, argv) => {
                     },
                 },
                 {
-                    test: /\.(frag|vert|glsl)$/,
+                    test: /\.(frag|vert|glsl|wgsl)$/,
                     use: 'raw-loader',
                 },
                 {
@@ -74,11 +74,12 @@ module.exports = (env, argv) => {
         ],
         devtool: prod ? false : 'source-map',
         devServer: {
+            hot: true,
             historyApiFallback: true,
             static: {
                 directory: path.join(__dirname, 'public'),
             },
-            compress: true,
+            // compress: true,
             port: 9000,
         },
     };

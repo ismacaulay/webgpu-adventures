@@ -15,14 +15,14 @@
     const examples = [
         { title: 'hello-world', component: HelloWorld },
         { title: 'ecs', component: ECS },
-        { title: 'learn-opengl/basics', component: Cube },
-        { title: 'learn-opengl/transformations', component: RotatingCube },
-        { title: 'learn-opengl/materials', component: Lighting },
-        { title: 'learn-opengl/lighting-maps', component: LightingMaps },
-        { title: 'learn-opengl/light-casters', component: LightCasters },
-        { title: 'learn-opengl/multiple-lights', component: MultipleLights },
-        { title: 'learn-opengl/depth-testing', component: DepthTesting },
-        { title: 'learn-opengl/stencil-testing', component: StencilTesting },
+        // { title: 'learn-opengl/basics', component: Cube },
+        // { title: 'learn-opengl/transformations', component: RotatingCube },
+        // { title: 'learn-opengl/materials', component: Lighting },
+        // { title: 'learn-opengl/lighting-maps', component: LightingMaps },
+        // { title: 'learn-opengl/light-casters', component: LightCasters },
+        // { title: 'learn-opengl/multiple-lights', component: MultipleLights },
+        // { title: 'learn-opengl/depth-testing', component: DepthTesting },
+        // { title: 'learn-opengl/stencil-testing', component: StencilTesting },
     ];
 
     let page;
