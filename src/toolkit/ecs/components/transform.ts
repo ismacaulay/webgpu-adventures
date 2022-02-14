@@ -1,19 +1,6 @@
-import { ComponentType, Component } from './types';
-import { vec3, mat4, quat } from 'gl-matrix';
-
-export interface TransformComponent extends Component {
-  type: ComponentType.Transform;
-
-  translation: vec3;
-  // TODO: this should be a quat
-  rotation: {
-    angle: number;
-    axis: vec3;
-  };
-  scale: vec3;
-
-  readonly matrix: mat4;
-}
+import { mat4, vec3 } from 'gl-matrix';
+import { ComponentType, TransformComponent } from 'toolkit/types/ecs/components';
+import { createNeedsUpdate } from 'toolkit/utils';
 
 export function createTransformComponent(initial: {
   translation?: vec3;
@@ -46,6 +33,7 @@ export function createTransformComponent(initial: {
 
   return {
     type: ComponentType.Transform,
+    ...createNeedsUpdate(),
 
     set translation(t: vec3) {
       translation = vec3.clone(t);

@@ -1,12 +1,12 @@
 import { vec3 } from 'gl-matrix';
 import { createOrthographicCamera, createPerspectiveCamera } from './camera';
-import { CameraType, Camera, CameraController } from './types';
+import { CameraType, Camera, CameraController } from 'toolkit/types/camera';
 import { createOrbitControls } from './orbit-controls';
 
 export function createCameraController(element: HTMLElement): CameraController {
   // TODO: this should be set outside
   const zoom = 1;
-  const position: [number, number, number] = [0, 0, 10];
+  const position: [number, number, number] = [0, 0, 4];
 
   const perspectiveCamera = createPerspectiveCamera({
     fov: 45,
@@ -20,8 +20,10 @@ export function createCameraController(element: HTMLElement): CameraController {
   // TODO: set z planes dynamically
   const orthographicCamera = createOrthographicCamera({
     aspect: element.clientWidth / element.clientHeight,
-    znear: -2000,
-    zfar: 2000,
+    // znear: -2000,
+    // zfar: 2000,
+    znear: 0.1,
+    zfar: 100,
     top: 2.5,
     bottom: -2.5,
     left: -2.5,
@@ -32,6 +34,8 @@ export function createCameraController(element: HTMLElement): CameraController {
   orthographicCamera.updateViewMatrix();
 
   let camera: Camera = orthographicCamera;
+
+  // TODO: specify controls type
   const controls = createOrbitControls(element, { camera });
 
   return {

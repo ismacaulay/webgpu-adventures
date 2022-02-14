@@ -1,9 +1,3 @@
-import { EntityManager } from '../entity-manager';
-import { LightManager, LightType, SpotLight, PointLight, DirectionalLight } from '../light-manager';
-import { ComponentType, MaterialComponent } from '../components';
-import { ShaderManager } from '../shader-manager';
-import { Camera } from 'toolkit/camera';
-
 export function createLightingSystem(
   entityManager: EntityManager,
   lightManager: LightManager,

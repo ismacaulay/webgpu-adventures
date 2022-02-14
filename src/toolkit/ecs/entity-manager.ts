@@ -1,21 +1,10 @@
-import { ComponentType, Component } from './components';
-
-export type Entity = number;
-
-type ComponentFlags = number;
-type ComponentMap = Map<ComponentType, Component>;
-export type ComponentList = Component[];
-
-export interface EntityManager {
-  create(): Entity;
-
-  addComponent(entity: Entity, component: Component): void;
-  get(id: number, components: ComponentType[]): ComponentList;
-  all(components: ComponentType[]): ComponentList[];
-  view(components: ComponentType[]): Iterator<ComponentList>;
-
-  destroy(): void;
-}
+import type { Component, ComponentType } from 'toolkit/types/ecs/components';
+import type {
+  ComponentFlags,
+  ComponentMap,
+  Entity,
+  EntityManager,
+} from 'toolkit/types/ecs/managers';
 
 export function createEntityManager(): EntityManager {
   let next: Entity = 0;

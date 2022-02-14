@@ -1,8 +1,3 @@
-import { EntityManager } from '../entity-manager';
-import { ComponentType, TransformComponent } from '../components';
-import { MovementComponent, MovementType } from '../components/movement';
-import { vec3 } from 'gl-matrix';
-
 export function createMovementSystem(entityManager: EntityManager) {
   let currentTime = 0;
 

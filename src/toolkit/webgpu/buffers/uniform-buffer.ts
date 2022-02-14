@@ -1,13 +1,13 @@
-import { createBuffer } from '../utils';
 import {
-  UniformValue,
-  UniformLocationDictionary,
-  UniformBuffer,
   BufferType,
+  UniformBuffer,
   UniformBufferDescriptor,
-  UniformType,
   UniformDictionary,
-} from './types';
+  UniformLocationDictionary,
+  UniformType,
+  UniformValue,
+} from 'toolkit/types/webgpu/buffers';
+import { createBuffer } from '../utils';
 
 function getSizeForUniformType(type: UniformType) {
   switch (type) {

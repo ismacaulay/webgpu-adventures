@@ -1,6 +1,5 @@
-export function webGPUSupported() {
-  return navigator.gpu !== undefined;
-}
+import type { VertexBuffer } from 'toolkit/types/webgpu/buffers';
+import type { Shader } from 'toolkit/types/webgpu/shaders';
 
 export function createBuffer(
   device: GPUDevice,
@@ -23,24 +22,58 @@ export function createBuffer(
   return buffer;
 }
 
-export function copyBufferToBuffer(
+export function createPipeline(
   device: GPUDevice,
-  encoder: GPUCommandEncoder,
-  src: Float32Array,
-  dst: GPUBuffer,
+  presentationFormat: GPUTextureFormat,
+  shader: Shader,
+  buffers: VertexBuffer[],
 ) {
-  // const uploadBuffer = createBuffer(device, src, GPUBufferUsage.COPY_SRC);
+  return device.createRenderPipeline({
+    vertex: {
+      ...shader.vertex,
+      buffers: buffers.map((b: VertexBuffer) => b.layout),
+    },
+    fragment: {
+      ...shader.fragment,
+      targets: [
+        {
+          format: presentationFormat,
+        },
+      ],
+    },
 
-  // const enc = encoder || device.createCommandEncoder();
-  // enc.copyBufferToBuffer(uploadBuffer, 0, dst, 0, src.byteLength);
+    primitive: {
+      topology: 'triangle-list',
+      cullMode: 'none',
+    },
 
-  // if (!encoder) {
-  //   device.defaultQueue.submit([enc.finish()]);
-  //   uploadBuffer.destroy();
-  //   return () => {};
-  // }
+    // Enable depth testing
+    depthStencil: {
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+      format: 'depth24plus',
+    },
 
-  return () => {
-    // uploadBuffer.destroy();
-  };
+    multisample: {
+      count: 4,
+    },
+  });
+}
+
+export function createBindGroups(
+  device: GPUDevice,
+  pipeline: GPUPipelineBase,
+  shader: Shader,
+): GPUBindGroup[] {
+  return shader.bindings.map((groupDescriptors, idx) => {
+    return device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(idx),
+      entries: groupDescriptors.entries.map((entry, idx) => {
+        return {
+          binding: idx,
+          resource: entry.resource,
+        };
+      }),
+    });
+  });
 }

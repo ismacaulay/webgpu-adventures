@@ -1,7 +1,3 @@
-import { EntityManager } from '../entity-manager';
-import { ComponentType } from '../components';
-import { ScriptComponent } from '../components/script';
-
 export function createScriptSystem(entityManager: EntityManager) {
   return {
     update(dt: number) {

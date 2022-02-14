@@ -1,5 +1,5 @@
 import { quat, vec2, vec3 } from 'gl-matrix';
-import { Camera, CameraType } from './types';
+import { Camera, CameraType } from '../types/camera';
 
 enum State {
   None,

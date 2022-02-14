@@ -1,24 +1,6 @@
-import { BaseComponent, ComponentType } from './types';
-import type { VertexBufferDescriptor, IndexBufferDescriptor } from 'toolkit/webgpu/buffers';
+import { ComponentType, MeshGeometryComponent } from 'toolkit/types/ecs/components';
+import type { IndexBufferDescriptor, VertexBufferDescriptor } from 'toolkit/types/webgpu/buffers';
 import { createBaseComponent } from './base';
-
-export enum GeometryType {
-  Mesh = 'mesh',
-}
-
-export interface BaseGeometryComponent extends BaseComponent {
-  type: ComponentType.Geometry;
-  geometryType: GeometryType;
-
-  buffers: VertexBufferDescriptor[];
-  count: number;
-}
-
-export interface MeshGeometryComponent extends BaseGeometryComponent {
-  indices?: IndexBufferDescriptor;
-  count: number;
-}
-export type GeometryComponent = MeshGeometryComponent;
 
 export function createMeshGeometryComponent({
   indices,
@@ -38,7 +20,6 @@ export function createMeshGeometryComponent({
 
   return {
     type: ComponentType.Geometry,
-    geometryType: GeometryType.Mesh,
     ...createBaseComponent(),
 
     indices: indexDescriptor,

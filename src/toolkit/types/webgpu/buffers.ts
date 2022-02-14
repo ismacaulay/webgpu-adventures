@@ -12,58 +12,8 @@ export interface BaseBuffer {
   destroy(): void;
 }
 
-export enum BufferAttributeFormat {
-  Float32 = 'float32',
-  Float32x2 = 'float32x2',
-  Float32x3 = 'float32x3',
-}
-
-export interface BufferAttribute {
-  format: BufferAttributeFormat;
-  location: number;
-}
-
-export interface VertexBufferDescriptor {
-  id?: number;
-  array: Float32Array;
-  attributes: BufferAttribute[];
-}
-
-export interface VertexBuffer extends BaseBuffer {
-  type: BufferType.Vertex;
-
-  readonly data: Float32Array;
-  readonly layout: GPUVertexBufferLayout;
-  readonly count: number;
-}
-
-export type UniformValue =
-  | boolean
-  | number
-  | ArrayLike<number>
-  | ArrayLike<number>[]
-  | UniformDictionary
-  | UniformDictionary[];
-
-export interface UniformDictionary {
-  [key: string]: UniformValue;
-}
-
-export interface UniformLocationDictionary {
-  [key: string]: number | boolean | { offset: number; c: number; r: number };
-}
-
-export interface UniformBuffer extends BaseBuffer {
-  type: BufferType.Uniform;
-
-  needsUpdate: boolean;
-  hasUniform(name: string): boolean;
-  updateUniform(name: string, value: UniformValue): void;
-  updateUniforms(uniforms: UniformDictionary): void;
-  destroy(): void;
-}
-
 export enum UniformType {
+  Bool,
   Scalar,
   Vec2,
   Vec3,
@@ -80,11 +30,58 @@ export enum UniformType {
 }
 
 export interface UniformBufferDescriptor {
-  [key: string]:
-    | UniformType
-    | UniformBufferDescriptor
-    | [UniformType, number]
-    | [UniformBufferDescriptor, number];
+  [key: string]: UniformType | UniformBufferDescriptor;
+}
+
+export type UniformValue =
+  | boolean
+  | number
+  | ArrayLike<number>
+  | ArrayLike<number>[]
+  | UniformDictionary
+  | UniformDictionary[];
+
+export interface UniformDictionary {
+  [key: string]: UniformValue | UniformDictionary;
+}
+
+export interface UniformLocationDictionary {
+  [key: string]: number | boolean | { offset: number; c: number; r: number };
+}
+
+export interface UniformBuffer extends BaseBuffer {
+  type: BufferType.Uniform;
+  readonly data: Float32Array;
+
+  needsUpdate: boolean;
+  hasUniform(name: string): boolean;
+  updateUniform(name: string, value: UniformValue): void;
+  updateUniforms(uniforms: UniformDictionary): void;
+  destroy(): void;
+}
+
+export enum BufferAttributeFormat {
+  Float32 = 'float32',
+  Float32x2 = 'float32x2',
+  Float32x3 = 'float32x3',
+}
+
+export interface BufferAttribute {
+  format: BufferAttributeFormat;
+  location: number;
+}
+
+export interface VertexBufferDescriptor {
+  id?: number;
+  array: Float32Array | Float64Array;
+  attributes: BufferAttribute[];
+}
+
+export interface VertexBuffer extends BaseBuffer {
+  type: BufferType.Vertex;
+  readonly data: Float32Array;
+
+  layout: GPUVertexBufferLayout;
 }
 
 export interface IndexBufferDescriptor {
@@ -94,7 +91,6 @@ export interface IndexBufferDescriptor {
 
 export interface IndexBuffer extends BaseBuffer {
   type: BufferType.Index;
-
   readonly data: Uint16Array | Uint32Array;
 
   format: GPUIndexFormat;

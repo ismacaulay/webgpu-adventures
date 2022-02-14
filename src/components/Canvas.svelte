@@ -1,5 +1,5 @@
 <script>
-  import { webGPUSupported } from 'toolkit/webgpu/utils';
+  // import { webGPUSupported } from 'toolkit/webgpu/utils';
   let element;
 
   export function getElement() {
@@ -18,16 +18,16 @@
     height: 100%;
   }
 
-  #not-supported {
+  /* #not-supported {
     padding: 10px;
     margin: 0;
-  }
+  } */
 </style>
 
 <div class="canvas-container">
-  {#if !webGPUSupported()}
+  <!-- {#if !webGPUSupported()}
     <p id="not-supported">WebGPU not supported in this browser yet!</p>
-  {:else}
-    <canvas bind:this={element} width="800" height="600" />
-  {/if}
+  {:else} -->
+  <canvas bind:this={element} width="800" height="600" />
+  <!-- {/if} -->
 </div>

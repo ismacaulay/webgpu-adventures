@@ -1,5 +1,5 @@
 import { mat4, vec3 } from 'gl-matrix';
-import { CameraType, OrthographicCamera, PerspectiveCamera } from './types';
+import { CameraType, OrthographicCamera, PerspectiveCamera } from '../types/camera';
 
 interface PerspectiveCameraParams {
   fov: number;

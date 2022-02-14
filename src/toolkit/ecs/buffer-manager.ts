@@ -1,59 +1,36 @@
+import { BufferManager, DefaultBuffers } from 'toolkit/types/ecs/managers';
+import type { Storage } from 'toolkit/types/generic';
 import {
-  createVertexBuffer,
-  BaseBuffer,
-  createUniformBuffer,
-  UniformBufferDescriptor,
-  UniformType,
-  UniformDictionary,
+  Buffer,
   IndexBufferDescriptor,
+  UniformBufferDescriptor,
+  UniformDictionary,
+  UniformType,
   VertexBufferDescriptor,
-} from 'toolkit/webgpu/buffers';
-import { createIndexBuffer } from 'toolkit/webgpu/buffers/index-buffer';
-import { createIdProvider } from './id-provider';
-
-export interface BufferManager {
-  createVertexBuffer(info: VertexBufferDescriptor): number;
-  createUniformBuffer(uniforms: UniformBufferDescriptor, initial?: UniformDictionary): number;
-  createIndexBuffer(descriptor: IndexBufferDescriptor): number;
-
-  get<T extends BaseBuffer>(id: number): T;
-  destroy(): void;
-}
-
-export enum DefaultBuffers {
-  ViewProjection = 0,
-
-  Count,
-}
-
-interface BufferStorage {
-  [key: number]: BaseBuffer;
-}
+} from 'toolkit/types/webgpu/buffers';
+import { createIndexBuffer, createUniformBuffer, createVertexBuffer } from 'toolkit/webgpu/buffers';
 
 export function createBufferManager(device: GPUDevice): BufferManager {
-  let storage: BufferStorage = {};
-  const generator = createIdProvider(DefaultBuffers.Count);
+  let storage: Storage<Buffer> = {};
+  let next = DefaultBuffers.Count;
 
   return {
-    createVertexBuffer(info: VertexBufferDescriptor) {
-      const id = generator.next();
-      storage[id] = createVertexBuffer(device, info.attributes, info.array);
-      return id;
+    createVertexBuffer(descriptor: VertexBufferDescriptor) {
+      storage[next] = createVertexBuffer(device, descriptor);
+      return next++;
     },
 
-    createUniformBuffer(uniforms: UniformBufferDescriptor, initial?: UniformDictionary) {
-      const id = generator.next();
-      storage[id] = createUniformBuffer(device, uniforms, initial);
-      return id;
+    createUniformBuffer(descriptor: UniformBufferDescriptor, initial?: UniformDictionary) {
+      storage[next] = createUniformBuffer(device, descriptor, initial);
+      return next++;
     },
 
     createIndexBuffer(descriptor: IndexBufferDescriptor) {
-      const id = generator.next();
-      storage[id] = createIndexBuffer(device, descriptor);
-      return id;
+      storage[next] = createIndexBuffer(device, descriptor);
+      return next++;
     },
 
-    get<T extends BaseBuffer>(id: number): T {
+    get<T extends Buffer>(id: number): T {
       let buffer = storage[id];
 
       if (!buffer) {
@@ -72,9 +49,7 @@ export function createBufferManager(device: GPUDevice): BufferManager {
     },
 
     destroy() {
-      Object.values(storage).forEach((buffer: BaseBuffer) => {
-        buffer.destroy();
-      });
+      Object.values(storage).forEach((buf: Buffer) => buf.destroy());
       storage = {};
     },
   };

@@ -1,4 +1,4 @@
-import { IndexBufferDescriptor, BufferType, IndexBuffer } from './types';
+import { BufferType, IndexBuffer, IndexBufferDescriptor } from 'toolkit/types/webgpu/buffers';
 import { createBuffer } from '../utils';
 
 export function createIndexBuffer(

@@ -1,94 +1,15 @@
-import { createBuffer } from './utils';
-import type { VertexBuffer } from './buffers';
-import type { Color } from 'toolkit/materials';
-import type { Shader } from './shaders';
+import type { GenericObject } from 'toolkit/types/generic';
+import type { VertexBuffer } from 'toolkit/types/webgpu/buffers';
+import {
+  BufferCommand,
+  DrawCommand,
+  RenderCommand,
+  RenderCommandType,
+  Renderer,
+} from 'toolkit/types/webgpu/renderer';
+import { createBindGroups, createPipeline } from './utils';
 
-export interface RendererSubmission {
-  shader: any;
-  buffers: VertexBuffer[];
-  count: number;
-}
-
-export enum CommandType {
-  Draw,
-  CopySrcToDst,
-}
-
-export interface DrawCommand {
-  type: CommandType.Draw;
-
-  priority: number;
-  shader: any;
-  buffers: VertexBuffer[];
-  count: number;
-}
-
-export interface CopySrcToDstCommand {
-  type: CommandType.CopySrcToDst;
-
-  src: Float32Array;
-  dst: GPUBuffer;
-  size: number;
-}
-export type RendererCommand = DrawCommand | CopySrcToDstCommand;
-
-export interface Renderer {
-  begin(): void;
-  submit(command: RendererCommand): void;
-  finish(): void;
-}
-
-function createRenderPipeline(device: GPUDevice, shader: Shader, vertexBuffers: VertexBuffer[]) {
-  const layout: GPUPipelineLayout = device.createPipelineLayout({
-    bindGroupLayouts: [shader.bindGroupLayout],
-  });
-
-  return device.createRenderPipeline({
-    layout: layout,
-
-    ...shader.stages,
-
-    primitiveTopology: 'triangle-list',
-    colorStates: [
-      {
-        format: 'bgra8unorm',
-        alphaBlend: {
-          srcFactor: 'src-alpha',
-          dstFactor: 'one-minus-src-alpha',
-          operation: 'add',
-        },
-        colorBlend: {
-          srcFactor: 'src-alpha',
-          dstFactor: 'one-minus-src-alpha',
-          operation: 'add',
-        },
-        writeMask: GPUColorWrite.ALL,
-      },
-    ],
-
-    depthStencilState: {
-      depthWriteEnabled: shader.depthWrite,
-      depthCompare: shader.depthFunc,
-      format: 'depth24plus-stencil8',
-
-      stencilFront: shader.stencilFront,
-      stencilBack: shader.stencilBack,
-      stencilWriteMask: shader.stencilWriteMask,
-      stencilReadMask: shader.stencilReadMask,
-    },
-
-    vertexState: {
-      indexFormat: 'uint16',
-      vertexBuffers: vertexBuffers.map((vb) => vb.descriptor),
-    },
-    rasterizationState: {
-      frontFace: 'ccw',
-      cullMode: 'none',
-    },
-  });
-}
-
-export async function createRenderer(canvas: HTMLCanvasElement) {
+export async function createRenderer(canvas: HTMLCanvasElement): Promise<Renderer> {
   const gpu: GPU | undefined = navigator.gpu;
   if (!gpu) {
     throw new Error('WebGPU not supported in this browser');
@@ -133,35 +54,30 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
   });
   let depthTextureView = depthTexture.createView();
 
-  let commands: any[] = [];
+  let commands: BufferCommand[] = [];
   let draws: DrawCommand[] = [];
-  let clearColor = [0, 0, 0];
+
+  // TODO: The cache is based on the shader id, but it may need more
+  // TODO: When the shader is removed, we dont remove the pipeline; there may be
+  //       multiple shaders using the same pipeline (cloned shaders)
+  const pipelineCache: GenericObject<GPURenderPipeline> = {};
+  const bindGroupCache: GenericObject<GPUBindGroup[]> = {};
 
   return {
     device,
 
     begin() {},
-    submit(command: RendererCommand) {
-      switch (command.type) {
-        case CommandType.Draw: {
-          draws.push(command);
-          break;
-        }
-        case CommandType.CopySrcToDst: {
-          commands.push((encoder: GPUCommandEncoder) => {
-            const { src, dst, size } = command;
-
-            // const uploadBuffer = createBuffer(device, src, GPUBufferUsage.COPY_SRC);
-            // encoder.copyBufferToBuffer(uploadBuffer, 0, dst, 0, size);
-
-            return () => {
-              // uploadBuffer.destroy();
-            };
-          });
-          break;
-        }
+    submit(command: RenderCommand | BufferCommand) {
+      if (command.type === RenderCommandType.Draw) {
+        draws.push(command);
+      } else if (
+        command.type === RenderCommandType.WriteBuffer ||
+        command.type === RenderCommandType.CopyToTexture
+      ) {
+        commands.push(command);
       }
     },
+
     finish() {
       if (
         canvas.clientWidth !== presentationSize[0] ||
@@ -194,83 +110,113 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
         depthTextureView = depthTexture.createView();
       }
 
+      for (let i = 0; i < commands.length; ++i) {
+        const command = commands[i];
+        if (command.type === RenderCommandType.WriteBuffer) {
+          let { dst, src } = command;
+
+          if (src instanceof Float64Array) {
+            src = new Float32Array(src);
+          }
+          device.queue.writeBuffer(dst, 0, src.buffer, src.byteOffset, src.byteLength);
+        } else {
+          const { dst, src } = command;
+          if (src instanceof ImageBitmap) {
+            device.queue.copyExternalImageToTexture({ source: src }, { texture: dst }, [
+              src.width,
+              src.height,
+            ]);
+          } else {
+            const {
+              buffer,
+              shape: [width, height],
+            } = src;
+            device.queue.writeTexture(
+              { texture: dst },
+              buffer,
+              {
+                bytesPerRow: width * 4,
+              },
+              {
+                width,
+                height,
+              },
+            );
+          }
+        }
+      }
+
       const renderPassDescriptor = {
         colorAttachments: [
           {
             view: renderTargetView,
             resolveTarget: context.getCurrentTexture().createView(),
-            loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+            clearValue: [0, 0, 0, 1],
+            loadOp: 'clear',
             storeOp: 'store',
           },
         ],
         depthStencilAttachment: {
           view: depthTextureView,
 
-          depthLoadValue: 1.0,
+          depthClearValue: 1.0,
+          depthLoadOp: 'clear',
           depthStoreOp: 'store',
-          stencilLoadValue: 0,
+
+          stencilClearValue: 0,
+          stencilLoadOp: 'clear',
           stencilStoreOp: 'store',
         },
       };
 
       const commandEncoder = device.createCommandEncoder();
-
-      // encode all upload commands
-      const cleanups = commands.map((fn) => fn(commandEncoder));
-      commands = [];
-
+      // TODO: Remove ignore once the types have been updated
       // @ts-ignore
-      let passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+      const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
-      passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
-      passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
-
-      draws.sort((d1, d2) => {
-        const first = d1.priority || Number.MAX_VALUE;
-        const second = d2.priority || Number.MAX_VALUE;
-
-        if (first === second) {
-          return 0;
-        }
-
-        return first < second ? -1 : 1;
-      });
-
-      // process the draw calls
-      let lastShaderId = -1;
       for (let i = 0; i < draws.length; ++i) {
-        const { shader, buffers, count, priority } = draws[i];
+        const command = draws[i];
 
-        if (shader.id !== lastShaderId) {
-          passEncoder.setPipeline(createRenderPipeline(device, shader, buffers));
-          lastShaderId = shader.id;
+        const { shader, buffers, count, indices } = command;
+
+        let pipeline = pipelineCache[shader.id];
+        if (!pipeline) {
+          pipeline = createPipeline(device, presentationFormat, shader, buffers);
+          pipelineCache[shader.id] = pipeline;
         }
 
-        passEncoder.setBindGroup(0, shader.bindGroup);
+        passEncoder.setPipeline(pipeline);
 
-        buffers.forEach((buf: VertexBuffer, idx: number) => {
+        let groups = bindGroupCache[shader.id];
+        if (!groups) {
+          groups = createBindGroups(device, pipeline, shader);
+          bindGroupCache[shader.id] = groups;
+        }
+
+        groups.forEach((group: any, idx: number) => {
+          passEncoder.setBindGroup(idx, group);
+        });
+
+        command.buffers.forEach((buf: VertexBuffer, idx: number) => {
           passEncoder.setVertexBuffer(idx, buf.buffer);
         });
 
-        passEncoder.setStencilReference(shader.stencilValue);
-
-        passEncoder.draw(count, 1, 0, 0);
+        if (indices) {
+          passEncoder.setIndexBuffer(indices.buffer, indices.format);
+          passEncoder.drawIndexed(count, 1, 0, 0, 0);
+        } else {
+          passEncoder.draw(count, 1, 0, 0);
+        }
       }
 
+      draws = [];
+      commands = [];
       passEncoder.end();
       device.queue.submit([commandEncoder.finish()]);
-
-      draws = [];
-
-      cleanups.forEach((fn) => fn());
     },
 
     destroy() {
       depthTexture.destroy();
-    },
-
-    set clearColor(value: Color) {
-      clearColor = value;
     },
   };
 }
