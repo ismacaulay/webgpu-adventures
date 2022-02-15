@@ -1,6 +1,10 @@
 import type { VertexBuffer } from 'toolkit/types/webgpu/buffers';
 import type { Shader } from 'toolkit/types/webgpu/shaders';
 
+export function isWebGPUSupported() {
+  return navigator && (navigator as any).gpu !== undefined;
+}
+
 export function createBuffer(
   device: GPUDevice,
   src: Float32Array | Uint16Array | Uint32Array,

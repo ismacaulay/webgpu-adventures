@@ -14,18 +14,13 @@
 </script>
 
 <style>
-  /* main { */
-  /*   display: flex; */
-  /*   flex-direction: row; */
-  /*   width: 100vw; */
-  /* } */
-  #panel {
-    height: 100vh;
-    width: 100%;
-    overflow: auto;
+  /* chrome canary overflows with height 100 */
+  .container {
+    width: 100vw;
+    height: 99vh;
   }
 </style>
 
-<div id="panel">
+<div class="container">
   <svelte:component this={page} />
 </div>

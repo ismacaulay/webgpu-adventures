@@ -1,2 +1,2 @@
 export * from './camera';
-export * from './free-camera-controller';
+export * from './free-controls';

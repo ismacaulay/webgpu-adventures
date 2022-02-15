@@ -44,6 +44,11 @@ export interface OrthographicCamera extends BaseCamera {
 
 export type Camera = PerspectiveCamera | OrthographicCamera;
 
+export enum CameraControls {
+  Orbit,
+  Free,
+}
+
 export interface CameraController {
   readonly camera: Camera;
   activeCamera: CameraType;

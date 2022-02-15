@@ -1,9 +1,13 @@
 import { vec3 } from 'gl-matrix';
 import { createOrthographicCamera, createPerspectiveCamera } from './camera';
-import { CameraType, Camera, CameraController } from 'toolkit/types/camera';
+import { CameraType, Camera, CameraController, CameraControls } from 'toolkit/types/camera';
 import { createOrbitControls } from './orbit-controls';
+import { createFreeControls } from '.';
 
-export function createCameraController(element: HTMLElement): CameraController {
+export function createCameraController(
+  element: HTMLElement,
+  options: { controls: CameraControls } = { controls: CameraControls.Orbit },
+): CameraController {
   // TODO: this should be set outside
   const zoom = 1;
   const position: [number, number, number] = [0, 0, 4];
@@ -33,8 +37,12 @@ export function createCameraController(element: HTMLElement): CameraController {
 
   let camera: Camera = orthographicCamera;
 
-  // TODO: specify controls type
-  const controls = createOrbitControls(element, { camera });
+  let controls: any;
+  if (options.controls === CameraControls.Free) {
+    controls = createFreeControls(element, camera);
+  } else {
+    controls = createOrbitControls(element, { camera });
+  }
 
   return {
     get camera() {

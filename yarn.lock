@@ -632,6 +632,11 @@
   resolved "https://registry.yarnpkg.com/@tsconfig/svelte/-/svelte-3.0.0.tgz#b06e059209f04c414de0069f2f0e2796d979fc6f"
   integrity sha512-pYrtLtOwku/7r1i9AMONsJMVYAtk3hzOfiGNekhtq5tYBGA7unMve8RvUclKLMT3PrihvJqUmzsRGh0RP84hKg==
 
+"@tweakpane/core@^1.0.8":
+  version "1.0.8"
+  resolved "https://registry.yarnpkg.com/@tweakpane/core/-/core-1.0.8.tgz#428246eae841bbf32bed2f27e54311849fdd8501"
+  integrity sha512-q7BQrqM4NYiaSoErRgRY0EBxxC8AzsZJoz52K8SNJ/IfYu9lTzfFTwW7ouYqgElSOx+3ybXBcMlkCPZdOBZg6Q==
+
 "@types/babel__core@^7.0.0", "@types/babel__core@^7.1.14":
   version "7.1.18"
   resolved "https://registry.yarnpkg.com/@types/babel__core/-/babel__core-7.1.18.tgz#1a29abcc411a9c05e2094c98f9a1b7da6cdf49f8"
@@ -3437,6 +3442,11 @@ tsutils@^3.21.0:
   integrity sha512-mHKK3iUXL+3UF6xL5k0PEhKRUBKPBCv/+RkEOpjRWxxx27KKRBmmA60A9pgOUvMi8GKhRMPEmjBRPzs2W7O1OA==
   dependencies:
     tslib "^1.8.1"
+
+tweakpane@^3.0.7:
+  version "3.0.7"
+  resolved "https://registry.yarnpkg.com/tweakpane/-/tweakpane-3.0.7.tgz#a514a08aa4fafb542923d83e4be6915887dac7e5"
+  integrity sha512-rgxqoo6T10atYoKHVif6aYlAMIAlHJ84hi5LXqi6ZgVEPcmnzPI34C88y6HquarBY0ZKE/ZCXVaZm8NibhQRtA==
 
 type-check@^0.4.0, type-check@~0.4.0:
   version "0.4.0"

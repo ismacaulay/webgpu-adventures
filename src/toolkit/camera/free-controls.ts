@@ -1,6 +1,6 @@
-import { Camera } from './camera';
 import { vec3 } from 'gl-matrix';
 import { radians } from 'toolkit/math';
+import type { Camera } from 'toolkit/types/camera';
 
 const W_KEY_BIT = 1 << 1;
 const A_KEY_BIT = 1 << 2;
@@ -13,8 +13,8 @@ function directionValue(keys: number, negBit: number, posBit: number) {
   return (!!(keys & posBit) ? 1 : 0) + (!!(keys & negBit) ? -1 : 0);
 }
 
-export function createFreeCameraController(
-  canvas: HTMLCanvasElement,
+export function createFreeControls(
+  canvas: HTMLElement,
   camera: Camera,
   options: {
     mouseSensitivity: number;
