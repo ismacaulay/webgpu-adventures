@@ -1,7 +1,7 @@
 import HelloWorld from './hello-world/Page.svelte';
 import Cube from './cube/Page.svelte';
 // import ECS from './ecs/Page.svelte';
-import TexturedCube from './learn-opengl/texturedCube/Page.svelte';
+import TexturedCube from './learn-opengl/1-texturedCube/Page.svelte';
 // import RotatingCube from './pages/learn-opengl/rotating-cube/Page.svelte';
 // import Lighting from './pages/learn-opengl/lighting/Page.svelte';
 // import LightingMaps from './pages/learn-opengl/lighting-maps/Page.svelte';
