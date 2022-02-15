@@ -1,7 +1,12 @@
+struct Matrices {
+  view: mat4x4<f32>;
+  projection: mat4x4<f32>;
+};
+
 @group(0) @binding(0)
 var<uniform> model: mat4x4<f32>;
 @group(0) @binding(1)
-var<uniform> viewProjection: mat4x4<f32>;
+var<uniform> matrices: Matrices;
 
 struct VertexOutput {
   @builtin(position) position: vec4<f32>;
@@ -17,7 +22,7 @@ fn vertex_main(
 ) -> VertexOutput {
   var out: VertexOutput;
 
-  out.position = viewProjection * model * vec4(position, 1.0);
+  out.position = matrices.projection * matrices.view * model * vec4(position, 1.0);
   out.colour = colour;
   out.uv = uv;
   return out;
@@ -35,6 +40,5 @@ fn fragment_main(
   @location(0) colour: vec3<f32>,
   @location(1) uv: vec2<f32>
 ) -> @location(0) vec4<f32> {
-  // return vec4<f32>(mix(colour, textureSample(u_texture, u_sampler, uv).xyz, u_texture_enabled), 1.0);
-  return vec4<f32>(colour, 1.0);
+  return vec4<f32>(mix(colour, textureSample(u_texture, u_sampler, uv).xyz, u_texture_enabled), 1.0);
 }

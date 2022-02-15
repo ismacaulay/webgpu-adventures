@@ -1,5 +1,5 @@
 <script>
-  import examples from './routes';
+  import examples from './examples';
 </script>
 
 <style>

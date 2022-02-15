@@ -1,7 +1,7 @@
 <script>
   import router from 'page';
   import Home from './pages/Home.svelte';
-  import examples from './pages/routes';
+  import examples from './pages/examples';
 
   let page;
   router('/', () => (page = Home));

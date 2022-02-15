@@ -20,10 +20,8 @@ export function createCameraController(element: HTMLElement): CameraController {
   // TODO: set z planes dynamically
   const orthographicCamera = createOrthographicCamera({
     aspect: element.clientWidth / element.clientHeight,
-    // znear: -2000,
-    // zfar: 2000,
-    znear: 0.1,
-    zfar: 100,
+    znear: -2000,
+    zfar: 2000,
     top: 2.5,
     bottom: -2.5,
     left: -2.5,
