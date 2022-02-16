@@ -53,7 +53,7 @@ export interface CameraController {
   readonly camera: Camera;
   activeCamera: CameraType;
 
-  update(): void;
+  update(dt: number): void;
   resize(width: number, height: number): void;
   destroy(): void;
 }

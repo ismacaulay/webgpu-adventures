@@ -102,7 +102,6 @@ export function createRenderSystem(
     shaderManager: ShaderManager;
   },
 ) {
-  const viewProjectionMatrix = mat4.create();
   const { entityManager, bufferManager, shaderManager } = managers;
 
   return {

@@ -31,7 +31,9 @@ export function createFreeControls(
   function onClick() {
     if (locked) return;
 
-    canvas.requestPointerLock();
+    (canvas.requestPointerLock() as any).catch(() => {
+      console.warn('Failed to requestPointerLock');
+    });
     keys = 0;
   }
 
@@ -45,61 +47,62 @@ export function createFreeControls(
 
   function onPointerLockError() {
     console.warn('Pointer lock error!');
+    locked = false;
   }
 
   function onKeyDown(evt: KeyboardEvent) {
-    switch (evt.keyCode) {
+    switch (evt.code) {
       // W
-      case 87:
+      case 'KeyW':
         keys |= W_KEY_BIT;
         break;
       // A
-      case 65:
+      case 'KeyA':
         keys |= A_KEY_BIT;
         break;
       // S
-      case 83:
+      case 'KeyS':
         keys |= S_KEY_BIT;
         break;
       // D
-      case 68:
+      case 'KeyD':
         keys |= D_KEY_BIT;
         break;
       // C
-      case 67:
+      case 'KeyC':
         keys |= C_KEY_BIT;
         break;
       // space
-      case 32:
+      case 'Space':
         keys |= SPACE_KEY_BIT;
         break;
     }
   }
 
   function onKeyUp(evt: KeyboardEvent) {
-    switch (evt.keyCode) {
+    switch (evt.code) {
       // W
-      case 87:
+      case 'KeyW':
         keys &= ~W_KEY_BIT;
         break;
       // A
-      case 65:
+      case 'KeyA':
         keys &= ~A_KEY_BIT;
         break;
       // S
-      case 83:
+      case 'KeyS':
         keys &= ~S_KEY_BIT;
         break;
       // D
-      case 68:
+      case 'KeyD':
         keys &= ~D_KEY_BIT;
         break;
       // C
-      case 67:
+      case 'KeyC':
         keys &= ~C_KEY_BIT;
         break;
       // space
-      case 32:
+      case 'Space':
         keys &= ~SPACE_KEY_BIT;
         break;
     }
@@ -169,7 +172,6 @@ export function createFreeControls(
 
       vec3.add(dir, _up, vec3.add(dir, _front, _right));
       vec3.add(camera.position, camera.position, dir);
-
       updateCamera();
     },
     destroy() {

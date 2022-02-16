@@ -39,6 +39,7 @@ export function createCameraController(
 
   let controls: any;
   if (options.controls === CameraControls.Free) {
+    camera = perspectiveCamera;
     controls = createFreeControls(element, camera);
   } else {
     controls = createOrbitControls(element, { camera });
@@ -72,8 +73,8 @@ export function createCameraController(
       controls.camera = camera;
     },
 
-    update() {
-      controls.update();
+    update(dt: number) {
+      controls.update(dt);
     },
 
     resize(width: number, height: number) {

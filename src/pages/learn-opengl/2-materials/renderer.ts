@@ -52,9 +52,9 @@ export async function setup(canvas: HTMLCanvasElement) {
   const renderer = await createRenderer(canvas);
 
   // TODO: fix free controls
-  const cameraController = createCameraController(canvas, { controls: CameraControls.Orbit });
+  const cameraController = createCameraController(canvas, { controls: CameraControls.Free });
   const camera = cameraController.camera;
-  vec3.set(camera.position, 0, 0, 3);
+  vec3.set(camera.position, 0, 0, 5);
   camera.updateViewMatrix();
 
   const entityManager = createEntityManager();
@@ -377,7 +377,7 @@ export async function setup(canvas: HTMLCanvasElement) {
     camera.aspect = canvas.clientWidth / canvas.clientHeight;
     camera.updateProjectionMatrix();
 
-    cameraController.update();
+    cameraController.update(dt);
 
     renderSystem.update();
 

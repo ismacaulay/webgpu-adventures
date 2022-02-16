@@ -154,7 +154,7 @@ export function createOrbitControls(element: HTMLElement, initialState: { camera
   let phi = 0;
   let radius = 0;
 
-  function update() {
+  function update(_dt: number) {
     quat.rotationTo(q, camera.up, yUp);
     quat.invert(invQ, q);
 
