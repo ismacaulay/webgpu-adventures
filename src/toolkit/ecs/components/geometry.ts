@@ -1,6 +1,5 @@
 import { ComponentType, MeshGeometryComponent } from 'toolkit/types/ecs/components';
 import type { IndexBufferDescriptor, VertexBufferDescriptor } from 'toolkit/types/webgpu/buffers';
-import { createBaseComponent } from './base';
 
 export function createMeshGeometryComponent({
   indices,
@@ -18,9 +17,16 @@ export function createMeshGeometryComponent({
     };
   }
 
+  let needsUpdate = true;
+
   return {
     type: ComponentType.Geometry,
-    ...createBaseComponent(),
+    get needsUpdate() {
+      return needsUpdate;
+    },
+    set needsUpdate(value: boolean) {
+      needsUpdate = value;
+    },
 
     indices: indexDescriptor,
     buffers,

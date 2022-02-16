@@ -1,5 +1,4 @@
 import type { Texture } from 'toolkit/types/webgpu/textures';
-import { createNeedsUpdate } from 'toolkit/utils';
 
 export async function createTextureFromURI(
   device: GPUDevice,
@@ -19,12 +18,18 @@ export async function createTextureFromURI(
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
   });
+  let needsUpdate = true;
 
   return {
     texture,
     data: imageBitmap,
 
-    ...createNeedsUpdate(),
+    get needsUpdate() {
+      return needsUpdate;
+    },
+    set needsUpdate(value: boolean) {
+      needsUpdate = value;
+    },
   };
 }
 
@@ -42,11 +47,17 @@ export async function createTextureFromBuffer(
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
   });
+  let needsUpdate = true;
 
   return {
     texture,
     data: { buffer, shape },
 
-    ...createNeedsUpdate(),
+    get needsUpdate() {
+      return needsUpdate;
+    },
+    set needsUpdate(value: boolean) {
+      needsUpdate = value;
+    },
   };
 }

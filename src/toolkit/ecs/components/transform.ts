@@ -1,6 +1,5 @@
 import { mat4, vec3 } from 'gl-matrix';
 import { ComponentType, TransformComponent } from 'toolkit/types/ecs/components';
-import { createNeedsUpdate } from 'toolkit/utils';
 
 export function createTransformComponent(initial: {
   translation?: vec3;
