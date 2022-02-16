@@ -116,7 +116,7 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
     camera.aspect = canvas.clientWidth / canvas.clientHeight;
     camera.updateProjectionMatrix();
 
-    cameraController.update();
+    cameraController.update(dt);
 
     renderSystem.update();
 

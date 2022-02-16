@@ -1,5 +1,5 @@
-export interface ScriptComponent extends Component {
-  type: ComponentType.Script;
+// export interface ScriptComponent extends Component {
+//   type: ComponentType.Script;
 
-  update: (dt?: number) => void;
-}
+//   update: (dt?: number) => void;
+// }

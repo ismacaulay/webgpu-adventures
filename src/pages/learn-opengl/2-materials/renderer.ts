@@ -29,9 +29,10 @@ import { DefaultBuffers } from 'toolkit/types/ecs/managers';
 import { BufferAttributeFormat, UniformType } from 'toolkit/types/webgpu/buffers';
 import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
 import { createRenderer } from 'toolkit/webgpu/renderer';
-import { CUBE_VERTICES_WITH_NORMALS } from 'utils/cube-vertices';
+import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS } from 'utils/cube-vertices';
 
 import gouraudShader from './shaders/gouraud.wgsl';
+import lightShaderSource from './shaders/light.wgsl';
 
 // import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
 // import { createCamera } from 'toolkit/camera/camera';
@@ -147,6 +148,7 @@ export async function setup(canvas: HTMLCanvasElement) {
       shader: shader,
     }),
   );
+  const cubeShader = shaderManager.get(shader);
 
   // const cubeFragmentUBO = createUniformBuffer(device, {
   //   // object_color: [1.0, 0.5, 0.31],
@@ -195,142 +197,67 @@ export async function setup(canvas: HTMLCanvasElement) {
   //   },
   // });
 
-  // const glslang = await glslangModule();
+  const lightEntity = entityManager.create();
+  const lightTransform = createTransformComponent({
+    scale: vec3.fromValues(0.2, 0.2, 0.2),
+    translation: lightPos,
+  });
+  entityManager.addComponent(lightEntity, lightTransform);
+  entityManager.addComponent(
+    lightEntity,
+    createMeshGeometryComponent({
+      buffers: [
+        {
+          array: CUBE_VERTICES,
+          attributes: [
+            {
+              format: BufferAttributeFormat.Float32x3,
+              location: 0,
+            },
+          ],
+        },
+      ],
+      count: 36,
+    }),
+  );
 
-  // const cubeShader = createShader(device, glslang, {
-  //   id: 0,
-  //   vertex: cubePhongVert,
-  //   fragment: cubePhongMaterialFrag,
-  //   bindings: [
-  //     {
-  //       binding: 0,
-  //       visibility: GPUShaderStage.VERTEX,
-  //       type: 'uniform-buffer',
-  //       resource: viewProjectionUBO,
-  //     },
-  //     {
-  //       binding: 1,
-  //       visibility: GPUShaderStage.VERTEX,
-  //       type: 'uniform-buffer',
-  //       resource: cubeVertexUBO,
-  //     },
-  //     {
-  //       binding: 2,
-  //       visibility: GPUShaderStage.FRAGMENT,
-  //       type: 'uniform-buffer',
-  //       resource: cubeFragmentUBO,
-  //     },
-  //   ],
-  // });
+  const lightUniformBuffer = bufferManager.createUniformBuffer(
+    {
+      model: UniformType.Mat4,
 
-  // const cubeMeshRenderer = createMeshRenderer(device, cubeShader, cubeVB);
+      light_colour: UniformType.Vec3,
+    },
+    {
+      model: mat4.create(),
 
-  // // LIGHT
-  // const lightVB = createVertexBuffer(
-  //   device,
-  //   [
-  //     {
-  //       type: BufferAttributeType.Float3,
-  //       location: 0,
-  //     },
-  //   ],
-  //   CUBE_VERTICES,
-  // );
-
-  // const lightModelMatrix = mat4.create();
-  // mat4.translate(lightModelMatrix, lightModelMatrix, lightPos);
-  // mat4.scale(lightModelMatrix, lightModelMatrix, [0.2, 0.2, 0.2]);
-
-  // const lightVertexUBO = createUniformBuffer(device, {
-  //   model: UniformType.Mat4,
-  // });
-  // lightVertexUBO.updateUniforms({
-  //   model: lightModelMatrix,
-  // });
-
-  // const lightFragmentUBO = createUniformBuffer(
-  //   device,
-  //   {
-  //     light_color: UniformType.Vec3,
-  //   },
-  //   {
-  //     light_color: [1.0, 1.0, 1.0],
-  //   },
-  // );
-
-  // const lightShader = createShader(device, glslang, {
-  //   id: 1,
-  //   vertex: lightVert,
-  //   fragment: lightFrag,
-  //   bindings: [
-  //     {
-  //       binding: 0,
-  //       visibility: GPUShaderStage.VERTEX,
-  //       type: 'uniform-buffer',
-  //       resource: viewProjectionUBO,
-  //     },
-  //     {
-  //       binding: 1,
-  //       visibility: GPUShaderStage.VERTEX,
-  //       type: 'uniform-buffer',
-  //       resource: lightVertexUBO,
-  //     },
-  //     {
-  //       binding: 2,
-  //       visibility: GPUShaderStage.FRAGMENT,
-  //       type: 'uniform-buffer',
-  //       resource: lightFragmentUBO,
-  //     },
-  //   ],
-  // });
-
-  // const lightMeshRenderer = createMeshRenderer(device, lightShader, lightVB);
-
-  // let colorTexture: GPUTexture = swapChain.getCurrentTexture();
-  // let colorTextureView: GPUTextureView = colorTexture.createView();
-
-  // const depthTexture: GPUTexture = device.createTexture({
-  //   size: {
-  //     width: canvas.width,
-  //     height: canvas.height,
-  //     depth: 1,
-  //   },
-  //   mipLevelCount: 1,
-  //   sampleCount: 1,
-  //   dimension: '2d',
-  //   format: 'depth24plus-stencil8',
-  //   usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC,
-  // });
-  // const depthTextureView: GPUTextureView = depthTexture.createView();
-
-  // let lightRotation = 0;
-  // function encodeCommands(delta: number) {
-  //   const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
-  //     attachment: colorTextureView,
-  //     loadValue: { r: 0, g: 0, b: 0, a: 1 },
-  //     storeOp: 'store',
-  //   };
-
-  //   const depthAttachment: GPURenderPassDepthStencilAttachmentDescriptor = {
-  //     attachment: depthTextureView,
-  //     depthLoadValue: 1,
-  //     depthStoreOp: 'store',
-  //     stencilLoadValue: 'load',
-  //     stencilStoreOp: 'store',
-  //   };
-
-  //   const renderPassDescriptor: GPURenderPassDescriptor = {
-  //     colorAttachments: [colorAttachment],
-  //     depthStencilAttachment: depthAttachment,
-  //   };
-
-  //   camera.updateViewMatrix();
-  //   camera.updateProjectionMatrix();
-  //   viewProjectionUBO.updateUniform('view', camera.viewMatrix);
-  //   viewProjectionUBO.updateUniform('projection', camera.projectionMatrix);
-
-  //   lightRotation += delta;
-  //   lightRotation %= 2 * Math.PI;
+      light_colour: vec3.fromValues(1.0, 1.0, 1.0),
+    },
+  );
+  const lightShader = shaderManager.create({
+    source: lightShaderSource,
+    vertex: {
+      entryPoint: 'vertex_main',
+    },
+    fragment: {
+      entryPoint: 'fragment_main',
+    },
+    bindings: [
+      {
+        type: ShaderBindingType.UniformBuffer,
+        resource: lightUniformBuffer,
+      },
+      {
+        type: ShaderBindingType.UniformBuffer,
+        resource: DefaultBuffers.ViewProjection,
+      },
+    ],
+  });
+  entityManager.addComponent(
+    lightEntity,
+    createShaderMaterialComponent({
+      shader: lightShader,
+    }),
+  );
 
   //   vec3.set(lightPos, 1.0 * Math.sin(lightRotation), 1.0, 1.0 * Math.cos(lightRotation));
   //   mat4.fromRotationTranslationScale(lightModelMatrix, [0, 0, 0, 0], lightPos, [0.2, 0.2, 0.2]);
@@ -345,27 +272,7 @@ export async function setup(canvas: HTMLCanvasElement) {
   //   cubeFragmentUBO.updateUniform('light.position', lightPos);
   //   cubeFragmentUBO.updateUniform('view_pos', camera.position);
 
-  //   const commandEncoder: GPUCommandEncoder = device.createCommandEncoder();
-  //   const cleanups = [
-  //     copyBufferToBuffer(device, commandEncoder, viewProjectionUBO.data, viewProjectionUBO.buffer),
-  //     copyBufferToBuffer(device, commandEncoder, lightVertexUBO.data, lightVertexUBO.buffer),
-  //     copyBufferToBuffer(device, commandEncoder, cubeFragmentUBO.data, cubeFragmentUBO.buffer),
-  //   ];
-
-  //   const passEncoder: GPURenderPassEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-  //   passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
-  //   passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
-
-  //   cubeMeshRenderer.render(passEncoder);
-  //   lightMeshRenderer.render(passEncoder);
-
-  //   passEncoder.endPass();
-
-  //   device.defaultQueue.submit([commandEncoder.finish()]);
-
-  //   cleanups.forEach((fn) => fn());
-  // }
-
+  let lightRotation = 0;
   let rafId: number;
   let lastTime = performance.now();
 
@@ -373,6 +280,15 @@ export async function setup(canvas: HTMLCanvasElement) {
     const now = performance.now();
     const dt = (now - lastTime) / 1000;
     lastTime = now;
+
+    lightRotation += dt;
+    lightRotation %= 2 * Math.PI;
+    vec3.set(lightPos, 1.0 * Math.sin(lightRotation), 1.0, 1.0 * Math.cos(lightRotation));
+    // vec3.copy(lightTransform.translation, lightPos);
+    lightTransform.translation = lightPos;
+    lightTransform.needsUpdate = true;
+
+    cubeShader.update({ light_pos: lightPos });
 
     camera.aspect = canvas.clientWidth / canvas.clientHeight;
     camera.updateProjectionMatrix();
