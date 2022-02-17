@@ -31,8 +31,10 @@ import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
 import { createRenderer } from 'toolkit/webgpu/renderer';
 import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS } from 'utils/cube-vertices';
 
-import gouraudShader from './shaders/gouraud.wgsl';
+import gouraudShaderSource from './shaders/gouraud.wgsl';
+import phongShaderSource from './shaders/phong.wgsl';
 import lightShaderSource from './shaders/light.wgsl';
+import { CommonMaterials, Materials } from 'toolkit/materials';
 
 // import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
 // import { createCamera } from 'toolkit/camera/camera';
@@ -42,11 +44,9 @@ import lightShaderSource from './shaders/light.wgsl';
 // import { vec3, mat4 } from 'gl-matrix';
 // import { copyBufferToBuffer } from 'toolkit/webgpu/utils';
 
-interface Material {
-  ambient: [number, number, number];
-  diffuse: [number, number, number];
-  specular: [number, number, number];
-  shininess: number;
+export enum Shading {
+  Gouraud = 'gouraud',
+  Phong = 'phong',
 }
 
 export async function setup(canvas: HTMLCanvasElement) {
@@ -101,7 +101,7 @@ export async function setup(canvas: HTMLCanvasElement) {
   const normal_matrix = mat4.create();
   mat4.transpose(normal_matrix, mat4.invert(normal_matrix, normal_matrix));
 
-  const uniformBuffer = bufferManager.createUniformBuffer(
+  const gouraudUBO = bufferManager.createUniformBuffer(
     {
       model: UniformType.Mat4,
       normal_matrix: UniformType.Mat4,
@@ -123,8 +123,8 @@ export async function setup(canvas: HTMLCanvasElement) {
       view_pos: camera.position,
     },
   );
-  const shader = shaderManager.create({
-    source: gouraudShader,
+  const gouraudShader = shaderManager.create({
+    source: gouraudShaderSource,
     vertex: {
       entryPoint: 'vertex_main',
     },
@@ -134,7 +134,7 @@ export async function setup(canvas: HTMLCanvasElement) {
     bindings: [
       {
         type: ShaderBindingType.UniformBuffer,
-        resource: uniformBuffer,
+        resource: gouraudUBO,
       },
       {
         type: ShaderBindingType.UniformBuffer,
@@ -142,13 +142,66 @@ export async function setup(canvas: HTMLCanvasElement) {
       },
     ],
   });
-  entityManager.addComponent(
-    cubeEntity,
-    createShaderMaterialComponent({
-      shader: shader,
-    }),
+
+  const phongUBO = bufferManager.createUniformBuffer(
+    {
+      model: UniformType.Mat4,
+      normal_matrix: UniformType.Mat4,
+
+      view_pos: UniformType.Vec3,
+
+      light_pos: UniformType.Vec3,
+      light_ambient: UniformType.Vec3,
+      light_diffuse: UniformType.Vec3,
+      light_specular: UniformType.Vec3,
+
+      mat_ambient: UniformType.Vec3,
+      mat_diffuse: UniformType.Vec3,
+      mat_specular: UniformType.Vec3,
+      mat_shininess: UniformType.Scalar,
+    },
+    {
+      model: mat4.create(),
+      normal_matrix,
+
+      view_pos: camera.position,
+
+      light_pos: lightPos,
+      light_ambient: [1.0, 1.0, 1.0],
+      light_diffuse: [1.0, 1.0, 1.0],
+      light_specular: [1.0, 1.0, 1.0],
+
+      mat_ambient: [1.0, 0.5, 0.31],
+      mat_diffuse: [1.0, 0.5, 0.31],
+      mat_specular: [0.5, 0.5, 0.5],
+      mat_shininess: 32.0,
+    },
   );
-  const cubeShader = shaderManager.get(shader);
+  const phongShader = shaderManager.create({
+    source: phongShaderSource,
+    vertex: {
+      entryPoint: 'vertex_main',
+    },
+    fragment: {
+      entryPoint: 'fragment_main',
+    },
+    bindings: [
+      {
+        type: ShaderBindingType.UniformBuffer,
+        resource: phongUBO,
+      },
+      {
+        type: ShaderBindingType.UniformBuffer,
+        resource: DefaultBuffers.ViewProjection,
+      },
+    ],
+  });
+
+  const material = createShaderMaterialComponent({
+    shader: gouraudShader,
+  });
+  entityManager.addComponent(cubeEntity, material);
+  let currentShader = shaderManager.get(gouraudShader);
 
   // const cubeFragmentUBO = createUniformBuffer(device, {
   //   // object_color: [1.0, 0.5, 0.31],
@@ -288,7 +341,7 @@ export async function setup(canvas: HTMLCanvasElement) {
     lightTransform.translation = lightPos;
     lightTransform.needsUpdate = true;
 
-    cubeShader.update({ light_pos: lightPos });
+    currentShader.update({ light_pos: lightPos, view_pos: camera.position });
 
     camera.aspect = canvas.clientWidth / canvas.clientHeight;
     camera.updateProjectionMatrix();
@@ -302,12 +355,26 @@ export async function setup(canvas: HTMLCanvasElement) {
   render();
 
   return {
-    setMaterial(material: Material) {
-      // cubeFragmentUBO.updateUniform('material.ambient', material.ambient);
-      // cubeFragmentUBO.updateUniform('material.diffuse', material.diffuse);
-      // cubeFragmentUBO.updateUniform('material.specular', material.specular);
-      // cubeFragmentUBO.updateUniform('material.shininess', material.shininess);
+    setMaterial(mat: Materials) {
+      if (material.shader === phongShader) {
+        const matProps = CommonMaterials[mat];
+        currentShader.update({
+          mat_ambient: matProps.ambient,
+          mat_diffuse: matProps.diffuse,
+          mat_specular: matProps.specular,
+          mat_shininess: matProps.shininess,
+        });
+      }
     },
+    setShading(shading: Shading) {
+      if (shading === Shading.Gouraud) {
+        material.shader = gouraudShader;
+      } else {
+        material.shader = phongShader;
+      }
+      currentShader = shaderManager.get(material.shader);
+    },
+
     destroy() {
       if (rafId) {
         cancelAnimationFrame(rafId);
