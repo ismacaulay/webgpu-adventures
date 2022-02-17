@@ -1,5 +1,4 @@
 import type { mat4, vec3 } from 'gl-matrix';
-import type { BoundingBox } from 'toolkit/types/math';
 import type {
   IndexBufferDescriptor,
   UniformDictionary,
@@ -11,12 +10,16 @@ export enum ComponentType {
   Geometry = 2,
   Material = 4,
   Script = 8,
+  Movement = 16,
 }
 
 export interface BaseComponent {
   type: ComponentType;
 }
 
+/**
+ * Transform
+ */
 export interface TransformComponent extends BaseComponent {
   type: ComponentType.Transform;
   needsUpdate: boolean;
@@ -32,6 +35,9 @@ export interface TransformComponent extends BaseComponent {
   readonly matrix: mat4;
 }
 
+/**
+ * Geometry
+ */
 export interface BaseGeometryComponent extends BaseComponent {
   type: ComponentType.Geometry;
   needsUpdate: boolean;
@@ -44,7 +50,18 @@ export interface MeshGeometryComponent extends BaseGeometryComponent {
 }
 export type GeometryComponent = MeshGeometryComponent;
 
+/**
+ * Shader
+ */
 export type ShaderId = number;
+
+export interface BasicMaterialComponent extends BaseComponent {
+  type: ComponentType.Material;
+
+  needsUpdate: boolean;
+  shader: ShaderId;
+  uniforms: UniformDictionary;
+}
 
 export interface ShaderMaterialComponent extends BaseComponent {
   type: ComponentType.Material;
@@ -55,16 +72,38 @@ export interface ShaderMaterialComponent extends BaseComponent {
 }
 export type MaterialComponent = ShaderMaterialComponent;
 
+/**
+ * Script
+ */
 export interface ScriptComponent extends BaseComponent {
   type: ComponentType.Script;
 
   update: (dt?: number) => void;
 }
 
+/**
+ * Movement
+ */
+export enum MovementType {
+  Circular,
+}
+
+export interface CircularMovementComponent {
+  type: ComponentType.Movement;
+  subtype: MovementType.Circular;
+
+  center: vec3;
+  axis: vec3;
+  radius: number;
+  period: number;
+}
+export type MovementComponent = CircularMovementComponent;
+
 export type Component =
   | TransformComponent
   | GeometryComponent
   | MaterialComponent
-  | ScriptComponent;
+  | ScriptComponent
+  | MovementComponent;
 
 export type ComponentList = Component[];

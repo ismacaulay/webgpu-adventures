@@ -87,7 +87,10 @@ export function createRenderSystem(
           shader.update({ model: transform.matrix });
           transform.needsUpdate = false;
         }
-        // shader.update(material.uniforms);
+        if (material.needsUpdate) {
+          shader.update(material.uniforms ?? {});
+          material.needsUpdate = false;
+        }
         shader.buffers.forEach((buf) => {
           if (buf.needsUpdate) {
             renderer.submit({

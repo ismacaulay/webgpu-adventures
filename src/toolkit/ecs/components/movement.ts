@@ -1,49 +1,40 @@
-// export enum MovementType {
-//   Circular,
-// }
+import { vec3 } from 'gl-matrix';
+import {
+  CircularMovementComponent,
+  ComponentType,
+  MovementType,
+} from 'toolkit/types/ecs/components';
 
-// export interface CircularMovementComponent {
-//   type: ComponentType.Movement;
-//   subtype: MovementType.Circular;
+export function createCircularMovementComponent(initial: {
+  center: vec3;
+  axis: vec3;
+  radius: number;
+  period: number;
+}): CircularMovementComponent {
+  const center = vec3.clone(initial.center);
+  const axis = vec3.clone(initial.axis);
+  let radius = initial.radius;
+  let period = initial.period;
 
-//   center: vec3;
-//   axis: vec3;
-//   radius: number;
-//   period: number;
-// }
+  return {
+    type: ComponentType.Movement,
+    subtype: MovementType.Circular,
 
-// export type MovementComponent = CircularMovementComponent;
+    center,
+    axis,
 
-// export function createCircularMovementComponent(initial: {
-//   center: vec3;
-//   axis: vec3;
-//   radius: number;
-//   period: number;
-// }): CircularMovementComponent {
-//   const center = initial.center;
-//   const axis = initial.axis;
-//   let radius = initial.radius;
-//   let period = initial.period;
+    get radius() {
+      return radius;
+    },
+    set radius(value: number) {
+      radius = value;
+    },
 
-//   return {
-//     type: ComponentType.Movement,
-//     subtype: MovementType.Circular,
-
-//     center,
-//     axis,
-
-//     get radius() {
-//       return radius;
-//     },
-//     set radius(value: number) {
-//       radius = value;
-//     },
-
-//     get period() {
-//       return period;
-//     },
-//     set period(value: number) {
-//       period = value;
-//     },
-//   };
-// }
+    get period() {
+      return period;
+    },
+    set period(value: number) {
+      period = value;
+    },
+  };
+}

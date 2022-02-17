@@ -16,15 +16,13 @@ import type {
   ShaderManager,
   TextureManager,
 } from 'toolkit/types/ecs/managers';
-import type { RenderSystem, ScriptSystem } from 'toolkit/types/ecs/systems';
+import { createMovementSystem } from 'toolkit/ecs/systems/movement';
 
 export interface Application {
   entityManager: EntityManager;
   bufferManager: BufferManager;
   textureManager: TextureManager;
   shaderManager: ShaderManager;
-  renderSystem: RenderSystem;
-  scriptSystem: ScriptSystem;
   cameraController: CameraController;
   start(): void;
   destroy(): void;
@@ -60,6 +58,7 @@ export async function createApp(
     shaderManager,
     bufferManager,
   });
+  const movementSystem = createMovementSystem(entityManager);
 
   let rafId: number;
   let lastTime = performance.now();
@@ -73,6 +72,7 @@ export async function createApp(
     cameraController.update(dt);
 
     scriptSystem.update(dt);
+    movementSystem.update(dt);
     renderSystem.update();
 
     rafId = requestAnimationFrame(render);
@@ -83,8 +83,6 @@ export async function createApp(
     bufferManager,
     textureManager,
     shaderManager,
-    renderSystem,
-    scriptSystem,
     cameraController,
 
     start() {

@@ -1,6 +1,8 @@
-export type Color = [number, number, number];
+import type { GenericObject } from 'toolkit/types/generic';
 
-export const Colors = {
-  Red: [1.0, 0.0, 0.0] as Color,
-  White: [1.0, 1.0, 1.0] as Color,
+export type Colour = [number, number, number];
+
+export const Colours: GenericObject<Colour> = {
+  Red: [1.0, 0.0, 0.0],
+  White: [1.0, 1.0, 1.0],
 };
