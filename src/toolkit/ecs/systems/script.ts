@@ -1,16 +1,19 @@
-// export function createScriptSystem(entityManager: EntityManager) {
-//   return {
-//     update(dt: number) {
-//       const view = entityManager.view([ComponentType.Script]);
+import { ComponentType, ScriptComponent } from 'toolkit/types/ecs/components';
+import type { EntityManager } from 'toolkit/types/ecs/managers';
 
-//       let result = view.next();
-//       while (!result.done) {
-//         const script = result.value[0] as ScriptComponent;
+export function createScriptSystem(entityManager: EntityManager) {
+  return {
+    update(dt: number) {
+      const view = entityManager.view([ComponentType.Script]);
 
-//         script.update(dt);
+      let result = view.next();
+      while (!result.done) {
+        const script = result.value[0] as ScriptComponent;
 
-//         result = view.next();
-//       }
-//     },
-//   };
-// }
+        script.update(dt);
+
+        result = view.next();
+      }
+    },
+  };
+}

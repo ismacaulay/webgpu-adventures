@@ -12,86 +12,9 @@ import {
   EntityManager,
   ShaderManager,
 } from 'toolkit/types/ecs/managers';
+import type { RenderSystem } from 'toolkit/types/ecs/systems';
 import type { IndexBuffer, UniformBuffer, VertexBuffer } from 'toolkit/types/webgpu/buffers';
 import { RenderCommandType, Renderer } from 'toolkit/types/webgpu/renderer';
-
-// export function createRenderSystemOld(
-//   entityManager: EntityManager,
-//   shaderManager: ShaderManager,
-//   bufferManager: BufferManager,
-//   renderer: Renderer,
-//   camera: Came,
-// ) {
-//   return {
-//     update() {
-//       renderer.begin();
-
-//       const viewProjectionBuffer = bufferManager.get<UniformBuffer>(DefaultBuffers.ViewProjection);
-//       viewProjectionBuffer.updateUniform('view', camera.viewMatrix);
-//       viewProjectionBuffer.updateUniform('projection', camera.projectionMatrix);
-//       renderer.submit({
-//         type: RenderCommandType.CopySrcToDst,
-//         src: viewProjectionBuffer.data,
-//         dst: viewProjectionBuffer.buffer,
-//         size: viewProjectionBuffer.data.byteLength,
-//       });
-//       viewProjectionBuffer.needsUpdate = false;
-
-//       // TODO: Implement a way to submit buffer updates and prevent
-//       //       the shader from submitting it when its already submitted
-
-//       const view = entityManager.view([
-//         ComponentType.Transform,
-//         ComponentType.Geometry,
-//         ComponentType.Material,
-//       ]);
-
-//       let result = view.next();
-//       while (!result.done) {
-//         const transform = result.value[0] as TransformComponent;
-//         const geometry = result.value[1] as GeometryComponent;
-//         const material = result.value[2] as MaterialComponent;
-
-//         const vbs = geometry.buffers.map((buffer) => {
-//           if (!buffer.id) {
-//             buffer.id = bufferManager.createVertexBuffer(buffer);
-//           }
-
-//           return bufferManager.get<VertexBuffer>(buffer.id);
-//         });
-
-//         const shader = shaderManager.get(material.shader);
-//         shader.update({ model: transform.matrix });
-//         shader.update(material.uniforms);
-
-//         shader.buffers.forEach((buffer: UniformBuffer) => {
-//           if (buffer.needsUpdate) {
-//             renderer.submit({
-//               type: RenderCommandType.CopySrcToDst,
-//               src: buffer.data,
-//               dst: buffer.buffer,
-//               size: buffer.data.byteLength,
-//             });
-
-//             buffer.needsUpdate = false;
-//           }
-//         });
-
-//         renderer.submit({
-//           type: RenderCommandType.Draw,
-//           priority: material.drawOrder,
-//           shader,
-//           buffers: vbs,
-//           count: geometry.count,
-//         });
-
-//         result = view.next();
-//       }
-
-//       renderer.finish();
-//     },
-//   };
-// }
 
 export function createRenderSystem(
   renderer: Renderer,
@@ -101,7 +24,7 @@ export function createRenderSystem(
     bufferManager: BufferManager;
     shaderManager: ShaderManager;
   },
-) {
+): RenderSystem {
   const { entityManager, bufferManager, shaderManager } = managers;
 
   return {

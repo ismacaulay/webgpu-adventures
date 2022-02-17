@@ -1,76 +1,31 @@
-// import glslangModule from 'toolkit/webgpu/shaders/glslang';
-// import { requestGPU, configureSwapChain } from 'toolkit/webgpu/utils';
-// import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS } from 'utils/cube-vertices';
-// import { createShader } from 'toolkit/webgpu/shaders/shader';
-// import cubePhongVert from './shaders/lighting.vert';
-// // import cubePhongFrag from './shaders/lighting.frag';
-// import cubePhongMaterialFrag from './shaders/lighting-material.frag';
-// // import cubeGouraudVert from './shaders/gouraud.vert';
-// // import cubeGouraudFrag from './shaders/gouraud.frag';
-// import lightVert from './shaders/light.vert';
-// import lightFrag from './shaders/light.frag';
-
 import { mat4, vec3 } from 'gl-matrix';
-import { createCameraController } from 'toolkit/camera/camera-controller';
-import {
-  createBufferManager,
-  createEntityManager,
-  createShaderManager,
-  createTextureManager,
-} from 'toolkit/ecs';
 import {
   createMeshGeometryComponent,
   createShaderMaterialComponent,
   createTransformComponent,
 } from 'toolkit/ecs/components';
-import { createRenderSystem } from 'toolkit/ecs/systems';
-import { CameraControls } from 'toolkit/types/camera';
 import { DefaultBuffers } from 'toolkit/types/ecs/managers';
 import { BufferAttributeFormat, UniformType } from 'toolkit/types/webgpu/buffers';
 import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
-import { createRenderer } from 'toolkit/webgpu/renderer';
 import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS } from 'utils/cube-vertices';
-
 import gouraudShaderSource from './shaders/gouraud.wgsl';
 import phongShaderSource from './shaders/phong.wgsl';
 import lightShaderSource from './shaders/light.wgsl';
 import { CommonMaterials, Materials } from 'toolkit/materials';
-
-// import { createFreeCameraController } from 'toolkit/camera/free-camera-controller';
-// import { createCamera } from 'toolkit/camera/camera';
-// import { createUniformBuffer } from 'toolkit/webgpu/buffers/uniform-buffer';
-// import { createMeshRenderer } from 'toolkit/webgpu/meshRenderer';
-// import { createVertexBuffer, BufferAttributeType, UniformType } from 'toolkit/webgpu/buffers';
-// import { vec3, mat4 } from 'gl-matrix';
-// import { copyBufferToBuffer } from 'toolkit/webgpu/utils';
+import type { Application } from 'pages/app';
+import { createScriptComponent } from 'toolkit/ecs/components/script';
 
 export enum Shading {
   Gouraud = 'gouraud',
   Phong = 'phong',
 }
 
-export async function setup(canvas: HTMLCanvasElement) {
-  const renderer = await createRenderer(canvas);
+export function setup(app: Application) {
+  const { entityManager, bufferManager, shaderManager, cameraController } = app;
 
-  // TODO: fix free controls
-  const cameraController = createCameraController(canvas, { controls: CameraControls.Free });
   const camera = cameraController.camera;
   vec3.set(camera.position, 0, 0, 5);
   camera.updateViewMatrix();
-
-  const entityManager = createEntityManager();
-  const bufferManager = createBufferManager(renderer.device);
-  const textureManager = createTextureManager(renderer.device);
-  const shaderManager = createShaderManager(renderer.device, {
-    bufferManager,
-    textureManager,
-  });
-
-  const renderSystem = createRenderSystem(renderer, cameraController, {
-    entityManager,
-    shaderManager,
-    bufferManager,
-  });
 
   const cubeEntity = entityManager.create();
   entityManager.addComponent(cubeEntity, createTransformComponent({}));
@@ -203,53 +158,6 @@ export async function setup(canvas: HTMLCanvasElement) {
   entityManager.addComponent(cubeEntity, material);
   let currentShader = shaderManager.get(gouraudShader);
 
-  // const cubeFragmentUBO = createUniformBuffer(device, {
-  //   // object_color: [1.0, 0.5, 0.31],
-
-  //   // phong shading
-  //   // light_color: [1.0, 1.0, 1.0],
-  //   // light_pos: lightPos.value,
-  //   view_pos: UniformType.Vec3,
-
-  //   // material system
-  //   material: {
-  //     ambient: UniformType.Vec3,
-  //     diffuse: UniformType.Vec3,
-  //     specular: UniformType.Vec3,
-  //     shininess: UniformType.Scalar,
-  //   },
-  //   light: {
-  //     position: UniformType.Vec3,
-  //     ambient: UniformType.Vec3,
-  //     diffuse: UniformType.Vec3,
-  //     specular: UniformType.Vec3,
-  //   },
-  // });
-  // cubeFragmentUBO.updateUniforms({
-  //   // object_color: [1.0, 0.5, 0.31],
-
-  //   // phong shading
-  //   // light_color: [1.0, 1.0, 1.0],
-  //   // light_pos: lightPos.value,
-  //   view_pos: camera.position,
-
-  //   // material system
-  //   material: {
-  //     ambient: [1.0, 0.5, 0.31],
-  //     diffuse: [1.0, 0.5, 0.31],
-  //     specular: [0.5, 0.5, 0.5],
-  //     shininess: 32.0,
-  //   },
-  //   light: {
-  //     position: lightPos,
-  //     // ambient: [0.2, 0.2, 0.2],
-  //     ambient: [1.0, 1.0, 1.0],
-  //     // diffuse: [0.5, 0.5, 0.5],
-  //     diffuse: [1.0, 1.0, 1.0],
-  //     specular: [1.0, 1.0, 1.0],
-  //   },
-  // });
-
   const lightEntity = entityManager.create();
   const lightTransform = createTransformComponent({
     scale: vec3.fromValues(0.2, 0.2, 0.2),
@@ -312,47 +220,46 @@ export async function setup(canvas: HTMLCanvasElement) {
     }),
   );
 
-  //   vec3.set(lightPos, 1.0 * Math.sin(lightRotation), 1.0, 1.0 * Math.cos(lightRotation));
-  //   mat4.fromRotationTranslationScale(lightModelMatrix, [0, 0, 0, 0], lightPos, [0.2, 0.2, 0.2]);
-  //   lightVertexUBO.updateUniform('model', lightModelMatrix);
-
-  //   // gouraud shading
-  //   // cubeVertexUBO.updateUniform('light_pos', lightPos.value);
-  //   // cubeVertexUBO.updateUniform('view_pos', camera.position.value);
-  //   // cubeVertexUBO.updateBuffer();
-
-  //   // phong shading
-  //   cubeFragmentUBO.updateUniform('light.position', lightPos);
-  //   cubeFragmentUBO.updateUniform('view_pos', camera.position);
-
   let lightRotation = 0;
-  let rafId: number;
-  let lastTime = performance.now();
+  entityManager.addComponent(
+    lightEntity,
+    createScriptComponent((dt: number) => {
+      lightRotation += dt;
+      lightRotation %= 2 * Math.PI;
+      vec3.set(lightPos, 1.0 * Math.sin(lightRotation), 1.0, 1.0 * Math.cos(lightRotation));
+      lightTransform.translation = lightPos;
+      lightTransform.needsUpdate = true;
 
-  function render() {
-    const now = performance.now();
-    const dt = (now - lastTime) / 1000;
-    lastTime = now;
+      currentShader.update({ light_pos: lightPos, view_pos: camera.position });
+    }),
+  );
+  // let rafId: number;
+  // let lastTime = performance.now();
 
-    lightRotation += dt;
-    lightRotation %= 2 * Math.PI;
-    vec3.set(lightPos, 1.0 * Math.sin(lightRotation), 1.0, 1.0 * Math.cos(lightRotation));
-    // vec3.copy(lightTransform.translation, lightPos);
-    lightTransform.translation = lightPos;
-    lightTransform.needsUpdate = true;
+  // function render() {
+  //   const now = performance.now();
+  //   const dt = (now - lastTime) / 1000;
+  //   lastTime = now;
 
-    currentShader.update({ light_pos: lightPos, view_pos: camera.position });
+  //   lightRotation += dt;
+  //   lightRotation %= 2 * Math.PI;
+  //   vec3.set(lightPos, 1.0 * Math.sin(lightRotation), 1.0, 1.0 * Math.cos(lightRotation));
+  //   // vec3.copy(lightTransform.translation, lightPos);
+  //   lightTransform.translation = lightPos;
+  //   lightTransform.needsUpdate = true;
 
-    camera.aspect = canvas.clientWidth / canvas.clientHeight;
-    camera.updateProjectionMatrix();
+  //   currentShader.update({ light_pos: lightPos, view_pos: camera.position });
 
-    cameraController.update(dt);
+  //   camera.aspect = canvas.clientWidth / canvas.clientHeight;
+  //   camera.updateProjectionMatrix();
 
-    renderSystem.update();
+  //   cameraController.update(dt);
 
-    rafId = requestAnimationFrame(render);
-  }
-  render();
+  //   renderSystem.update();
+
+  //   rafId = requestAnimationFrame(render);
+  // }
+  // render();
 
   return {
     setMaterial(mat: Materials) {
@@ -373,19 +280,6 @@ export async function setup(canvas: HTMLCanvasElement) {
         material.shader = phongShader;
       }
       currentShader = shaderManager.get(material.shader);
-    },
-
-    destroy() {
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-      }
-
-      shaderManager.destroy();
-      bufferManager.destroy();
-      entityManager.destroy();
-
-      renderer.destroy();
-      cameraController.destroy();
     },
   };
 }

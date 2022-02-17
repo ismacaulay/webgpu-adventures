@@ -10,15 +10,16 @@ export enum ComponentType {
   Transform = 1,
   Geometry = 2,
   Material = 4,
+  Script = 8,
 }
 
 export interface BaseComponent {
-  needsUpdate: boolean;
   type: ComponentType;
 }
 
 export interface TransformComponent extends BaseComponent {
   type: ComponentType.Transform;
+  needsUpdate: boolean;
 
   translation: vec3;
   // TODO: this should be a quat
@@ -33,6 +34,7 @@ export interface TransformComponent extends BaseComponent {
 
 export interface BaseGeometryComponent extends BaseComponent {
   type: ComponentType.Geometry;
+  needsUpdate: boolean;
 }
 
 export interface MeshGeometryComponent extends BaseGeometryComponent {
@@ -46,12 +48,23 @@ export type ShaderId = number;
 
 export interface ShaderMaterialComponent extends BaseComponent {
   type: ComponentType.Material;
+  needsUpdate: boolean;
 
   shader: ShaderId;
   uniforms?: UniformDictionary;
 }
 export type MaterialComponent = ShaderMaterialComponent;
 
-export type Component = TransformComponent | GeometryComponent | MaterialComponent;
+export interface ScriptComponent extends BaseComponent {
+  type: ComponentType.Script;
+
+  update: (dt?: number) => void;
+}
+
+export type Component =
+  | TransformComponent
+  | GeometryComponent
+  | MaterialComponent
+  | ScriptComponent;
 
 export type ComponentList = Component[];

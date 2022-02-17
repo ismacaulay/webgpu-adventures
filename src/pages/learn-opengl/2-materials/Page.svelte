@@ -1,13 +1,16 @@
 <script lang="ts">
-  import { setup, Shading } from './renderer';
-  import { Materials, CommonMaterials } from 'toolkit/materials';
+  import { setup, Shading } from './setup';
   import { onMount } from 'svelte';
   import { Pane } from 'tweakpane';
   import Canvas from 'components/Canvas.svelte';
+  import type { Application } from 'pages/app';
+  import { createApp } from 'pages/app';
+  import { CameraControls } from 'toolkit/types/camera';
+  import { Materials } from 'toolkit/materials';
 
   let canvas: any;
   onMount(() => {
-    let app: any;
+    let app: Application;
     let pane: Pane;
 
     (async () => {
@@ -16,11 +19,11 @@
         material: Materials.Default,
       };
       pane = new Pane({ title: 'materials' });
-
-      app = await setup(canvas.getElement());
-      app.setShading(params.shading);
+      app = await createApp(canvas.getElement(), { camera: { controls: CameraControls.Free } });
+      const controller = setup(app);
+      controller.setShading(params.shading);
       if (params.shading === Shading.Phong) {
-        app.setMaterial(params.material);
+        controller.setMaterial(params.material);
       }
 
       let materialInput: any = undefined;
@@ -37,7 +40,7 @@
               },
             })
             .on('change', () => {
-              app.setMaterial(params.material);
+              controller.setMaterial(params.material);
             });
         } else {
           pane.remove(materialInput);
@@ -53,10 +56,12 @@
           },
         })
         .on('change', () => {
-          app.setShading(params.shading);
+          controller.setShading(params.shading);
           setupMaterialSelect();
         });
       setupMaterialSelect();
+
+      app.start();
     })();
 
     return () => {

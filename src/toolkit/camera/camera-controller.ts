@@ -6,7 +6,7 @@ import { createFreeControls } from '.';
 
 export function createCameraController(
   element: HTMLElement,
-  options: { controls: CameraControls } = { controls: CameraControls.Orbit },
+  options: { controls?: CameraControls },
 ): CameraController {
   // TODO: this should be set outside
   const zoom = 1;
@@ -38,7 +38,7 @@ export function createCameraController(
   let camera: Camera = orthographicCamera;
 
   let controls: any;
-  if (options.controls === CameraControls.Free) {
+  if (options?.controls === CameraControls.Free) {
     camera = perspectiveCamera;
     controls = createFreeControls(element, camera);
   } else {
