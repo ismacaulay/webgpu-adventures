@@ -41,7 +41,7 @@ export async function createApp(
 ): Promise<Application> {
   const renderer = await createRenderer(canvas);
 
-  const cameraController = createCameraController(canvas, initial?.camera ?? {});
+  const cameraController = createCameraController(canvas, initial?.camera);
   const camera = cameraController.camera;
   vec3.set(camera.position, ...(initial?.camera?.position ?? [0, 0, 5]));
   camera.updateViewMatrix();

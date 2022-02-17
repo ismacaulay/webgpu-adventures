@@ -6,7 +6,7 @@ import { createFreeControls } from '.';
 
 export function createCameraController(
   element: HTMLElement,
-  options: { controls?: CameraControls },
+  options?: { controls?: CameraControls },
 ): CameraController {
   // TODO: this should be set outside
   const zoom = 1;
