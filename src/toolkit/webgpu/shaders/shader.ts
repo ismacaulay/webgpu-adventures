@@ -50,20 +50,42 @@ export function createShader(
     });
   }
 
-  const vertexDescription = {
+  const vertex = {
     module: vertexModule,
     entryPoint: descriptor.vertex.entryPoint,
   };
 
-  const fragmentDescription = {
+  const fragment = {
     module: fragmentModule,
     entryPoint: descriptor.fragment.entryPoint,
   };
 
   return {
     id,
-    vertex: vertexDescription,
-    fragment: fragmentDescription,
+    vertex,
+    fragment,
+    bindings,
+    buffers,
+    textures,
+
+    update(uniforms: UniformDictionary) {
+      updateBuffers(buffers, uniforms);
+    },
+  };
+}
+
+export function cloneShader(
+  shader: Shader,
+  bindings: ShaderBindGroupDescriptor[],
+  textures: Texture[],
+  buffers: UniformBuffer[],
+): Shader {
+  const { id, vertex, fragment } = shader;
+
+  return {
+    id,
+    vertex,
+    fragment,
     bindings,
     buffers,
     textures,

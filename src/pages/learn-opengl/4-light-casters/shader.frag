@@ -58,9 +58,7 @@ void main()
 
     // spot light
     vec3 light_dir = normalize(light.position - v_frag_pos);
-    float theta = dot(light_dir, normalize(-light.direction));
-    float intensity = clamp((theta - light.outerCutoff) / (light.innerCutoff - light.outerCutoff), 0.0, 1.0);
-
+ 
     // lighting calc
     vec3 view_dir = normalize(view_pos - v_frag_pos);
     vec3 reflect_dir = reflect(-light_dir, v_normal);

@@ -45,7 +45,7 @@ export enum ShaderBindingType {
   Sampler,
 }
 
-interface ShaderBindingDescriptor {
+export interface ShaderBindingDescriptor {
   type: ShaderBindingType;
   resource: number;
 }

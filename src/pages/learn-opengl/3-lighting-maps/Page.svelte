@@ -29,6 +29,8 @@
       const app = await createApp(canvas.getElement(), {
         camera: { controls: CameraControls.Free },
       });
+      app.start();
+
       const { entityManager, shaderManager, bufferManager, textureManager, cameraController } = app;
 
       const camera = cameraController.camera;
@@ -192,8 +194,6 @@
           cubeShader.update({ light_pos: lightTransform.translation, view_pos: camera.position });
         }),
       );
-
-      app.start();
     })();
 
     return () => {
