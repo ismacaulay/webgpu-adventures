@@ -95,6 +95,7 @@ export async function createApp(
       }
 
       shaderManager.destroy();
+      textureManager.destroy();
       bufferManager.destroy();
       entityManager.destroy();
 

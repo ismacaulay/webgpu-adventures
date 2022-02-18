@@ -26,7 +26,7 @@
     let app: Application;
 
     (async () => {
-      const app = await createApp(canvas.getElement(), {
+      app = await createApp(canvas.getElement(), {
         camera: { controls: CameraControls.Free },
       });
       app.start();

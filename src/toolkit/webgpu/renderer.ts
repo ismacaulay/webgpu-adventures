@@ -217,6 +217,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
 
     destroy() {
       depthTexture.destroy();
+      renderTarget.destroy();
     },
   };
 }

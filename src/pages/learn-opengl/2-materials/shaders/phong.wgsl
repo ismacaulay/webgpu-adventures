@@ -59,7 +59,7 @@ fn fragment_main(
 
   var view_dir = normalize(ubo.view_pos - frag_pos);
   var reflect_dir = reflect(-light_dir, n);
-  var spec = pow(max(dot(view_dir, reflect_dir), 0.0), ubo.shininess);
+  var spec = pow(max(dot(view_dir, reflect_dir), 0.0), ubo.mat_shininess);
   var specular = spec * ubo.mat_specular * ubo.light_specular;
 
   return vec4(ambient + diffuse + specular, 1.0);
