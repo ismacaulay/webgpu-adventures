@@ -3,6 +3,7 @@ import Cube from './cube/Page.svelte';
 // import ECS from './ecs/Page.svelte';
 import TexturedCube from './learn-opengl/1-textured-cube/Page.svelte';
 import Materials from './learn-opengl/2-materials/Page.svelte';
+// @ts-ignore for some reason this page is angry in vscode
 import LightingMaps from './learn-opengl/3-lighting-maps/Page.svelte';
 import LightCasters from './learn-opengl/4-light-casters/Page.svelte';
 // import MultipleLights from './pages/learn-opengl/multiple-lights/Page.svelte';
