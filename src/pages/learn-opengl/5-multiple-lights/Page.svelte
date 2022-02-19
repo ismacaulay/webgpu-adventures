@@ -17,6 +17,8 @@
   import { radians } from 'toolkit/math';
   import { CUBE_VERTICES_WITH_NORMALS_WITH_UV } from 'utils/cube-vertices';
   import cubeShaderSource from './shader.wgsl';
+  import { createLightObject } from 'utils/objects/light';
+  import { createScriptComponent } from 'toolkit/ecs/components/script';
 
   let canvas: any;
   onMount(() => {
@@ -24,6 +26,8 @@
 
     (async () => {
       app = await createApp(canvas.getElement(), { camera: { controls: CameraControls.Free } });
+      app.start();
+
       const { entityManager, bufferManager, textureManager, shaderManager, cameraController } = app;
 
       const camera = cameraController.camera;
@@ -32,6 +36,70 @@
 
       const camDir = vec3.create();
       vec3.normalize(camDir, vec3.sub(camDir, camera.target, camera.position));
+
+      const dirLights = [
+        {
+          direction: vec3.fromValues(-0.2, -1.0, -0.3),
+          ambient: vec3.fromValues(0.05, 0.05, 0.05),
+          diffuse: vec3.fromValues(0.4, 0.4, 0.4),
+          specular: vec3.fromValues(0.5, 0.5, 0.5),
+        },
+      ];
+
+      const pointLights = [
+        {
+          position: vec3.fromValues(0.7, 0.2, 2.0),
+          kc: 1.0,
+          kl: 0.09,
+          kq: 0.032,
+          ambient: vec3.fromValues(0.05, 0.05, 0.05),
+          diffuse: vec3.fromValues(0.8, 0.8, 0.8),
+          specular: vec3.fromValues(1.0, 1.0, 1.0),
+        },
+        {
+          position: vec3.fromValues(2.3, -3.3, -4.0),
+          kc: 1.0,
+          kl: 0.09,
+          kq: 0.032,
+          ambient: vec3.fromValues(0.05, 0.05, 0.05),
+          diffuse: vec3.fromValues(0.8, 0.8, 0.8),
+          specular: vec3.fromValues(1.0, 1.0, 1.0),
+        },
+        {
+          position: vec3.fromValues(-4.0, 2.0, -12.0),
+          kc: 1.0,
+          kl: 0.09,
+          kq: 0.032,
+          ambient: vec3.fromValues(0.05, 0.05, 0.05),
+          diffuse: vec3.fromValues(0.8, 0.8, 0.8),
+          specular: vec3.fromValues(1.0, 1.0, 1.0),
+        },
+        {
+          position: vec3.fromValues(0.0, 0.0, -3.0),
+          kc: 1.0,
+          kl: 0.09,
+          kq: 0.032,
+          ambient: vec3.fromValues(0.05, 0.05, 0.05),
+          diffuse: vec3.fromValues(0.8, 0.8, 0.8),
+          specular: vec3.fromValues(1.0, 1.0, 1.0),
+        },
+      ];
+
+      const spotLights = [
+        {
+          position: camera.position,
+          direction: camDir,
+          inner_cutoff: Math.cos(radians(12.5)),
+          outer_cutoff: Math.cos(radians(15.0)),
+          kc: 1.0,
+          kl: 0.09,
+          kq: 0.032,
+          ambient: vec3.fromValues(0.0, 0.0, 0.0),
+          diffuse: vec3.fromValues(1.0, 1.0, 1.0),
+          specular: vec3.fromValues(1.0, 1.0, 1.0),
+        },
+      ];
+
       const materialUniforms = {
         view_pos: camera.position,
 
@@ -41,6 +109,10 @@
           diffuse: [0.5, 0.5, 0.5],
           specular: [1.0, 1.0, 1.0],
         },
+
+        directional_lights: dirLights,
+        point_lights: pointLights,
+        spot_lights: spotLights,
       };
       const materialBuffer = bufferManager.createUniformBuffer(
         {
@@ -52,10 +124,49 @@
             diffuse: UniformType.Vec3,
             specular: UniformType.Vec3,
           },
+
+          directional_lights: [
+            {
+              direction: UniformType.Vec3,
+              ambient: UniformType.Vec3,
+              diffuse: UniformType.Vec3,
+              specular: UniformType.Vec3,
+            },
+            dirLights.length,
+          ],
+
+          point_lights: [
+            {
+              position: UniformType.Vec3,
+              kc: UniformType.Scalar,
+              kl: UniformType.Scalar,
+              kq: UniformType.Scalar,
+              ambient: UniformType.Vec3,
+              diffuse: UniformType.Vec3,
+              specular: UniformType.Vec3,
+            },
+            pointLights.length,
+          ],
+          spot_lights: [
+            {
+              position: UniformType.Vec3,
+              direction: UniformType.Vec3,
+              inner_cutoff: UniformType.Scalar,
+              outer_cutoff: UniformType.Scalar,
+              kc: UniformType.Scalar,
+              kl: UniformType.Scalar,
+              kq: UniformType.Scalar,
+              ambient: UniformType.Vec3,
+              diffuse: UniformType.Vec3,
+              specular: UniformType.Vec3,
+            },
+            spotLights.length,
+          ],
         },
         materialUniforms,
       );
 
+      // console.log(bufferManager.get<any>(materialBuffer).data);
       const sampler = textureManager.createSampler({
         magFilter: 'linear',
         minFilter: 'linear',
@@ -187,19 +298,28 @@
             shader: cubeShaderId,
           }),
         );
-        /* entityManager.addComponent( */
-        /*   cubeEntity, */
-        /*   createScriptComponent(() => { */
-        /*     vec3.normalize(camDir, vec3.sub(camDir, camera.target, camera.position)); */
-        /*     const shader = shaderManager.get(cubeShaderId); */
-        /*     shader.update({ */
-        /*       spot: { */
-        /*         position: camera.position, */
-        /*         direction: camDir, */
-        /*       }, */
-        /*     }); */
-        /*   }), */
-        /* ); */
+        entityManager.addComponent(
+          cubeEntity,
+          createScriptComponent(() => {
+            vec3.normalize(camDir, vec3.sub(camDir, camera.target, camera.position));
+            const shader = shaderManager.get(cubeShaderId);
+            shader.update({
+              spot_lights: [
+                {
+                  position: camera.position,
+                  direction: camDir,
+                },
+              ],
+            });
+          }),
+        );
+      }
+
+      for (let i = 0; i < pointLights.length; ++i) {
+        createLightObject(
+          { entityManager, bufferManager, shaderManager },
+          { translation: pointLights[i].position },
+        );
       }
     })();
 

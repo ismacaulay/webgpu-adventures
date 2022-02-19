@@ -30,7 +30,11 @@ export enum UniformType {
 }
 
 export interface UniformBufferDescriptor {
-  [key: string]: UniformType | UniformBufferDescriptor;
+  [key: string]:
+    | UniformType
+    | UniformBufferDescriptor
+    | [UniformType, number]
+    | [UniformBufferDescriptor, number];
 }
 
 export type UniformValue =
