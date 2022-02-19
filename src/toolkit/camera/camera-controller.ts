@@ -15,7 +15,7 @@ export function createCameraController(
   const perspectiveCamera = createPerspectiveCamera({
     fov: 45,
     znear: 0.1,
-    zfar: 2000,
+    zfar: 100,
     aspect: element.clientWidth / element.clientHeight,
   });
   vec3.set(perspectiveCamera.position, ...position);

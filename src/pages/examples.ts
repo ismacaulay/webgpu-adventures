@@ -7,7 +7,7 @@ import Materials from './learn-opengl/2-materials/Page.svelte';
 import LightingMaps from './learn-opengl/3-lighting-maps/Page.svelte';
 import LightCasters from './learn-opengl/4-light-casters/Page.svelte';
 import MultipleLights from './learn-opengl/5-multiple-lights/Page.svelte';
-// import DepthTesting from './pages/learn-opengl/depth-testing/Page.svelte';
+import DepthTesting from './learn-opengl/6-depth-testing/Page.svelte';
 // import StencilTesting from './pages/learn-opengl/stencil-testing/Page.svelte';
 
 export default [
@@ -18,7 +18,7 @@ export default [
   { title: 'learn-opengl/lighting-maps', component: LightingMaps },
   { title: 'learn-opengl/light-casters', component: LightCasters },
   { title: 'learn-opengl/multiple-lights', component: MultipleLights },
-  // { title: 'learn-opengl/depth-testing', component: DepthTesting },
+  { title: 'learn-opengl/depth-testing', component: DepthTesting },
   // { title: 'learn-opengl/stencil-testing', component: StencilTesting },
   // { title: 'ecs', component: ECS },
 ];

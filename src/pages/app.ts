@@ -24,8 +24,12 @@ export interface Application {
   textureManager: TextureManager;
   shaderManager: ShaderManager;
   cameraController: CameraController;
+
   start(): void;
   destroy(): void;
+
+  onRenderBegin(cb: () => void): void;
+  onRenderEnd(cb: () => void): void;
 }
 
 export async function createApp(
@@ -62,10 +66,13 @@ export async function createApp(
 
   let rafId: number;
   let lastTime = performance.now();
+  let _onRenderBegin = () => {};
+  let _onRenderEnd = () => {};
   function render() {
     const now = performance.now();
     const dt = (now - lastTime) / 1000;
     lastTime = now;
+    _onRenderBegin();
 
     camera.aspect = canvas.clientWidth / canvas.clientHeight;
     camera.updateProjectionMatrix();
@@ -75,6 +82,7 @@ export async function createApp(
     movementSystem.update(dt);
     renderSystem.update();
 
+    _onRenderEnd();
     rafId = requestAnimationFrame(render);
   }
 
@@ -101,6 +109,13 @@ export async function createApp(
 
       renderer.destroy();
       cameraController.destroy();
+    },
+
+    onRenderBegin(cb) {
+      _onRenderBegin = cb;
+    },
+    onRenderEnd(cb) {
+      _onRenderEnd = cb;
     },
   };
 }

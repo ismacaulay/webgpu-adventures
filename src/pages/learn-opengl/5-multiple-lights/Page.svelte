@@ -19,13 +19,25 @@
   import cubeShaderSource from './shader.wgsl';
   import { createLightObject } from 'utils/objects/light';
   import { createScriptComponent } from 'toolkit/ecs/components/script';
+  import Stats from 'toolkit/stats';
 
+  let container: HTMLElement;
   let canvas: any;
   onMount(() => {
     let app: Application;
 
     (async () => {
+      const stats = new (Stats as any)();
+      stats.showPanel(0);
+      container.appendChild(stats.dom);
+
       app = await createApp(canvas.getElement(), { camera: { controls: CameraControls.Free } });
+      app.onRenderBegin(() => {
+        stats.begin();
+      });
+      app.onRenderEnd(() => {
+        stats.end();
+      });
       app.start();
 
       const { entityManager, bufferManager, textureManager, shaderManager, cameraController } = app;
@@ -331,4 +343,21 @@
   });
 </script>
 
-<Canvas bind:this={canvas} />
+<style>
+  .container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .stats-container {
+    position: absolute;
+    left: 5px;
+    top: 0;
+  }
+</style>
+
+<div class="container">
+  <Canvas bind:this={canvas} />
+  <div class="stats-container" bind:this={container} />
+</div>
