@@ -61,11 +61,6 @@ struct UBO {
   view_pos: vec3<f32>;
 
   shininess: f32;
-
-  light_type: f32;
-  directional: DirectionalLight;
-  point: PointLight;
-  spot: SpotLight;
   light_colour: LightColour;
 }
 @group(0) @binding(2)
@@ -78,11 +73,6 @@ var diffuse_tex: texture_2d<f32>;
 @group(0) @binding(5)
 var specular_tex: texture_2d<f32>;
 
-// TODO: for some reason i32/u32 does not work in if statements
-let DIR_LIGHT: f32 = 0.0;
-let POINT_LIGHT: f32 = 1.0;
-let SPOT_LIGHT: f32 = 2.0;
-
 @stage(fragment)
 fn fragment_main(
   @location(0) normal: vec3<f32>,
@@ -92,14 +82,6 @@ fn fragment_main(
   var n = normalize(normal);
 
   var light_dir: vec3<f32>;
-
-  if (u.light_type == DIR_LIGHT) {
-    light_dir = normalize(-u.directional.direction);
-  } else if (u.light_type == POINT_LIGHT) {
-    light_dir = normalize(u.point.position - frag_pos);
-  } else if (u.light_type == SPOT_LIGHT) {
-    light_dir = normalize(u.spot.position - frag_pos);
-  }
 
   var view_dir = normalize(u.view_pos - frag_pos);
   var reflect_dir = reflect(-light_dir, n);
@@ -115,28 +97,5 @@ fn fragment_main(
   var spec = pow(max(dot(view_dir, reflect_dir), 0.0), u.shininess);
   var specular = spec_map_colour * spec * u.light_colour.specular;
 
-  if (u.light_type == POINT_LIGHT) {
-    var distance = length(u.point.position - frag_pos);
-    var attenuation = 1.0 / (u.point.kc + (u.point.kl * distance) + (u.point.kq * distance * distance));
-    ambient = ambient * attenuation;
-    diffuse = diffuse * attenuation;
-    specular = specular * attenuation;
-  } else if (u.light_type == SPOT_LIGHT) {
-    var theta = dot(light_dir, normalize(-u.spot.direction));
-    var intensity = clamp((theta - u.spot.outer_cutoff) / (u.spot.inner_cutoff - u.spot.outer_cutoff), 0.0, 1.0);
-
-    diffuse = diffuse * intensity;
-    specular = specular * intensity;
-  }
-
   return vec4(ambient + diffuse + specular, 1.0);
-  // if (u.light_type == DIR_LIGHT) {
-  //   return vec4(1.0, 0.0, 0.0, 1.0);
-  // } else if (u.light_type == POINT_LIGHT) {
-  //   return vec4(0.0, 1.0, 0.0, 1.0);
-  // } else if (u.light_type == SPOT_LIGHT) {
-  //   return vec4(0.0, 0.0, 1.0, 1.0);
-  // } else {
-  //   return vec4(1.0, 0.0, 1.0, 1.0);
-  // }
 }
