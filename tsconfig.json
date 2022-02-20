@@ -10,7 +10,8 @@
       "toolkit": ["./toolkit"],
       "rendering": ["./rendering"],
       "utils": ["./utils"],
-      "types": ["./types"]
+      "types": ["./types"],
+      "pages": ["./pages"]
     },
     "target": "es6",
     "sourceMap": true,

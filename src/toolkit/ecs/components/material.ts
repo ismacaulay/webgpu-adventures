@@ -1,4 +1,5 @@
-import { Colour, Colours } from 'toolkit/materials';
+import { Colours } from 'toolkit/materials';
+import type { Colour3 } from 'toolkit/types/colour';
 import {
   BasicMaterialComponent,
   ComponentType,
@@ -33,7 +34,7 @@ export function createShaderMaterialComponent({
 
 export function createBasicMaterialComponent(initial: {
   shader: number;
-  colour?: Colour;
+  colour?: Colour3;
   drawOrder?: number;
 }): BasicMaterialComponent {
   const { shader, colour = Colours.Red, drawOrder = Number.MAX_SAFE_INTEGER } = initial;

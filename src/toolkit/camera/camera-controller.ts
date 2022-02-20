@@ -42,6 +42,7 @@ export function createCameraController(
     camera = perspectiveCamera;
     controls = createFreeControls(element, camera);
   } else {
+    console.log('orbit controls');
     controls = createOrbitControls(element, { camera });
   }
 
