@@ -1,4 +1,4 @@
-import { mat4 } from 'gl-matrix';
+import { mat4, vec3 } from 'gl-matrix';
 import type { CameraController } from 'toolkit/types/camera';
 import {
   ComponentType,
@@ -26,6 +26,7 @@ export function createRenderSystem(
   },
 ): RenderSystem {
   const { entityManager, bufferManager, shaderManager } = managers;
+  const _tmp = vec3.create();
 
   return {
     update() {
@@ -45,17 +46,29 @@ export function createRenderSystem(
         dst: matricesBuffer.buffer,
       });
 
-      const view = entityManager.view([
+      const entities = entityManager.all([
         ComponentType.Transform,
         ComponentType.Geometry,
         ComponentType.Material,
       ]);
+      entities.sort((a, b) => {
+        const drawOrder =
+          (a[2] as MaterialComponent).drawOrder - (b[2] as MaterialComponent).drawOrder;
+        if (drawOrder !== 0) {
+          return drawOrder;
+        }
 
-      let result = view.next();
-      while (!result.done) {
-        const transform = result.value[0] as TransformComponent;
-        const geometry = result.value[1] as GeometryComponent;
-        const material = result.value[2] as MaterialComponent;
+        return (
+          vec3.length(vec3.sub(_tmp, camera.position, (b[0] as TransformComponent).translation)) -
+          vec3.length(vec3.sub(_tmp, camera.position, (a[0] as TransformComponent).translation))
+        );
+      });
+
+      for (let i = 0; i < entities.length; ++i) {
+        const result = entities[i];
+        const transform = result[0] as TransformComponent;
+        const geometry = result[1] as GeometryComponent;
+        const material = result[2] as MaterialComponent;
 
         const vertexBuffers = geometry.buffers.map((buffer) => {
           // TODO: should the buffers on the geometry have a needsUpdate?
@@ -123,8 +136,6 @@ export function createRenderSystem(
         });
 
         geometry.needsUpdate = false;
-
-        result = view.next();
       }
 
       renderer.finish();

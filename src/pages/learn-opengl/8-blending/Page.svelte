@@ -36,7 +36,7 @@
 
       pane = new Pane({ title: 'settings ' });
       const params = {
-        texture: 'grass',
+        texture: 'window',
       };
 
       app = await createApp(canvas.getElement(), { camera: { controls: CameraControls.Free } });
@@ -158,6 +158,7 @@
           entity,
           createShaderMaterialComponent({
             shader: cubeShaderId,
+            drawOrder: 1,
           }),
         );
       }
@@ -230,6 +231,7 @@
         planeEntity,
         createShaderMaterialComponent({
           shader: planeShaderId,
+          drawOrder: 2,
         }),
       );
 
@@ -387,6 +389,7 @@
           entity,
           createShaderMaterialComponent({
             shader: -1,
+            drawOrder: 3,
           }),
         );
       }
