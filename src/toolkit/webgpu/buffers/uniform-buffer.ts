@@ -11,6 +11,7 @@ import { createBuffer } from '../utils';
 
 function getSizeForUniformType(type: UniformType) {
   switch (type) {
+    case UniformType.Bool:
     case UniformType.Scalar:
       return 1;
     case UniformType.Vec2:
@@ -38,6 +39,7 @@ function getSizeForUniformType(type: UniformType) {
 
 function locationForValue(value: UniformType, offset: number) {
   switch (value) {
+    case UniformType.Bool:
     case UniformType.Scalar:
     case UniformType.Vec2:
     case UniformType.Vec3:
@@ -135,7 +137,7 @@ export function processUniforms(uniforms: UniformBufferDescriptor) {
 
         offset += computeFourBytePadding(offset);
       } else {
-        if (value === UniformType.Scalar) {
+        if (value === UniformType.Scalar || value === UniformType.Bool) {
           // no padding
         } else if (value === UniformType.Vec2) {
           offset += computeTwoBytePadding(offset);

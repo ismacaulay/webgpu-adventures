@@ -13,9 +13,7 @@
   } from 'toolkit/ecs/components';
   import { BufferAttributeFormat, UniformType } from 'toolkit/types/webgpu/buffers';
   import type { Colour3 } from 'toolkit/types/colour';
-  import { inverseLerp, lerp } from 'toolkit/math';
-  import PNRG from 'alea';
-  import SimplexNoise from 'simplex-noise';
+  import { inverseLerp } from 'toolkit/math';
   import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
   import { DefaultBuffers } from 'toolkit/types/ecs/managers';
   import type { Texture } from 'toolkit/types/webgpu/textures';

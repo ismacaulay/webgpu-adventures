@@ -22,6 +22,8 @@ import DepthTesting from './learn-opengl/6-depth-testing/Page.svelte';
 import StencilTesting from './learn-opengl/7-stencil-testing/Page.svelte';
 // @ts-ignore
 import NoiseMap from './terrain/NoiseMap.svelte';
+// @ts-ignore
+import Terrain from './terrain/Terrain.svelte';
 
 export default [
   { title: 'hello-world', component: HelloWorld },
@@ -36,4 +38,5 @@ export default [
   { title: 'learn-opengl/stencil-testing', component: StencilTesting },
 
   { title: 'terrain/noise-map', component: NoiseMap },
+  { title: 'terrain/terrain', component: Terrain },
 ];
