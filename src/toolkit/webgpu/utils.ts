@@ -42,18 +42,7 @@ export function createPipeline(
       targets: [
         {
           format: presentationFormat,
-          blend: {
-            alpha: {
-              operation: 'add',
-              srcFactor: 'src-alpha',
-              dstFactor: 'one-minus-src-alpha',
-            },
-            color: {
-              operation: 'add',
-              srcFactor: 'src-alpha',
-              dstFactor: 'one-minus-src-alpha',
-            },
-          },
+          blend: shader.blend,
         },
       ],
     },
