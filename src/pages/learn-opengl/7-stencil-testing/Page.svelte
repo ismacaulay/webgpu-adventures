@@ -242,7 +242,6 @@
           depthFailOp: 'keep',
           passOp: 'keep',
         };
-        outlineShader.stencilWriteMask = 0xff;
 
         entityManager.addComponent(
           cubeOutline,
