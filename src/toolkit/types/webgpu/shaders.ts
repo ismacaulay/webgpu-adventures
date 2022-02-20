@@ -42,6 +42,8 @@ export interface Shader {
   stencilWriteMask: number;
   stencilReadMask: number;
   stencilValue: number;
+
+  blend: GPUBlendState;
 }
 
 /*

@@ -21,6 +21,8 @@ import DepthTesting from './learn-opengl/6-depth-testing/Page.svelte';
 // @ts-ignore
 import StencilTesting from './learn-opengl/7-stencil-testing/Page.svelte';
 // @ts-ignore
+import Blending from './learn-opengl/8-blending/Page.svelte';
+// @ts-ignore
 import NoiseMap from './terrain/NoiseMap.svelte';
 // @ts-ignore
 import Terrain from './terrain/Terrain.svelte';
@@ -36,6 +38,7 @@ export default [
   { title: 'learn-opengl/multiple-lights', component: MultipleLights },
   { title: 'learn-opengl/depth-testing', component: DepthTesting },
   { title: 'learn-opengl/stencil-testing', component: StencilTesting },
+  { title: 'learn-opengl/blending', component: Blending },
 
   { title: 'terrain/noise-map', component: NoiseMap },
   { title: 'terrain/terrain', component: Terrain },

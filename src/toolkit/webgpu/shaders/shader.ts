@@ -59,6 +59,19 @@ function buildShader({
   let stencilReadMask = 0xff;
   let stencilValue = 1;
 
+  let blend: GPUBlendState = {
+    alpha: {
+      operation: 'add',
+      srcFactor: 'src-alpha',
+      dstFactor: 'one-minus-src-alpha',
+    },
+    color: {
+      operation: 'add',
+      srcFactor: 'src-alpha',
+      dstFactor: 'one-minus-src-alpha',
+    },
+  };
+
   return {
     id,
     vertex,
@@ -118,6 +131,13 @@ function buildShader({
     },
     set stencilValue(value: number) {
       stencilValue = value;
+    },
+
+    get blend() {
+      return blend;
+    },
+    set blend(value: GPUBlendState) {
+      blend = value;
     },
   };
 }
