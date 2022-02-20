@@ -1,227 +1,236 @@
-import { configureSwapChain, requestGPU, createBuffer } from './utils';
-import { VertexBuffer } from './buffers';
-import { Color } from 'toolkit/materials';
-import { Shader } from './shaders';
+import type { GenericObject } from 'toolkit/types/generic';
+import type { VertexBuffer } from 'toolkit/types/webgpu/buffers';
+import {
+  BufferCommand,
+  DrawCommand,
+  RenderCommand,
+  RenderCommandType,
+  Renderer,
+} from 'toolkit/types/webgpu/renderer';
+import { createBindGroups, createPipeline } from './utils';
 
-export interface RendererSubmission {
-    shader: any;
-    buffers: VertexBuffer[];
-    count: number;
-}
+export async function createRenderer(canvas: HTMLCanvasElement): Promise<Renderer> {
+  const gpu: GPU | undefined = navigator.gpu;
+  if (!gpu) {
+    throw new Error('WebGPU not supported in this browser');
+  }
 
-export enum CommandType {
-    Draw,
-    CopySrcToDst,
-}
+  const adapter = await gpu.requestAdapter();
+  if (!adapter) {
+    throw new Error('Unable to request adapter');
+  }
 
-export interface DrawCommand {
-    type: CommandType.Draw;
+  const device: GPUDevice = await adapter.requestDevice();
+  const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
-    priority: number;
-    shader: any;
-    buffers: VertexBuffer[];
-    count: number;
-}
+  // setup the context
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  let presentationSize = [
+    canvas.clientWidth * devicePixelRatio,
+    canvas.clientHeight * devicePixelRatio,
+  ];
+  const presentationFormat = context.getPreferredFormat(adapter);
+  context.configure({
+    device,
+    size: presentationSize,
+    format: presentationFormat,
+  });
 
-export interface CopySrcToDstCommand {
-    type: CommandType.CopySrcToDst;
+  // setup the render target
+  let renderTarget = device.createTexture({
+    size: presentationSize,
+    sampleCount: 4,
+    format: presentationFormat,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  let renderTargetView = renderTarget.createView();
 
-    src: Float32Array;
-    dst: GPUBuffer;
-    size: number;
-}
-export type RendererCommand = DrawCommand | CopySrcToDstCommand;
+  // create the depth texture
+  let depthTexture = device.createTexture({
+    size: presentationSize,
+    format: 'depth24plus-stencil8',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    sampleCount: 4,
+  });
+  let depthTextureView = depthTexture.createView();
 
-export interface Renderer {
-    begin(): void;
-    submit(command: RendererCommand): void;
-    finish(): void;
-}
+  let commands: BufferCommand[] = [];
+  let draws: DrawCommand[] = [];
 
-function createRenderPipeline(device: GPUDevice, shader: Shader, vertexBuffers: VertexBuffer[]) {
-    const layout: GPUPipelineLayout = device.createPipelineLayout({
-        bindGroupLayouts: [shader.bindGroupLayout],
-    });
+  // TODO: The cache is based on the shader id, but it may need more
+  // TODO: When the shader is removed, we dont remove the pipeline; there may be
+  //       multiple shaders using the same pipeline (cloned shaders)
+  const pipelineCache: GenericObject<GPURenderPipeline> = {};
+  const bindGroupCache: GenericObject<GPUBindGroup[]> = {};
 
-    return device.createRenderPipeline({
-        layout: layout,
+  return {
+    device,
 
-        ...shader.stages,
+    begin() {},
+    submit(command: RenderCommand | BufferCommand) {
+      if (command.type === RenderCommandType.Draw) {
+        draws.push(command);
+      } else if (
+        command.type === RenderCommandType.WriteBuffer ||
+        command.type === RenderCommandType.CopyToTexture
+      ) {
+        commands.push(command);
+      }
+    },
 
-        primitiveTopology: 'triangle-list',
-        colorStates: [
-            {
-                format: 'bgra8unorm',
-                alphaBlend: {
-                    srcFactor: 'src-alpha',
-                    dstFactor: 'one-minus-src-alpha',
-                    operation: 'add',
-                },
-                colorBlend: {
-                    srcFactor: 'src-alpha',
-                    dstFactor: 'one-minus-src-alpha',
-                    operation: 'add',
-                },
-                writeMask: GPUColorWrite.ALL,
-            },
+    finish() {
+      if (
+        canvas.clientWidth !== presentationSize[0] ||
+        canvas.clientHeight !== presentationSize[1]
+      ) {
+        presentationSize = [
+          canvas.clientWidth * devicePixelRatio,
+          canvas.clientHeight * devicePixelRatio,
+        ];
+        context.configure({
+          device,
+          size: presentationSize,
+          format: presentationFormat,
+        });
+        renderTarget.destroy();
+        renderTarget = device.createTexture({
+          size: presentationSize,
+          sampleCount: 4,
+          format: presentationFormat,
+          usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+        renderTargetView = renderTarget.createView();
+        depthTexture.destroy();
+        depthTexture = device.createTexture({
+          size: presentationSize,
+          format: 'depth24plus-stencil8',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT,
+          sampleCount: 4,
+        });
+        depthTextureView = depthTexture.createView();
+      }
+
+      for (let i = 0; i < commands.length; ++i) {
+        const command = commands[i];
+        if (command.type === RenderCommandType.WriteBuffer) {
+          let { dst, src } = command;
+
+          if (src instanceof Float64Array) {
+            src = new Float32Array(src);
+          }
+          device.queue.writeBuffer(dst, 0, src.buffer, src.byteOffset, src.byteLength);
+        } else {
+          const { dst, src } = command;
+          if (src instanceof ImageBitmap) {
+            device.queue.copyExternalImageToTexture({ source: src }, { texture: dst }, [
+              src.width,
+              src.height,
+            ]);
+          } else {
+            const {
+              buffer,
+              shape: [width, height],
+            } = src;
+            device.queue.writeTexture(
+              { texture: dst },
+              buffer,
+              {
+                bytesPerRow: width * 4,
+              },
+              {
+                width,
+                height,
+              },
+            );
+          }
+        }
+      }
+
+      const renderPassDescriptor = {
+        colorAttachments: [
+          {
+            view: renderTargetView,
+            resolveTarget: context.getCurrentTexture().createView(),
+            clearValue: [0, 0, 0, 1],
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
         ],
+        depthStencilAttachment: {
+          view: depthTextureView,
 
-        depthStencilState: {
-            depthWriteEnabled: shader.depthWrite,
-            depthCompare: shader.depthFunc,
-            format: 'depth24plus-stencil8',
+          depthClearValue: 1.0,
+          depthLoadOp: 'clear',
+          depthStoreOp: 'store',
 
-            stencilFront: shader.stencilFront,
-            stencilBack: shader.stencilBack,
-            stencilWriteMask: shader.stencilWriteMask,
-            stencilReadMask: shader.stencilReadMask,
+          stencilClearValue: 0,
+          stencilLoadOp: 'clear',
+          stencilStoreOp: 'store',
         },
+      };
 
-        vertexState: {
-            indexFormat: 'uint16',
-            vertexBuffers: vertexBuffers.map(vb => vb.descriptor),
-        },
-        rasterizationState: {
-            frontFace: 'ccw',
-            cullMode: 'none',
-        },
-    });
-}
+      const commandEncoder = device.createCommandEncoder();
+      // TODO: Remove ignore once the types have been updated
+      // @ts-ignore
+      const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
-export async function createRenderer(canvas: HTMLCanvasElement) {
-    const gpu = requestGPU();
-    const adapter = await gpu.requestAdapter();
-    const device = await adapter.requestDevice();
+      draws.sort((d1, d2) => {
+        const first = d1.priority;
+        const second = d2.priority;
 
-    const swapChainFormat: GPUTextureFormat = 'bgra8unorm';
-    const swapChain = configureSwapChain(canvas, {
-        device,
-        format: swapChainFormat,
-    });
+        if (first === second) {
+          return 0;
+        }
 
-    const depthTexture: GPUTexture = device.createTexture({
-        size: {
-            width: canvas.width,
-            height: canvas.height,
-            depth: 1,
-        },
-        mipLevelCount: 1,
-        sampleCount: 1,
-        dimension: '2d',
-        format: 'depth24plus-stencil8',
-        usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC,
-    });
-    const depthTextureView: GPUTextureView = depthTexture.createView();
+        return first < second ? -1 : 1;
+      });
 
-    let commands: any[] = [];
-    let draws: DrawCommand[] = [];
-    let clearColor = [0, 0, 0];
+      for (let i = 0; i < draws.length; ++i) {
+        const command = draws[i];
 
-    return {
-        device,
+        const { shader, buffers, count, indices } = command;
 
-        begin() {},
-        submit(command: RendererCommand) {
-            switch (command.type) {
-                case CommandType.Draw: {
-                    draws.push(command);
-                    break;
-                }
-                case CommandType.CopySrcToDst: {
-                    commands.push((encoder: GPUCommandEncoder) => {
-                        const { src, dst, size } = command;
+        let pipeline = pipelineCache[shader.id];
+        if (!pipeline) {
+          pipeline = createPipeline(device, presentationFormat, shader, buffers);
+          pipelineCache[shader.id] = pipeline;
+        }
 
-                        const uploadBuffer = createBuffer(device, src, GPUBufferUsage.COPY_SRC);
-                        encoder.copyBufferToBuffer(uploadBuffer, 0, dst, 0, size);
+        passEncoder.setPipeline(pipeline);
 
-                        return () => {
-                            uploadBuffer.destroy();
-                        };
-                    });
-                    break;
-                }
-            }
-        },
-        finish() {
-            const colorTexture = swapChain.getCurrentTexture();
-            const colorTextureView = colorTexture.createView();
+        let groups = bindGroupCache[shader.id];
+        if (!groups) {
+          groups = createBindGroups(device, pipeline, shader);
+          bindGroupCache[shader.id] = groups;
+        }
 
-            const colorAttachment: GPURenderPassColorAttachmentDescriptor = {
-                attachment: colorTextureView,
-                loadValue: { r: clearColor[0], g: clearColor[1], b: clearColor[2], a: 1 },
-                // loadValue: { r: 1, g: 1, b: 1, a: 1 },
-                storeOp: 'store',
-            };
+        groups.forEach((group: any, idx: number) => {
+          passEncoder.setBindGroup(idx, group);
+        });
 
-            const depthAttachment: GPURenderPassDepthStencilAttachmentDescriptor = {
-                attachment: depthTextureView,
-                depthLoadValue: 1,
-                depthStoreOp: 'store',
-                stencilLoadValue: 0,
-                stencilStoreOp: 'store',
-            };
-            const renderPassDescriptor: GPURenderPassDescriptor = {
-                colorAttachments: [colorAttachment],
-                depthStencilAttachment: depthAttachment,
-            };
+        command.buffers.forEach((buf: VertexBuffer, idx: number) => {
+          passEncoder.setVertexBuffer(idx, buf.buffer);
+        });
 
-            const commandEncoder = device.createCommandEncoder();
+        passEncoder.setStencilReference(shader.stencilValue);
 
-            // encode all upload commands
-            const cleanups = commands.map(fn => fn(commandEncoder));
-            commands = [];
+        if (indices) {
+          passEncoder.setIndexBuffer(indices.buffer, indices.format);
+          passEncoder.drawIndexed(count, 1, 0, 0, 0);
+        } else {
+          passEncoder.draw(count, 1, 0, 0);
+        }
+      }
 
-            let passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+      draws = [];
+      commands = [];
+      passEncoder.end();
+      device.queue.submit([commandEncoder.finish()]);
+    },
 
-            passEncoder.setViewport(0, 0, canvas.width, canvas.height, 0, 1);
-            passEncoder.setScissorRect(0, 0, canvas.width, canvas.height);
-
-            draws.sort((d1, d2) => {
-                const first = d1.priority || Number.MAX_VALUE;
-                const second = d2.priority || Number.MAX_VALUE;
-
-                if (first === second) {
-                    return 0;
-                }
-
-                return first < second ? -1 : 1;
-            });
-
-            // process the draw calls
-            let lastShaderId = -1;
-            for (let i = 0; i < draws.length; ++i) {
-                const { shader, buffers, count, priority } = draws[i];
-
-                if (shader.id !== lastShaderId) {
-                    passEncoder.setPipeline(createRenderPipeline(device, shader, buffers));
-                    lastShaderId = shader.id;
-                }
-
-                passEncoder.setBindGroup(0, shader.bindGroup);
-
-                buffers.forEach((buf: VertexBuffer, idx: number) => {
-                    passEncoder.setVertexBuffer(idx, buf.buffer);
-                });
-
-                passEncoder.setStencilReference(shader.stencilValue);
-
-                passEncoder.draw(count, 1, 0, 0);
-            }
-
-            passEncoder.endPass();
-            device.defaultQueue.submit([commandEncoder.finish()]);
-
-            draws = [];
-
-            cleanups.forEach(fn => fn());
-        },
-
-        destroy() {
-            depthTexture.destroy();
-        },
-
-        set clearColor(value: Color) {
-            clearColor = value;
-        },
-    };
+    destroy() {
+      depthTexture.destroy();
+      renderTarget.destroy();
+    },
+  };
 }

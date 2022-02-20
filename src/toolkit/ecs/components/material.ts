@@ -1,47 +1,57 @@
-import { Colors, Color } from 'toolkit/materials/color';
-import { Component, ComponentType } from './types';
-import { UniformDictionary } from 'toolkit/webgpu/buffers';
+import { Colour, Colours } from 'toolkit/materials';
+import {
+  BasicMaterialComponent,
+  ComponentType,
+  ShaderMaterialComponent,
+} from 'toolkit/types/ecs/components';
+import type { UniformDictionary } from 'toolkit/types/webgpu/buffers';
 
-export interface MaterialComponent extends Component {
-    readonly shader: number;
-    readonly uniforms: UniformDictionary;
+export function createShaderMaterialComponent({
+  shader,
+  uniforms,
+  drawOrder = Number.MAX_SAFE_INTEGER,
+}: {
+  shader: number;
+  uniforms?: UniformDictionary;
+  drawOrder?: number;
+}): ShaderMaterialComponent {
+  let needsUpdate = true;
 
-    readonly lighting: boolean;
-
-    readonly drawOrder: number;
+  return {
+    type: ComponentType.Material,
+    get needsUpdate() {
+      return needsUpdate;
+    },
+    set needsUpdate(value: boolean) {
+      needsUpdate = value;
+    },
+    shader,
+    uniforms,
+    drawOrder,
+  };
 }
 
 export function createBasicMaterialComponent(initial: {
-    shader: number;
-    color?: Color;
-}): MaterialComponent {
-    const { shader, color = Colors.Red } = initial;
+  shader: number;
+  colour?: Colour;
+  drawOrder?: number;
+}): BasicMaterialComponent {
+  const { shader, colour = Colours.Red, drawOrder = Number.MAX_SAFE_INTEGER } = initial;
+  let needsUpdate = true;
 
-    return {
-        type: ComponentType.Material,
-        shader,
-        lighting: false,
-        drawOrder: Number.MAX_VALUE,
-        uniforms: {
-            color,
-        },
-    };
-}
+  return {
+    type: ComponentType.Material,
+    get needsUpdate() {
+      return needsUpdate;
+    },
+    set needsUpdate(value: boolean) {
+      needsUpdate = value;
+    },
 
-export function createMaterialComponent({
     shader,
-    uniforms,
-    drawOrder = Number.MAX_VALUE,
-}: {
-    shader: number;
-    uniforms: UniformDictionary;
-    drawOrder?: number;
-}): MaterialComponent {
-    return {
-        type: ComponentType.Material,
-        shader,
-        lighting: true,
-        uniforms,
-        drawOrder,
-    };
+    uniforms: {
+      colour,
+    },
+    drawOrder,
+  };
 }

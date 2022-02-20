@@ -1,55 +1,87 @@
-export function webGPUSupported() {
-    return navigator.gpu !== undefined;
+import type { VertexBuffer } from 'toolkit/types/webgpu/buffers';
+import type { Shader } from 'toolkit/types/webgpu/shaders';
+
+export function isWebGPUSupported() {
+  return navigator && (navigator as any).gpu !== undefined;
 }
 
-export function requestGPU() {
-    const entry: GPU | undefined = navigator.gpu;
-    if (!entry) {
-        throw new Error('WebGPU not supported in this browser');
-    }
+export function createBuffer(
+  device: GPUDevice,
+  src: Float32Array | Uint16Array | Uint32Array,
+  usage: number,
+): GPUBuffer {
+  // create a buffer
+  const buffer = device.createBuffer({
+    size: src.byteLength,
+    usage,
+    mappedAtCreation: true,
+  });
 
-    return entry;
+  // write the data to the mapped buffer
+  new (src as any).constructor(buffer.getMappedRange()).set(src);
+
+  // unmap the buffer before submitting it to the queue
+  buffer.unmap();
+
+  return buffer;
 }
 
-export function configureSwapChain(canvas: HTMLCanvasElement, descriptor: GPUSwapChainDescriptor) {
-    const context: GPUCanvasContext = canvas.getContext('gpupresent') as any;
-    return context.configureSwapChain(descriptor);
-}
-
-export function createBuffer(device: GPUDevice, src: Float32Array | Uint16Array, usage: number) {
-    // create a buffer
-    //  the simplest way is to create a mapped buffer, then write the array to the mapping
-    //  you can also create a buffer, then request the mapping afterwards (not sure how to yet)
-    //  finally, you can use copyBufferToBuffer to copy the data from one buffer to another
-    const [buffer, mapping]: [GPUBuffer, ArrayBuffer] = device.createBufferMapped({
-        size: src.byteLength,
-        usage,
-    });
-    // write the data to the mapped buffer
-    new (src as any).constructor(mapping).set(src);
-    // the buffer needs to be unmapped before it can be submitted to the queue
-    buffer.unmap();
-    return buffer;
-}
-
-export function copyBufferToBuffer(
-    device: GPUDevice,
-    encoder: GPUCommandEncoder,
-    src: Float32Array,
-    dst: GPUBuffer,
+export function createPipeline(
+  device: GPUDevice,
+  presentationFormat: GPUTextureFormat,
+  shader: Shader,
+  buffers: VertexBuffer[],
 ) {
-    const uploadBuffer = createBuffer(device, src, GPUBufferUsage.COPY_SRC);
+  return device.createRenderPipeline({
+    vertex: {
+      ...shader.vertex,
+      buffers: buffers.map((b: VertexBuffer) => b.layout),
+    },
+    fragment: {
+      ...shader.fragment,
+      targets: [
+        {
+          format: presentationFormat,
+        },
+      ],
+    },
 
-    const enc = encoder || device.createCommandEncoder();
-    enc.copyBufferToBuffer(uploadBuffer, 0, dst, 0, src.byteLength);
+    primitive: {
+      topology: 'triangle-list',
+      cullMode: 'none',
+    },
 
-    if (!encoder) {
-        device.defaultQueue.submit([enc.finish()]);
-        uploadBuffer.destroy();
-        return () => {};
-    }
+    depthStencil: {
+      depthWriteEnabled: shader.depthWrite,
+      depthCompare: shader.depthFunc,
+      format: 'depth24plus-stencil8',
 
-    return () => {
-        uploadBuffer.destroy();
-    };
+      stencilFront: shader.stencilFront,
+      stencilBack: shader.stencilBack,
+      stencilWriteMask: shader.stencilWriteMask,
+      stencilReadMask: shader.stencilReadMask,
+    },
+
+    multisample: {
+      count: 4,
+    },
+  });
+}
+
+export function createBindGroups(
+  device: GPUDevice,
+  pipeline: GPUPipelineBase,
+  shader: Shader,
+): GPUBindGroup[] {
+  return shader.bindings.map((groupDescriptors, idx) => {
+    return device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(idx),
+      entries: groupDescriptors.entries.map((entry, idx) => {
+        return {
+          binding: idx,
+          resource: entry.resource,
+        };
+      }),
+    });
+  });
 }

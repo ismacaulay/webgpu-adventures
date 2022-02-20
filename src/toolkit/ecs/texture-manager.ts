@@ -1,71 +1,46 @@
-import { createTextureFromImage } from 'utils/img-loader';
-
-interface SamplerStorage {
-    [key: number]: GPUSampler;
-}
-
-interface TextureStorage {
-    [key: number]: GPUTexture;
-}
-
-export interface TextureDescriptor {
-    uri: string;
-    usage: number;
-}
-
-export interface TextureManager {
-    createSampler(descriptor: GPUSamplerDescriptor): number;
-    getSampler(id: number): GPUSampler;
-
-    createTexture(descriptor: TextureDescriptor): Promise<number>;
-    getTexture(id: number): GPUTexture;
-
-    destroy(): void;
-}
+import type { TextureManager } from 'toolkit/types/ecs/managers';
+import type { Texture, TextureDescriptor } from 'toolkit/types/webgpu/textures';
+import { createTextureFromBuffer, createTextureFromURI } from 'toolkit/webgpu/texture';
 
 export function createTextureManager(device: GPUDevice): TextureManager {
-    let samplerStorage: SamplerStorage = {};
-    let textureStorage: TextureStorage = {};
+  const storage: any = {};
+  let next = 0;
 
-    let nextSampler = 0;
-    let nextTexture = 0;
+  return {
+    createSampler(descriptor: GPUSamplerDescriptor) {
+      const sampler = device.createSampler(descriptor);
+      storage[next] = sampler;
+      return next++;
+    },
 
-    return {
-        createSampler(descriptor: GPUSamplerDescriptor) {
-            const id = nextSampler;
-            nextSampler++;
+    async createTexture(descriptor: TextureDescriptor) {
+      const { resource, format } = descriptor;
 
-            samplerStorage[id] = device.createSampler(descriptor);
+      let texture: Texture;
+      if ('uri' in resource) {
+        texture = await createTextureFromURI(device, resource.uri, format);
+      } else {
+        texture = await createTextureFromBuffer(device, resource.buffer, resource.shape, format);
+      }
 
-            return id;
-        },
-        getSampler(id: number) {
-            return samplerStorage[id];
-        },
+      storage[next] = texture;
+      return next++;
+    },
 
-        async createTexture({ uri, usage }: TextureDescriptor) {
-            const id = nextTexture;
-            nextTexture++;
+    get<T extends GPUSampler | Texture>(id: number): T {
+      const obj = storage[id];
+      if (!obj) {
+        throw new Error(`Unknown id: ${id}`);
+      }
+      return obj as T;
+    },
 
-            textureStorage[id] = await createTextureFromImage(
-                device,
-                uri,
-                usage,
-            );
-
-            return id;
-        },
-        getTexture(id: number) {
-            return textureStorage[id];
-        },
-
-        destroy() {
-            Object.values(textureStorage).forEach(t => {
-                t.destroy();
-            });
-
-            textureStorage = {};
-            samplerStorage = {};
-        },
-    };
+    destroy() {
+      Object.values(storage).forEach((obj) => {
+        if (obj instanceof GPUTexture) {
+          obj.destroy();
+        }
+      });
+    },
+  };
 }

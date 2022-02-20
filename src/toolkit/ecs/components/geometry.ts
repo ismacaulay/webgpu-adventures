@@ -1,46 +1,36 @@
-import { Component, ComponentType } from './types';
-import { VertexBufferInfo } from '../buffer-manager';
-import { getCountForType } from 'toolkit/webgpu/buffers/vertex-buffer';
+import { ComponentType, MeshGeometryComponent } from 'toolkit/types/ecs/components';
+import type { IndexBufferDescriptor, VertexBufferDescriptor } from 'toolkit/types/webgpu/buffers';
 
-export enum GeometryType {
-    Mesh = 'mesh',
-}
-
-export interface GeometryComponent extends Component {
-    type: ComponentType.Geometry;
-
-    geometryType: GeometryType;
-    buffers: VertexBufferInfo[];
-    count: number;
-}
-
-export interface MeshGeometryComponent extends GeometryComponent {
-    geometryType: GeometryType.Mesh;
-}
-
-export function createMeshGeometryComponent(initial: {
-    buffers: VertexBufferInfo[];
+export function createMeshGeometryComponent({
+  indices,
+  buffers,
+  count,
+}: {
+  indices?: Uint16Array | Uint32Array;
+  buffers: VertexBufferDescriptor[];
+  count: number;
 }): MeshGeometryComponent {
-    const { buffers } = initial;
-
-    // TODO: Improve validation of the component
-    if (buffers.length === 0) {
-        throw new Error('[MeshGeometryComponent] No buffers provided');
-    }
-
-    const buffer = buffers[0];
-    let valuesPerVertex = 0;
-    const attrs = buffer.attributes;
-    for (let i = 0; i < attrs.length; i++) {
-        valuesPerVertex += getCountForType(attrs[i].type);
-    }
-    const count = buffer.array.length / valuesPerVertex;
-
-    return {
-        type: ComponentType.Geometry,
-
-        geometryType: GeometryType.Mesh,
-        buffers: initial.buffers,
-        count,
+  let indexDescriptor: IndexBufferDescriptor | undefined = undefined;
+  if (indices) {
+    indexDescriptor = {
+      array: indices,
     };
+  }
+
+  let needsUpdate = true;
+
+  return {
+    type: ComponentType.Geometry,
+    get needsUpdate() {
+      return needsUpdate;
+    },
+    set needsUpdate(value: boolean) {
+      needsUpdate = value;
+    },
+
+    indices: indexDescriptor,
+    buffers,
+
+    count,
+  };
 }

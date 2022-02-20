@@ -1,7 +1,11 @@
-import {ComponentType, Component} from "./types";
+import { ComponentType, ScriptComponent } from 'toolkit/types/ecs/components';
 
-export interface ScriptComponent extends Component {
+export function createScriptComponent(cb: Function): ScriptComponent {
+  return {
     type: ComponentType.Script,
 
-    update: (dt?: number) => void;
+    update(dt) {
+      cb(dt);
+    },
+  };
 }

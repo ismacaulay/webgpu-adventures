@@ -1,69 +1,112 @@
-import glslangModule from 'toolkit/webgpu/shaders/glslang';
-import { ShaderBinding, createShader, cloneShader, Shader } from 'toolkit/webgpu/shaders';
+import type { ShaderId } from 'toolkit/types/ecs/components';
+import {
+  BufferManager,
+  DefaultBuffers,
+  ShaderManager,
+  TextureManager,
+} from 'toolkit/types/ecs/managers';
+import type { Storage } from 'toolkit/types/generic';
+import type { UniformBuffer } from 'toolkit/types/webgpu/buffers';
+import {
+  Shader,
+  ShaderBindingDescriptor,
+  ShaderBindingType,
+  ShaderDescriptor,
+} from 'toolkit/types/webgpu/shaders';
+import type { Texture } from 'toolkit/types/webgpu/textures';
+import { cloneShader, createShader } from 'toolkit/webgpu/shaders';
 
-export interface ShaderDescriptor {
-    vertex: string;
-    fragment: string;
-    bindings: ShaderBinding[];
+function processBindings(
+  bindings: ShaderBindingDescriptor[],
+  {
+    bufferManager,
+    textureManager,
+  }: { bufferManager: BufferManager; textureManager: TextureManager },
+) {
+  const uniformBuffers: UniformBuffer[] = [];
+  let textures: Texture[] = [];
+  const processed = [
+    {
+      entries: bindings.map((binding) => {
+        if (binding.type === ShaderBindingType.UniformBuffer) {
+          const buffer = bufferManager.get<UniformBuffer>(binding.resource);
+          // only include non default buffers
+          if (binding.resource >= DefaultBuffers.Count) {
+            uniformBuffers.push(buffer);
+          }
+          return {
+            resource: {
+              buffer: buffer.buffer,
+            },
+          };
+        } else if (binding.type === ShaderBindingType.Sampler) {
+          return {
+            resource: textureManager.get<GPUSampler>(binding.resource),
+          };
+        } else {
+          const texture = textureManager.get<Texture>(binding.resource);
+          textures.push(texture);
+
+          return {
+            resource: texture.texture.createView(),
+          };
+        }
+      }),
+    },
+  ];
+
+  return { bindings: processed, textures, uniformBuffers };
 }
 
-export interface ShaderManager {
-    get(id: number): Shader;
-    create(descriptor: ShaderDescriptor): number;
-    destroy(): void;
-}
+export function createShaderManager(
+  device: GPUDevice,
+  {
+    bufferManager,
+    textureManager,
+  }: { bufferManager: BufferManager; textureManager: TextureManager },
+): ShaderManager {
+  let storage: Storage<Shader> = {};
+  let next = 0;
 
-interface ShaderStorage {
-    [key: number]: Shader;
-}
+  return {
+    create(descriptor: ShaderDescriptor) {
+      const { bindings, textures, uniformBuffers } = processBindings(descriptor.bindings, {
+        bufferManager,
+        textureManager,
+      });
 
-export async function createShaderManager(device: GPUDevice) {
-    const glslang = await glslangModule();
+      const shader = createShader(next, device, descriptor, bindings, uniformBuffers, textures);
+      storage[next] = shader;
+      return next++;
+    },
 
-    let storage: ShaderStorage = {};
+    get(id: ShaderId) {
+      const shader = storage[id];
+      if (!shader) {
+        throw new Error(`Unknown shader id: ${id}`);
+      }
 
-    let storageId = 0;
-    let shaderId = 0;
+      return shader;
+    },
 
-    return {
-        get(id: number) {
-            let shader = storage[id];
-            if (!shader) {
-                throw new Error(`Unknown shader: ${id}`);
-            }
+    clone(id: number, bindingDescriptors: ShaderBindingDescriptor[]) {
+      const shader = storage[id];
+      if (!shader) {
+        throw new Error(`Unknown shader: ${id}`);
+      }
 
-            return shader;
-        },
+      const { bindings, textures, uniformBuffers } = processBindings(bindingDescriptors, {
+        bufferManager,
+        textureManager,
+      });
 
-        create({ vertex, fragment, bindings }: ShaderDescriptor) {
-            const shader = createShader(device, glslang, {
-                id: shaderId,
-                vertex,
-                fragment,
-                bindings,
-            });
-            shaderId++;
+      storage[next] = cloneShader(shader, bindings, textures, uniformBuffers);
+      storage[next].id = next;
+      return next++;
+    },
 
-            const id = storageId;
-            storageId++;
-            storage[id] = shader;
-            return id;
-        },
-
-        clone(id: number, bindings: ShaderBinding[]) {
-            const shader = storage[id];
-            if (!shader) {
-                throw new Error(`Unknown shader: ${id}`);
-            }
-
-            const next = storageId;
-            storageId++;
-            storage[next] = cloneShader(device, shader, bindings);
-            return next;
-        },
-
-        destroy() {
-            storage = {};
-        },
-    };
+    destroy() {
+      storage = {};
+    },
+  };
 }

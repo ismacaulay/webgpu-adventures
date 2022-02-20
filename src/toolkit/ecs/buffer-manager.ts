@@ -1,78 +1,56 @@
+import { BufferManager, DefaultBuffers } from 'toolkit/types/ecs/managers';
+import type { Storage } from 'toolkit/types/generic';
 import {
-    BufferAttribute,
-    createVertexBuffer as createWebGPUVertexBuffer,
-    Buffer,
-    createUniformBuffer,
-    UniformBufferDescriptor,
-    UniformType,
-    UniformDictionary,
-} from 'toolkit/webgpu/buffers';
-import { createIdProvider } from './id-provider';
-
-export interface VertexBufferInfo {
-    id?: number;
-    attributes: BufferAttribute[];
-    array: Float32Array;
-}
-
-export interface BufferManager {
-    createVertexBuffer(info: VertexBufferInfo): number;
-    createUniformBuffer(uniforms: UniformBufferDescriptor, initial?: UniformDictionary): number;
-
-    get<T extends Buffer>(id: number): T;
-    destroy(): void;
-}
-
-export enum DefaultBuffers {
-    ViewProjection = 0,
-
-    Count,
-}
-
-interface BufferStorage {
-    [key: number]: Buffer;
-}
+  Buffer,
+  IndexBufferDescriptor,
+  UniformBufferDescriptor,
+  UniformDictionary,
+  UniformType,
+  VertexBufferDescriptor,
+} from 'toolkit/types/webgpu/buffers';
+import { createIndexBuffer, createUniformBuffer, createVertexBuffer } from 'toolkit/webgpu/buffers';
 
 export function createBufferManager(device: GPUDevice): BufferManager {
-    let storage: BufferStorage = {};
-    const generator = createIdProvider(DefaultBuffers.Count);
+  let storage: Storage<Buffer> = {};
+  let next = DefaultBuffers.Count;
 
-    return {
-        createVertexBuffer(info: VertexBufferInfo) {
-            const id = generator.next();
-            storage[id] = createWebGPUVertexBuffer(device, info.attributes, info.array);
-            return id;
-        },
+  return {
+    createVertexBuffer(descriptor: VertexBufferDescriptor) {
+      storage[next] = createVertexBuffer(device, descriptor);
+      return next++;
+    },
 
-        createUniformBuffer(uniforms: UniformBufferDescriptor, initial?: UniformDictionary) {
-            const id = generator.next();
-            storage[id] = createUniformBuffer(device, uniforms, initial);
-            return id;
-        },
+    createUniformBuffer(descriptor: UniformBufferDescriptor, initial?: UniformDictionary) {
+      storage[next] = createUniformBuffer(device, descriptor, initial);
+      return next++;
+    },
 
-        get<T extends Buffer>(id: number): T {
-            let buffer = storage[id];
+    createIndexBuffer(descriptor: IndexBufferDescriptor) {
+      storage[next] = createIndexBuffer(device, descriptor);
+      return next++;
+    },
 
-            if (!buffer) {
-                if (id === DefaultBuffers.ViewProjection) {
-                    buffer = createUniformBuffer(device, {
-                        view: UniformType.Mat4,
-                        projection: UniformType.Mat4,
-                    });
-                    storage[id] = buffer;
-                } else {
-                    throw new Error(`Unknown buffer: ${id}`);
-                }
-            }
+    get<T extends Buffer>(id: number): T {
+      let buffer = storage[id];
 
-            return buffer as T;
-        },
+      if (!buffer) {
+        if (id === DefaultBuffers.ViewProjection) {
+          buffer = createUniformBuffer(device, {
+            view: UniformType.Mat4,
+            projection: UniformType.Mat4,
+          });
+          storage[id] = buffer;
+        } else {
+          throw new Error(`Unknown buffer: ${id}`);
+        }
+      }
 
-        destroy() {
-            Object.values(storage).forEach((buffer: Buffer) => {
-                buffer.destroy();
-            });
-            storage = {};
-        },
-    };
+      return buffer as T;
+    },
+
+    destroy() {
+      Object.values(storage).forEach((buf: Buffer) => buf.destroy());
+      storage = {};
+    },
+  };
 }

@@ -1,73 +1,59 @@
+import {
+  BufferAttributeFormat,
+  BufferType,
+  VertexBuffer,
+  VertexBufferDescriptor,
+} from 'toolkit/types/webgpu/buffers';
 import { createBuffer } from '../utils';
-import { BufferAttributeType, BufferAttribute, VertexBuffer, BufferType } from './types';
 
-function getSizeForType(type: BufferAttributeType) {
-    switch (type) {
-        case BufferAttributeType.Float2:
-            return 4 * 2;
-        case BufferAttributeType.Float3:
-            return 4 * 3;
-        default:
-            throw new Error(`Unknown BufferAttributeType ${type}`);
-    }
-}
-
-export function getCountForType(type: BufferAttributeType) {
-    switch (type) {
-        case BufferAttributeType.Float2:
-            return 2;
-        case BufferAttributeType.Float3:
-            return 3;
-        default:
-            throw new Error(`Unknown BufferAttributeType ${type}`);
-    }
-}
-
-function buildGPUVertexAttributes(attributes: BufferAttribute[]) {
-    const gpuAttrs: GPUVertexAttributeDescriptor[] = [];
-    let stride = 0;
-
-    for (let i = 0; i < attributes.length; ++i) {
-        const { type, location } = attributes[i];
-
-        gpuAttrs.push({
-            shaderLocation: location,
-            format: type,
-            offset: stride,
-        });
-
-        stride += getSizeForType(type);
-    }
-
-    return { attributes: gpuAttrs, stride };
+function getStrideForFormat(type: BufferAttributeFormat) {
+  switch (type) {
+    case BufferAttributeFormat.Float32:
+      return 4;
+    case BufferAttributeFormat.Float32x2:
+      return 4 * 2;
+    case BufferAttributeFormat.Float32x3:
+      return 4 * 3;
+  }
 }
 
 export function createVertexBuffer(
-    device: GPUDevice,
-    attributes: BufferAttribute[],
-    data: Float32Array,
+  device: GPUDevice,
+  { array, attributes }: VertexBufferDescriptor,
 ): VertexBuffer {
-    const { attributes: gpuAttributes, stride } = buildGPUVertexAttributes(attributes);
+  let data: Float32Array;
+  if (array instanceof Float64Array) {
+    data = new Float32Array(array);
+  } else {
+    data = array;
+  }
+  const buffer = createBuffer(device, data, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST);
 
-    const descriptor: GPUVertexBufferLayoutDescriptor = {
-        attributes: gpuAttributes,
-        arrayStride: stride,
-        stepMode: 'vertex',
-    };
+  const attrs: GPUVertexAttribute[] = [];
+  let offset = 0;
+  for (let i = 0; i < attributes.length; ++i) {
+    const { location, format } = attributes[i];
+    attrs.push({
+      shaderLocation: location,
+      format,
+      offset,
+    });
 
-    const buffer = createBuffer(device, data, GPUBufferUsage.VERTEX);
+    offset += getStrideForFormat(format);
+  }
 
-    const count = (data.BYTES_PER_ELEMENT * data.length) / stride;
+  return {
+    type: BufferType.Vertex,
 
-    return {
-        type: BufferType.Vertex,
-        buffer,
-        data,
-        descriptor,
-        count,
+    buffer,
+    data,
+    layout: {
+      arrayStride: offset,
+      attributes: attrs,
+    },
 
-        destroy() {
-            buffer.destroy();
-        },
-    };
+    destroy() {
+      buffer.destroy();
+    },
+  };
 }
