@@ -8,7 +8,7 @@ import { Colours } from 'toolkit/materials';
 import type { BufferManager, EntityManager, ShaderManager } from 'toolkit/types/ecs/managers';
 import { BufferAttributeFormat } from 'toolkit/types/webgpu/buffers';
 import { createBasicShader } from 'toolkit/webgpu/shaders/basic-shader';
-import { CUBE_VERTICES } from 'utils/cube-vertices';
+import { CUBE_VERTICES } from 'pages/utils/cube-vertices';
 
 export function createLightObject(
   {

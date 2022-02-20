@@ -7,7 +7,7 @@ import {
 import { DefaultBuffers } from 'toolkit/types/ecs/managers';
 import { BufferAttributeFormat, UniformType } from 'toolkit/types/webgpu/buffers';
 import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
-import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS } from 'utils/cube-vertices';
+import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS } from 'pages/utils/cube-vertices';
 import gouraudShaderSource from './shaders/gouraud.wgsl';
 import phongShaderSource from './shaders/phong.wgsl';
 import lightShaderSource from './shaders/light.wgsl';

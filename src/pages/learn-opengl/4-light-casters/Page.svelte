@@ -13,7 +13,7 @@
   } from 'toolkit/ecs/components';
   import { createBasicShader } from 'toolkit/webgpu/shaders/basic-shader';
   import { Colours } from 'toolkit/materials';
-  import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS_WITH_UV } from 'utils/cube-vertices';
+  import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS_WITH_UV } from 'pages/utils/cube-vertices';
   import { BufferAttributeFormat, UniformType } from 'toolkit/types/webgpu/buffers';
   import { radians } from 'toolkit/math';
   import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';

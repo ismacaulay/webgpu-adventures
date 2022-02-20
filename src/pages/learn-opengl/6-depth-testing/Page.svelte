@@ -6,7 +6,7 @@
   import type { Application } from 'pages/app';
   import { CameraControls } from 'toolkit/types/camera';
   import { mat4, vec3 } from 'gl-matrix';
-  import { CUBE_VERTICES_WITH_UV } from 'utils/cube-vertices';
+  import { CUBE_VERTICES_WITH_UV } from 'pages/utils/cube-vertices';
   import { BufferAttributeFormat, UniformType } from 'toolkit/types/webgpu/buffers';
   import {
     createMeshGeometryComponent,

@@ -1,4 +1,4 @@
-import { CUBE_VERTICES_WITH_COLOR_WITH_UV } from 'utils/cube-vertices';
+import { CUBE_VERTICES_WITH_COLOR_WITH_UV } from 'pages/utils/cube-vertices';
 
 import { mat4, vec3 } from 'gl-matrix';
 import { createRenderer } from 'toolkit/webgpu/renderer';

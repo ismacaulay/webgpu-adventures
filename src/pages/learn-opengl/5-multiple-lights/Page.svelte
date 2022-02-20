@@ -15,9 +15,9 @@
   import { DefaultBuffers } from 'toolkit/types/ecs/managers';
   import { BufferAttributeFormat, UniformType } from 'toolkit/types/webgpu/buffers';
   import { radians } from 'toolkit/math';
-  import { CUBE_VERTICES_WITH_NORMALS_WITH_UV } from 'utils/cube-vertices';
+  import { CUBE_VERTICES_WITH_NORMALS_WITH_UV } from 'pages/utils/cube-vertices';
   import cubeShaderSource from './shader.wgsl';
-  import { createLightObject } from 'utils/objects/light';
+  import { createLightObject } from 'pages/utils/objects/light';
   import { createScriptComponent } from 'toolkit/ecs/components/script';
   import Stats from 'toolkit/stats';
 
