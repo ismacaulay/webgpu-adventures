@@ -67,6 +67,7 @@
     return () => {
       if (app) {
         app.destroy();
+        pane.dispose();
       }
     };
   });

@@ -48,7 +48,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
   // create the depth texture
   let depthTexture = device.createTexture({
     size: presentationSize,
-    format: 'depth24plus',
+    format: 'depth24plus-stencil8',
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
     sampleCount: 4,
   });
@@ -103,7 +103,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         depthTexture.destroy();
         depthTexture = device.createTexture({
           size: presentationSize,
-          format: 'depth24plus',
+          format: 'depth24plus-stencil8',
           usage: GPUTextureUsage.RENDER_ATTACHMENT,
           sampleCount: 4,
         });
@@ -174,6 +174,17 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
       // @ts-ignore
       const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
+      draws.sort((d1, d2) => {
+        const first = d1.priority;
+        const second = d2.priority;
+
+        if (first === second) {
+          return 0;
+        }
+
+        return first < second ? -1 : 1;
+      });
+
       for (let i = 0; i < draws.length; ++i) {
         const command = draws[i];
 
@@ -200,6 +211,8 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         command.buffers.forEach((buf: VertexBuffer, idx: number) => {
           passEncoder.setVertexBuffer(idx, buf.buffer);
         });
+
+        passEncoder.setStencilReference(shader.stencilValue);
 
         if (indices) {
           passEncoder.setIndexBuffer(indices.buffer, indices.format);

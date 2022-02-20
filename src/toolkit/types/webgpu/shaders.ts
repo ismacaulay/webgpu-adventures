@@ -33,6 +33,15 @@ export interface Shader {
   textures: Texture[];
 
   update(uniforms: UniformDictionary): void;
+
+  depthWrite: boolean;
+  depthFunc: GPUCompareFunction;
+
+  stencilFront: GPUStencilFaceState;
+  stencilBack: GPUStencilFaceState;
+  stencilWriteMask: number;
+  stencilReadMask: number;
+  stencilValue: number;
 }
 
 /*

@@ -60,6 +60,7 @@ export interface BasicMaterialComponent extends BaseComponent {
 
   needsUpdate: boolean;
   shader: ShaderId;
+  drawOrder: number;
   uniforms: UniformDictionary;
 }
 
@@ -68,9 +69,10 @@ export interface ShaderMaterialComponent extends BaseComponent {
   needsUpdate: boolean;
 
   shader: ShaderId;
+  drawOrder: number;
   uniforms?: UniformDictionary;
 }
-export type MaterialComponent = ShaderMaterialComponent;
+export type MaterialComponent = ShaderMaterialComponent | BasicMaterialComponent;
 
 /**
  * Script

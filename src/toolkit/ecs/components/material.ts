@@ -9,9 +9,11 @@ import type { UniformDictionary } from 'toolkit/types/webgpu/buffers';
 export function createShaderMaterialComponent({
   shader,
   uniforms,
+  drawOrder = Number.MAX_SAFE_INTEGER,
 }: {
   shader: number;
   uniforms?: UniformDictionary;
+  drawOrder?: number;
 }): ShaderMaterialComponent {
   let needsUpdate = true;
 
@@ -25,14 +27,16 @@ export function createShaderMaterialComponent({
     },
     shader,
     uniforms,
+    drawOrder,
   };
 }
 
 export function createBasicMaterialComponent(initial: {
   shader: number;
   colour?: Colour;
+  drawOrder?: number;
 }): BasicMaterialComponent {
-  const { shader, colour = Colours.Red } = initial;
+  const { shader, colour = Colours.Red, drawOrder = Number.MAX_SAFE_INTEGER } = initial;
   let needsUpdate = true;
 
   return {
@@ -48,5 +52,6 @@ export function createBasicMaterialComponent(initial: {
     uniforms: {
       colour,
     },
+    drawOrder,
   };
 }

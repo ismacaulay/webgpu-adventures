@@ -23,6 +23,7 @@ export interface DrawCommand extends BaseRenderCommand {
   indices?: IndexBuffer;
   buffers: VertexBuffer[];
   count: number;
+  priority: number;
 }
 
 export interface WriteBufferCommand extends BaseRenderCommand {

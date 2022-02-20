@@ -27,13 +27,14 @@
   let canvas: any;
   onMount(() => {
     let app: Application;
+    let pane: Pane;
 
     (async () => {
       const stats = new (Stats as any)();
       stats.showPanel(0);
       container.appendChild(stats.dom);
 
-      const pane = new Pane({ title: 'settings' });
+      pane = new Pane({ title: 'settings' });
       const params = {
         renderMode: RenderMode.Normal,
       };
@@ -255,6 +256,7 @@
     return () => {
       if (app) {
         app.destroy();
+        pane.dispose();
       }
     };
   });

@@ -119,6 +119,7 @@ export function createRenderSystem(
           indices,
           buffers: vertexBuffers,
           count: geometry.count,
+          priority: material.drawOrder,
         });
 
         geometry.needsUpdate = false;

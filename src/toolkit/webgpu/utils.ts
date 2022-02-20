@@ -51,11 +51,15 @@ export function createPipeline(
       cullMode: 'none',
     },
 
-    // Enable depth testing
     depthStencil: {
-      depthWriteEnabled: true,
-      depthCompare: 'less',
-      format: 'depth24plus',
+      depthWriteEnabled: shader.depthWrite,
+      depthCompare: shader.depthFunc,
+      format: 'depth24plus-stencil8',
+
+      stencilFront: shader.stencilFront,
+      stencilBack: shader.stencilBack,
+      stencilWriteMask: shader.stencilWriteMask,
+      stencilReadMask: shader.stencilReadMask,
     },
 
     multisample: {

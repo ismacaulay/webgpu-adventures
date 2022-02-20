@@ -1,14 +1,12 @@
 import HelloWorld from './hello-world/Page.svelte';
 import Cube from './cube/Page.svelte';
-// import ECS from './ecs/Page.svelte';
 import TexturedCube from './learn-opengl/1-textured-cube/Page.svelte';
 import Materials from './learn-opengl/2-materials/Page.svelte';
-// @ts-ignore for some reason this page is angry in vscode
 import LightingMaps from './learn-opengl/3-lighting-maps/Page.svelte';
 import LightCasters from './learn-opengl/4-light-casters/Page.svelte';
 import MultipleLights from './learn-opengl/5-multiple-lights/Page.svelte';
 import DepthTesting from './learn-opengl/6-depth-testing/Page.svelte';
-// import StencilTesting from './pages/learn-opengl/stencil-testing/Page.svelte';
+import StencilTesting from './learn-opengl/7-stencil-testing/Page.svelte';
 
 export default [
   { title: 'hello-world', component: HelloWorld },
@@ -19,6 +17,5 @@ export default [
   { title: 'learn-opengl/light-casters', component: LightCasters },
   { title: 'learn-opengl/multiple-lights', component: MultipleLights },
   { title: 'learn-opengl/depth-testing', component: DepthTesting },
-  // { title: 'learn-opengl/stencil-testing', component: StencilTesting },
-  // { title: 'ecs', component: ECS },
+  { title: 'learn-opengl/stencil-testing', component: StencilTesting },
 ];

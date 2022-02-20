@@ -25,6 +25,103 @@ function updateBuffers(buffers: UniformBuffer[], uniforms: UniformDictionary) {
   });
 }
 
+function buildShader({
+  id,
+  vertex,
+  fragment,
+  bindings,
+  buffers,
+  textures,
+}: {
+  id: number;
+  vertex: { module: GPUShaderModule; entryPoint: string };
+  fragment: { module: GPUShaderModule; entryPoint: string };
+  bindings: ShaderBindGroupDescriptor[];
+  buffers: UniformBuffer[];
+  textures: Texture[];
+}): Shader {
+  let depthWrite = true;
+  let depthFunc: GPUCompareFunction = 'less';
+
+  let stencilFront: GPUStencilFaceState = {
+    compare: 'always',
+    failOp: 'keep',
+    depthFailOp: 'keep',
+    passOp: 'keep',
+  };
+  let stencilBack: GPUStencilFaceState = {
+    compare: 'always',
+    failOp: 'keep',
+    depthFailOp: 'keep',
+    passOp: 'keep',
+  };
+  let stencilWriteMask = 0xff;
+  let stencilReadMask = 0xff;
+  let stencilValue = 1;
+
+  return {
+    id,
+    vertex,
+    fragment,
+    bindings,
+    buffers,
+    textures,
+
+    update(uniforms: UniformDictionary) {
+      updateBuffers(buffers, uniforms);
+    },
+
+    get depthWrite() {
+      return depthWrite;
+    },
+    set depthWrite(value: boolean) {
+      depthWrite = value;
+    },
+
+    get depthFunc() {
+      return depthFunc;
+    },
+    set depthFunc(value: GPUCompareFunction) {
+      depthFunc = value;
+    },
+
+    get stencilFront() {
+      return stencilFront;
+    },
+    set stencilFront(value: GPUStencilFaceState) {
+      stencilFront = value;
+    },
+
+    get stencilBack() {
+      return stencilBack;
+    },
+    set stencilBack(value: GPUStencilFaceState) {
+      stencilBack = value;
+    },
+
+    get stencilWriteMask() {
+      return stencilWriteMask;
+    },
+    set stencilWriteMask(value: number) {
+      stencilWriteMask = value;
+    },
+
+    get stencilReadMask() {
+      return stencilReadMask;
+    },
+    set stencilReadMask(value: number) {
+      stencilReadMask = value;
+    },
+
+    get stencilValue() {
+      return stencilValue;
+    },
+    set stencilValue(value: number) {
+      stencilValue = value;
+    },
+  };
+}
+
 export function createShader(
   id: number,
   device: GPUDevice,
@@ -60,18 +157,7 @@ export function createShader(
     entryPoint: descriptor.fragment.entryPoint,
   };
 
-  return {
-    id,
-    vertex,
-    fragment,
-    bindings,
-    buffers,
-    textures,
-
-    update(uniforms: UniformDictionary) {
-      updateBuffers(buffers, uniforms);
-    },
-  };
+  return buildShader({ id, vertex, fragment, bindings, buffers, textures });
 }
 
 export function cloneShader(
@@ -82,16 +168,5 @@ export function cloneShader(
 ): Shader {
   const { id, vertex, fragment } = shader;
 
-  return {
-    id,
-    vertex,
-    fragment,
-    bindings,
-    buffers,
-    textures,
-
-    update(uniforms: UniformDictionary) {
-      updateBuffers(buffers, uniforms);
-    },
-  };
+  return buildShader({ id, vertex, fragment, bindings, buffers, textures });
 }
