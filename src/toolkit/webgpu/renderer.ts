@@ -47,6 +47,13 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
   });
   let renderTargetView = renderTarget.createView();
 
+  // let sceneTarget = device.createTexture({
+  //   size: presentationSize,
+  //   format: presentationFormat,
+  //   usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+  // });
+  // let sceneTextureView = sceneTarget.createView();
+
   // create the depth texture
   let depthTexture = device.createTexture({
     size: presentationSize,
@@ -66,12 +73,6 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
   const bindGroupCache: GenericObject<GPUBindGroup[]> = {};
 
   const quadSampler = device.createSampler();
-  // const quadTexture = device.createTexture({
-  //   size: presentationSize,
-  //   format: presentationFormat,
-  //   usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  //   // sampleCount: 4,
-  // });
 
   // prettier-ignore
   const quadVertices = [
@@ -126,8 +127,18 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
     //   count: 4,
     // },
   });
-  let quadBindGroup: GPUBindGroup;
-  let updateBindGroup = true;
+
+  let quadBindGroup = device.createBindGroup({
+    layout: quadPipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: quadSampler },
+      {
+        binding: 1,
+        // resource: sceneTextureView,
+        resource: renderTargetView,
+      },
+    ],
+  });
 
   return {
     device,
@@ -159,14 +170,24 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
           size: presentationSize,
           format: presentationFormat,
         });
+
         renderTarget.destroy();
         renderTarget = device.createTexture({
           size: presentationSize,
-          // sampleCount: 4,
           format: presentationFormat,
           usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+          // sampleCount: 4,
         });
         renderTargetView = renderTarget.createView();
+
+        // sceneTarget.destroy();
+        // sceneTarget = device.createTexture({
+        //   size: presentationSize,
+        //   format: presentationFormat,
+        //   usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+        // });
+        // sceneTextureView = sceneTarget.createView();
+
         depthTexture.destroy();
         depthTexture = device.createTexture({
           size: presentationSize,
@@ -175,7 +196,18 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
           // sampleCount: 4,
         });
         depthTextureView = depthTexture.createView();
-        updateBindGroup = true;
+
+        quadBindGroup = device.createBindGroup({
+          layout: quadPipeline.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: quadSampler },
+            {
+              binding: 1,
+              // resource: sceneTextureView,
+              resource: renderTargetView,
+            },
+          ],
+        });
       }
 
       {
@@ -219,7 +251,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
           colorAttachments: [
             {
               view: renderTargetView,
-              // resolveTarget: context.getCurrentTexture().createView(),
+              // resolveTarget: sceneTextureView,
               clearValue: [0, 0, 0, 1],
               loadOp: 'clear',
               storeOp: 'store',
@@ -303,8 +335,6 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         const renderPassDescriptor = {
           colorAttachments: [
             {
-              // view: quadTexture.createView(),
-              // resolveTarget: context.getCurrentTexture().createView(),
               view: context.getCurrentTexture().createView(),
               clearValue: [0, 0, 0, 1],
               loadOp: 'clear',
@@ -319,21 +349,6 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
         passEncoder.setPipeline(quadPipeline);
-
-        if (updateBindGroup) {
-          quadBindGroup = device.createBindGroup({
-            layout: quadPipeline.getBindGroupLayout(0),
-            entries: [
-              { binding: 0, resource: quadSampler },
-              {
-                binding: 1,
-                resource: renderTargetView,
-              },
-            ],
-          });
-
-          updateBindGroup = false;
-        }
         passEncoder.setBindGroup(0, quadBindGroup);
         passEncoder.setVertexBuffer(0, quadVertexBuffer.buffer);
         passEncoder.draw(6, 1, 0, 0);
@@ -346,6 +361,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
     destroy() {
       depthTexture.destroy();
       renderTarget.destroy();
+      // sceneTarget.destroy();
     },
   };
 }
