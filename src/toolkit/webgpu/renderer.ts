@@ -1,5 +1,5 @@
 import type { GenericObject } from 'toolkit/types/generic';
-import type { VertexBuffer } from 'toolkit/types/webgpu/buffers';
+import { BufferAttributeFormat, VertexBuffer } from 'toolkit/types/webgpu/buffers';
 import {
   BufferCommand,
   DrawCommand,
@@ -8,6 +8,8 @@ import {
   Renderer,
 } from 'toolkit/types/webgpu/renderer';
 import { createBindGroups, createPipeline } from './utils';
+import quadShaderSource from './shaders/quad.wgsl';
+import { createVertexBuffer } from './buffers';
 
 export async function createRenderer(canvas: HTMLCanvasElement): Promise<Renderer> {
   const gpu: GPU | undefined = navigator.gpu;
@@ -39,9 +41,9 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
   // setup the render target
   let renderTarget = device.createTexture({
     size: presentationSize,
-    sampleCount: 4,
+    // sampleCount: 4,
     format: presentationFormat,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
   });
   let renderTargetView = renderTarget.createView();
 
@@ -50,7 +52,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
     size: presentationSize,
     format: 'depth24plus-stencil8',
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    sampleCount: 4,
+    // sampleCount: 4,
   });
   let depthTextureView = depthTexture.createView();
 
@@ -63,10 +65,75 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
   const pipelineCache: GenericObject<GPURenderPipeline> = {};
   const bindGroupCache: GenericObject<GPUBindGroup[]> = {};
 
+  const quadSampler = device.createSampler();
+  // const quadTexture = device.createTexture({
+  //   size: presentationSize,
+  //   format: presentationFormat,
+  //   usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  //   // sampleCount: 4,
+  // });
+
+  // prettier-ignore
+  const quadVertices = [
+    // positions   // texCoords
+    -1.0,  1.0,  0.0, 0.0,
+    -1.0, -1.0,  0.0, 1.0,
+     1.0, -1.0,  1.0, 1.0,
+
+    -1.0,  1.0,  0.0, 0.0,
+     1.0, -1.0,  1.0, 1.0,
+     1.0,  1.0,  1.0, 0.0
+  ];
+  const quadVertexBuffer = createVertexBuffer(device, {
+    array: Float32Array.from(quadVertices),
+    attributes: [
+      {
+        location: 0,
+        format: BufferAttributeFormat.Float32x2,
+      },
+      {
+        location: 1,
+        format: BufferAttributeFormat.Float32x2,
+      },
+    ],
+  });
+
+  const quadShaderModule = device.createShaderModule({
+    code: quadShaderSource,
+  });
+  const quadPipeline = device.createRenderPipeline({
+    vertex: {
+      module: quadShaderModule,
+      entryPoint: 'vertex_main',
+      buffers: [quadVertexBuffer.layout],
+    },
+    fragment: {
+      module: quadShaderModule,
+      entryPoint: 'fragment_main',
+      targets: [
+        {
+          format: presentationFormat,
+        },
+      ],
+    },
+
+    primitive: {
+      topology: 'triangle-list',
+      cullMode: 'none',
+    },
+
+    // multisample: {
+    //   count: 4,
+    // },
+  });
+  let quadBindGroup: GPUBindGroup;
+  let updateBindGroup = true;
+
   return {
     device,
 
     begin() {},
+
     submit(command: RenderCommand | BufferCommand) {
       if (command.type === RenderCommandType.Draw) {
         draws.push(command);
@@ -95,9 +162,9 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         renderTarget.destroy();
         renderTarget = device.createTexture({
           size: presentationSize,
-          sampleCount: 4,
+          // sampleCount: 4,
           format: presentationFormat,
-          usage: GPUTextureUsage.RENDER_ATTACHMENT,
+          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
         });
         renderTargetView = renderTarget.createView();
         depthTexture.destroy();
@@ -105,129 +172,175 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
           size: presentationSize,
           format: 'depth24plus-stencil8',
           usage: GPUTextureUsage.RENDER_ATTACHMENT,
-          sampleCount: 4,
+          // sampleCount: 4,
         });
         depthTextureView = depthTexture.createView();
+        updateBindGroup = true;
       }
 
-      for (let i = 0; i < commands.length; ++i) {
-        const command = commands[i];
-        if (command.type === RenderCommandType.WriteBuffer) {
-          let { dst, src } = command;
+      {
+        for (let i = 0; i < commands.length; ++i) {
+          const command = commands[i];
+          if (command.type === RenderCommandType.WriteBuffer) {
+            let { dst, src } = command;
 
-          if (src instanceof Float64Array) {
-            src = new Float32Array(src);
-          }
-          device.queue.writeBuffer(dst, 0, src.buffer, src.byteOffset, src.byteLength);
-        } else {
-          const { dst, src } = command;
-          if (src instanceof ImageBitmap) {
-            device.queue.copyExternalImageToTexture({ source: src }, { texture: dst }, [
-              src.width,
-              src.height,
-            ]);
+            if (src instanceof Float64Array) {
+              src = new Float32Array(src);
+            }
+            device.queue.writeBuffer(dst, 0, src.buffer, src.byteOffset, src.byteLength);
           } else {
-            const {
-              buffer,
-              shape: [width, height],
-            } = src;
-            device.queue.writeTexture(
-              { texture: dst },
-              buffer,
-              {
-                bytesPerRow: width * 4,
-              },
-              {
-                width,
-                height,
-              },
-            );
+            const { dst, src } = command;
+            if (src instanceof ImageBitmap) {
+              device.queue.copyExternalImageToTexture({ source: src }, { texture: dst }, [
+                src.width,
+                src.height,
+              ]);
+            } else {
+              const {
+                buffer,
+                shape: [width, height],
+              } = src;
+              device.queue.writeTexture(
+                { texture: dst },
+                buffer,
+                {
+                  bytesPerRow: width * 4,
+                },
+                {
+                  width,
+                  height,
+                },
+              );
+            }
           }
         }
-      }
 
-      const renderPassDescriptor = {
-        colorAttachments: [
-          {
-            view: renderTargetView,
-            resolveTarget: context.getCurrentTexture().createView(),
-            clearValue: [0, 0, 0, 1],
-            loadOp: 'clear',
-            storeOp: 'store',
+        const renderPassDescriptor = {
+          colorAttachments: [
+            {
+              view: renderTargetView,
+              // resolveTarget: context.getCurrentTexture().createView(),
+              clearValue: [0, 0, 0, 1],
+              loadOp: 'clear',
+              storeOp: 'store',
+            },
+          ],
+          depthStencilAttachment: {
+            view: depthTextureView,
+
+            depthClearValue: 1.0,
+            depthLoadOp: 'clear',
+            depthStoreOp: 'store',
+
+            stencilClearValue: 0,
+            stencilLoadOp: 'clear',
+            stencilStoreOp: 'store',
           },
-        ],
-        depthStencilAttachment: {
-          view: depthTextureView,
+        };
 
-          depthClearValue: 1.0,
-          depthLoadOp: 'clear',
-          depthStoreOp: 'store',
+        const commandEncoder = device.createCommandEncoder();
+        // TODO: Remove ignore once the types have been updated
+        // @ts-ignore
+        const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
-          stencilClearValue: 0,
-          stencilLoadOp: 'clear',
-          stencilStoreOp: 'store',
-        },
-      };
+        draws.sort((d1, d2) => {
+          const first = d1.priority;
+          const second = d2.priority;
 
-      const commandEncoder = device.createCommandEncoder();
-      // TODO: Remove ignore once the types have been updated
-      // @ts-ignore
-      const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+          if (first === second) {
+            return 0;
+          }
 
-      draws.sort((d1, d2) => {
-        const first = d1.priority;
-        const second = d2.priority;
-
-        if (first === second) {
-          return 0;
-        }
-
-        return first < second ? -1 : 1;
-      });
-
-      for (let i = 0; i < draws.length; ++i) {
-        const command = draws[i];
-
-        const { shader, buffers, count, indices } = command;
-
-        let pipeline = pipelineCache[shader.id];
-        if (!pipeline || shader.needsUpdate) {
-          pipeline = createPipeline(device, presentationFormat, shader, buffers);
-          pipelineCache[shader.id] = pipeline;
-        }
-
-        passEncoder.setPipeline(pipeline);
-
-        let groups = bindGroupCache[shader.id];
-        if (!groups) {
-          groups = createBindGroups(device, pipeline, shader);
-          bindGroupCache[shader.id] = groups;
-        }
-
-        groups.forEach((group: any, idx: number) => {
-          passEncoder.setBindGroup(idx, group);
+          return first < second ? -1 : 1;
         });
 
-        command.buffers.forEach((buf: VertexBuffer, idx: number) => {
-          passEncoder.setVertexBuffer(idx, buf.buffer);
-        });
+        for (let i = 0; i < draws.length; ++i) {
+          const command = draws[i];
 
-        passEncoder.setStencilReference(shader.stencilValue);
+          const { shader, buffers, count, indices } = command;
 
-        if (indices) {
-          passEncoder.setIndexBuffer(indices.buffer, indices.format);
-          passEncoder.drawIndexed(count, 1, 0, 0, 0);
-        } else {
-          passEncoder.draw(count, 1, 0, 0);
+          let pipeline = pipelineCache[shader.id];
+          if (!pipeline || shader.needsUpdate) {
+            pipeline = createPipeline(device, presentationFormat, shader, buffers);
+            pipelineCache[shader.id] = pipeline;
+          }
+
+          passEncoder.setPipeline(pipeline);
+
+          let groups = bindGroupCache[shader.id];
+          if (!groups) {
+            groups = createBindGroups(device, pipeline, shader);
+            bindGroupCache[shader.id] = groups;
+          }
+
+          groups.forEach((group: any, idx: number) => {
+            passEncoder.setBindGroup(idx, group);
+          });
+
+          command.buffers.forEach((buf: VertexBuffer, idx: number) => {
+            passEncoder.setVertexBuffer(idx, buf.buffer);
+          });
+
+          passEncoder.setStencilReference(shader.stencilValue);
+
+          if (indices) {
+            passEncoder.setIndexBuffer(indices.buffer, indices.format);
+            passEncoder.drawIndexed(count, 1, 0, 0, 0);
+          } else {
+            passEncoder.draw(count, 1, 0, 0);
+          }
+
+          shader.needsUpdate = false;
         }
 
-        shader.needsUpdate = false;
+        draws = [];
+        commands = [];
+        passEncoder.end();
+        device.queue.submit([commandEncoder.finish()]);
       }
 
-      draws = [];
-      commands = [];
-      passEncoder.end();
-      device.queue.submit([commandEncoder.finish()]);
+      {
+        const renderPassDescriptor = {
+          colorAttachments: [
+            {
+              // view: quadTexture.createView(),
+              // resolveTarget: context.getCurrentTexture().createView(),
+              view: context.getCurrentTexture().createView(),
+              clearValue: [0, 0, 0, 1],
+              loadOp: 'clear',
+              storeOp: 'store',
+            },
+          ],
+        };
+
+        const commandEncoder = device.createCommandEncoder();
+        // TODO: Remove ignore once the types have been updated
+        // @ts-ignore
+        const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+
+        passEncoder.setPipeline(quadPipeline);
+
+        if (updateBindGroup) {
+          quadBindGroup = device.createBindGroup({
+            layout: quadPipeline.getBindGroupLayout(0),
+            entries: [
+              { binding: 0, resource: quadSampler },
+              {
+                binding: 1,
+                resource: renderTargetView,
+              },
+            ],
+          });
+
+          updateBindGroup = false;
+        }
+        passEncoder.setBindGroup(0, quadBindGroup);
+        passEncoder.setVertexBuffer(0, quadVertexBuffer.buffer);
+        passEncoder.draw(6, 1, 0, 0);
+
+        passEncoder.end();
+        device.queue.submit([commandEncoder.finish()]);
+      }
     },
 
     destroy() {

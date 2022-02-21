@@ -63,9 +63,9 @@ export function createPipeline(
       stencilReadMask: shader.stencilReadMask,
     },
 
-    multisample: {
-      count: 4,
-    },
+    // multisample: {
+    //   count: 4,
+    // },
   });
 }
 
