@@ -191,7 +191,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         const { shader, buffers, count, indices } = command;
 
         let pipeline = pipelineCache[shader.id];
-        if (!pipeline) {
+        if (!pipeline || shader.needsUpdate) {
           pipeline = createPipeline(device, presentationFormat, shader, buffers);
           pipelineCache[shader.id] = pipeline;
         }
@@ -220,6 +220,8 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         } else {
           passEncoder.draw(count, 1, 0, 0);
         }
+
+        shader.needsUpdate = false;
       }
 
       draws = [];

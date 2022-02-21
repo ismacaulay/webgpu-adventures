@@ -72,6 +72,8 @@ function buildShader({
     },
   };
 
+  let needsUpdate = true;
+
   return {
     id,
     vertex,
@@ -79,6 +81,13 @@ function buildShader({
     bindings,
     buffers,
     textures,
+
+    get needsUpdate() {
+      return needsUpdate;
+    },
+    set needsUpdate(value: boolean) {
+      needsUpdate = value;
+    },
 
     update(uniforms: UniformDictionary) {
       updateBuffers(buffers, uniforms);

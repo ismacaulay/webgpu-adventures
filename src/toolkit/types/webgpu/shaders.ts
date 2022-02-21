@@ -32,6 +32,7 @@ export interface Shader {
   buffers: UniformBuffer[];
   textures: Texture[];
 
+  needsUpdate: boolean;
   update(uniforms: UniformDictionary): void;
 
   depthWrite: boolean;
