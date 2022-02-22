@@ -34,6 +34,7 @@
     Sharpen = 'sharpen',
     Blur = 'blur',
     EdgeDetection = 'edge detection',
+    GreyScaleEdgeDetection = 'grey scale + edge detection',
   }
 
   onMount(() => {
@@ -251,69 +252,99 @@
         }),
       );
 
-      let postProcessingDescriptors: GenericObject<{ shader: number }> = {};
-      let currentPostProcessing: { shader: number } | undefined = undefined;
+      let postProcessingDescriptors: GenericObject<{ shader: number }[]> = {};
+      let currentPostProcessingDescriptors: { shader: number }[] = [];
       function updatePostProcessing(pp: PostProcessing) {
-        if (currentPostProcessing) {
-          renderSystem.removePostProcessing(currentPostProcessing);
-        }
+        currentPostProcessingDescriptors.forEach((descriptor) =>
+          renderSystem.removePostProcessing(descriptor),
+        );
 
         if (pp == PostProcessing.None) {
-          currentPostProcessing = undefined;
+          currentPostProcessingDescriptors = [];
         } else {
-          currentPostProcessing = postProcessingDescriptors[pp];
-          if (!currentPostProcessing) {
+          currentPostProcessingDescriptors = postProcessingDescriptors[pp];
+          if (!currentPostProcessingDescriptors) {
             switch (pp) {
               case PostProcessing.Inverted: {
-                currentPostProcessing = {
-                  shader: shaderManager.create({
-                    source: invertedShaderSource,
-                    entryPoint: 'main',
-                  }),
-                };
+                currentPostProcessingDescriptors = [
+                  {
+                    shader: shaderManager.create({
+                      source: invertedShaderSource,
+                      entryPoint: 'main',
+                    }),
+                  },
+                ];
                 break;
               }
               case PostProcessing.GreyScale: {
-                currentPostProcessing = {
-                  shader: shaderManager.create({
-                    source: greyScaleShaderSource,
-                    entryPoint: 'main',
-                  }),
-                };
+                currentPostProcessingDescriptors = [
+                  {
+                    shader: shaderManager.create({
+                      source: greyScaleShaderSource,
+                      entryPoint: 'main',
+                    }),
+                  },
+                ];
                 break;
               }
               case PostProcessing.Sharpen: {
-                currentPostProcessing = {
-                  shader: shaderManager.create({
-                    source: sharpenShaderSource,
-                    entryPoint: 'main',
-                  }),
-                };
+                currentPostProcessingDescriptors = [
+                  {
+                    shader: shaderManager.create({
+                      source: sharpenShaderSource,
+                      entryPoint: 'main',
+                    }),
+                  },
+                ];
                 break;
               }
               case PostProcessing.Blur: {
-                currentPostProcessing = {
-                  shader: shaderManager.create({
-                    source: blurShaderSource,
-                    entryPoint: 'main',
-                  }),
-                };
+                currentPostProcessingDescriptors = [
+                  {
+                    shader: shaderManager.create({
+                      source: blurShaderSource,
+                      entryPoint: 'main',
+                    }),
+                  },
+                ];
                 break;
               }
               case PostProcessing.EdgeDetection: {
-                currentPostProcessing = {
-                  shader: shaderManager.create({
-                    source: edgeDetectionShaderSource,
-                    entryPoint: 'main',
-                  }),
-                };
+                currentPostProcessingDescriptors = [
+                  {
+                    shader: shaderManager.create({
+                      source: edgeDetectionShaderSource,
+                      entryPoint: 'main',
+                    }),
+                  },
+                ];
+                break;
+              }
+              case PostProcessing.GreyScaleEdgeDetection: {
+                currentPostProcessingDescriptors = [
+                  {
+                    shader: shaderManager.create({
+                      source: greyScaleShaderSource,
+                      entryPoint: 'main',
+                    }),
+                  },
+                  {
+                    shader: shaderManager.create({
+                      source: edgeDetectionShaderSource,
+                      entryPoint: 'main',
+                    }),
+                  },
+                ];
                 break;
               }
             }
 
-            postProcessingDescriptors[pp] = currentPostProcessing;
+            postProcessingDescriptors[pp] = currentPostProcessingDescriptors;
           }
-          renderSystem.addPostProcessing(currentPostProcessing);
+
+          currentPostProcessingDescriptors.forEach((descriptor) =>
+            renderSystem.addPostProcessing(descriptor),
+          );
         }
       }
       updatePostProcessing(params.postProcessing);
@@ -327,6 +358,7 @@
             [PostProcessing.Sharpen]: PostProcessing.Sharpen,
             [PostProcessing.Blur]: PostProcessing.Blur,
             [PostProcessing.EdgeDetection]: PostProcessing.EdgeDetection,
+            [PostProcessing.GreyScaleEdgeDetection]: PostProcessing.GreyScaleEdgeDetection,
           },
         })
         .on('change', () => {

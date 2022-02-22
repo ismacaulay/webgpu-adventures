@@ -127,7 +127,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
   const postProcessingOutputTextures: GenericObject<{ texture: GPUTexture; view: GPUTextureView }> =
     {};
 
-  let rebuildBindGroups = true;
+  let needsUpdate = true;
   let lastOutput: GPUTextureView;
 
   return {
@@ -194,7 +194,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
           ],
         });
 
-        rebuildBindGroups = true;
+        needsUpdate = true;
       }
 
       const commandEncoder = device.createCommandEncoder();
@@ -326,7 +326,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
           const { shader } = postProcessing[i];
 
           let output = postProcessingOutputTextures[shader.id];
-          if (!output || rebuildBindGroups) {
+          if (!output || needsUpdate) {
             if (output) {
               output.texture.destroy();
             }
@@ -379,25 +379,38 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
             shader.needsUpdate = false;
           }
 
-          let groups = bindGroupCache[shader.id];
-          if (!groups || rebuildBindGroups) {
-            groups = [
-              device.createBindGroup({
-                layout: pipeline.getBindGroupLayout(0),
-                entries: [
-                  { binding: 0, resource: quadSampler },
-                  {
-                    binding: 1,
-                    resource: renderTargetView,
-                  },
-                ],
-              }),
-            ];
-            bindGroupCache[shader.id] = groups;
-          }
+          // TODO: figure out how to properly cache bind groups
+          // let groups = bindGroupCache[shader.id];
+          // if (!groups || needsUpdate) {
+          //   groups = [
+          //     device.createBindGroup({
+          //       layout: pipeline.getBindGroupLayout(0),
+          //       entries: [
+          //         { binding: 0, resource: quadSampler },
+          //         {
+          //           binding: 1,
+          //           resource: lastOutput,
+          //         },
+          //       ],
+          //     }),
+          //   ];
+          //   bindGroupCache[shader.id] = groups;
+          // }
 
           passEncoder.setPipeline(pipeline);
-          passEncoder.setBindGroup(0, groups[0]);
+          passEncoder.setBindGroup(
+            0,
+            device.createBindGroup({
+              layout: pipeline.getBindGroupLayout(0),
+              entries: [
+                { binding: 0, resource: quadSampler },
+                {
+                  binding: 1,
+                  resource: lastOutput,
+                },
+              ],
+            }),
+          );
           passEncoder.setVertexBuffer(0, quadVertexBuffer.buffer);
           passEncoder.draw(6, 1, 0, 0);
           passEncoder.end();
@@ -443,7 +456,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
 
       device.queue.submit([commandEncoder.finish()]);
 
-      rebuildBindGroups = false;
+      needsUpdate = false;
     },
 
     destroy() {
