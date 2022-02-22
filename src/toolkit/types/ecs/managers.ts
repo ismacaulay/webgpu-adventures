@@ -6,7 +6,12 @@ import type {
   UniformDictionary,
   VertexBufferDescriptor,
 } from '../webgpu/buffers';
-import type { Shader, ShaderBindingDescriptor, ShaderDescriptor } from '../webgpu/shaders';
+import type {
+  PostProcessingShader,
+  Shader,
+  ShaderBindingDescriptor,
+  ShaderDescriptor,
+} from '../webgpu/shaders';
 import type { Texture, TextureDescriptor } from '../webgpu/textures';
 import type { Component, ComponentType } from './components';
 
@@ -59,7 +64,7 @@ export interface BufferManager {
  * shader manager
  */
 export interface ShaderManager {
-  get(id: number): Shader;
+  get<T extends Shader | PostProcessingShader>(id: number): T;
   create(descriptor: ShaderDescriptor): number;
   clone(id: number, bindings: ShaderBindingDescriptor[]): number;
   destroy(): void;

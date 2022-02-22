@@ -16,10 +16,26 @@
   import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
   import { DefaultBuffers } from 'toolkit/types/ecs/managers';
   import shaderSource from './shader.wgsl';
+  import invertedShaderSource from './inverted.frag.wgsl';
+  import greyScaleShaderSource from './greyscale.frag.wgsl';
+  import sharpenShaderSource from './sharpen.frag.wgsl';
+  import blurShaderSource from './blur.frag.wgsl';
+  import edgeDetectionShaderSource from './edge-detection.frag.wgsl';
   import { Pane } from 'tweakpane';
+  import type { GenericObject } from 'toolkit/types/generic';
 
   let container: HTMLElement;
   let canvas: any;
+
+  enum PostProcessing {
+    None = 'none',
+    Inverted = 'inverted',
+    GreyScale = 'grey scale',
+    Sharpen = 'sharpen',
+    Blur = 'blur',
+    EdgeDetection = 'edge detection',
+  }
+
   onMount(() => {
     let app: Application;
     let pane: Pane;
@@ -30,7 +46,9 @@
       container.appendChild(stats.dom);
 
       pane = new Pane({ title: 'settings' });
-      const params = {};
+      const params = {
+        postProcessing: PostProcessing.None,
+      };
 
       app = await createApp(canvas.getElement(), { camera: { controls: CameraControls.Free } });
       app.onRenderBegin(() => {
@@ -41,7 +59,14 @@
       });
       app.start();
 
-      const { entityManager, bufferManager, shaderManager, textureManager, cameraController } = app;
+      const {
+        entityManager,
+        bufferManager,
+        shaderManager,
+        textureManager,
+        cameraController,
+        renderSystem,
+      } = app;
 
       const camera = cameraController.camera;
       vec3.set(camera.position, 0, 0, 3);
@@ -225,6 +250,88 @@
           shader: planeShaderId,
         }),
       );
+
+      let postProcessingDescriptors: GenericObject<{ shader: number }> = {};
+      let currentPostProcessing: { shader: number } | undefined = undefined;
+      function updatePostProcessing(pp: PostProcessing) {
+        if (currentPostProcessing) {
+          renderSystem.removePostProcessing(currentPostProcessing);
+        }
+
+        if (pp == PostProcessing.None) {
+          currentPostProcessing = undefined;
+        } else {
+          currentPostProcessing = postProcessingDescriptors[pp];
+          if (!currentPostProcessing) {
+            switch (pp) {
+              case PostProcessing.Inverted: {
+                currentPostProcessing = {
+                  shader: shaderManager.create({
+                    source: invertedShaderSource,
+                    entryPoint: 'main',
+                  }),
+                };
+                break;
+              }
+              case PostProcessing.GreyScale: {
+                currentPostProcessing = {
+                  shader: shaderManager.create({
+                    source: greyScaleShaderSource,
+                    entryPoint: 'main',
+                  }),
+                };
+                break;
+              }
+              case PostProcessing.Sharpen: {
+                currentPostProcessing = {
+                  shader: shaderManager.create({
+                    source: sharpenShaderSource,
+                    entryPoint: 'main',
+                  }),
+                };
+                break;
+              }
+              case PostProcessing.Blur: {
+                currentPostProcessing = {
+                  shader: shaderManager.create({
+                    source: blurShaderSource,
+                    entryPoint: 'main',
+                  }),
+                };
+                break;
+              }
+              case PostProcessing.EdgeDetection: {
+                currentPostProcessing = {
+                  shader: shaderManager.create({
+                    source: edgeDetectionShaderSource,
+                    entryPoint: 'main',
+                  }),
+                };
+                break;
+              }
+            }
+
+            postProcessingDescriptors[pp] = currentPostProcessing;
+          }
+          renderSystem.addPostProcessing(currentPostProcessing);
+        }
+      }
+      updatePostProcessing(params.postProcessing);
+
+      pane
+        .addInput(params, 'postProcessing', {
+          options: {
+            [PostProcessing.None]: PostProcessing.None,
+            [PostProcessing.Inverted]: PostProcessing.Inverted,
+            [PostProcessing.GreyScale]: PostProcessing.GreyScale,
+            [PostProcessing.Sharpen]: PostProcessing.Sharpen,
+            [PostProcessing.Blur]: PostProcessing.Blur,
+            [PostProcessing.EdgeDetection]: PostProcessing.EdgeDetection,
+          },
+        })
+        .on('change', () => {
+          updatePostProcessing(params.postProcessing);
+        });
     })();
 
     return () => {

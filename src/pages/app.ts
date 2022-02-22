@@ -17,6 +17,7 @@ import type {
   TextureManager,
 } from 'toolkit/types/ecs/managers';
 import { createMovementSystem } from 'toolkit/ecs/systems/movement';
+import type { RenderSystem } from 'toolkit/types/ecs/systems';
 
 export interface Application {
   entityManager: EntityManager;
@@ -24,6 +25,8 @@ export interface Application {
   textureManager: TextureManager;
   shaderManager: ShaderManager;
   cameraController: CameraController;
+
+  renderSystem: RenderSystem;
 
   start(): void;
   destroy(): void;
@@ -91,7 +94,10 @@ export async function createApp(
     bufferManager,
     textureManager,
     shaderManager,
+
     cameraController,
+
+    renderSystem,
 
     start() {
       render();

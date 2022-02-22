@@ -1,9 +1,10 @@
-import { mat4, vec3 } from 'gl-matrix';
+import { vec3 } from 'gl-matrix';
 import type { CameraController } from 'toolkit/types/camera';
 import {
   ComponentType,
   GeometryComponent,
   MaterialComponent,
+  ShaderId,
   TransformComponent,
 } from 'toolkit/types/ecs/components';
 import {
@@ -15,6 +16,7 @@ import {
 import type { RenderSystem } from 'toolkit/types/ecs/systems';
 import type { IndexBuffer, UniformBuffer, VertexBuffer } from 'toolkit/types/webgpu/buffers';
 import { RenderCommandType, Renderer } from 'toolkit/types/webgpu/renderer';
+import type { PostProcessingShader, Shader } from 'toolkit/types/webgpu/shaders';
 
 export function createRenderSystem(
   renderer: Renderer,
@@ -27,6 +29,8 @@ export function createRenderSystem(
 ): RenderSystem {
   const { entityManager, bufferManager, shaderManager } = managers;
   const _tmp = vec3.create();
+
+  const postProcessingDescriptors: { shader: ShaderId }[] = [];
 
   return {
     update() {
@@ -94,7 +98,7 @@ export function createRenderSystem(
           indices = bufferManager.get<IndexBuffer>(geometry.indices.id);
         }
 
-        const shader = shaderManager.get(material.shader);
+        const shader = shaderManager.get<Shader>(material.shader);
 
         if (transform.needsUpdate) {
           shader.update({ model: transform.matrix });
@@ -138,7 +142,27 @@ export function createRenderSystem(
         geometry.needsUpdate = false;
       }
 
+      for (let i = 0; i < postProcessingDescriptors.length; ++i) {
+        renderer.submit({
+          type: RenderCommandType.PostProcessing,
+          shader: shaderManager.get<PostProcessingShader>(postProcessingDescriptors[i].shader),
+        });
+      }
+
       renderer.finish();
+    },
+
+    addPostProcessing(descriptor: { shader: ShaderId }) {
+      postProcessingDescriptors.push(descriptor);
+    },
+    removePostProcessing(descriptor: { shader: ShaderId }) {
+      const idx = postProcessingDescriptors.indexOf(descriptor);
+      if (idx === -1) {
+        console.warn('Failed to remove unknown post processing descriptor: ', descriptor);
+        return;
+      }
+
+      postProcessingDescriptors.splice(idx, 1);
     },
   };
 }

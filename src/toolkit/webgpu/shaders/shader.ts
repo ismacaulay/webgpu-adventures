@@ -1,8 +1,11 @@
 import type { UniformBuffer, UniformDictionary } from 'toolkit/types/webgpu/buffers';
-import type {
+import {
+  PostProcessingShader,
+  PostProcessingShaderDescriptor,
   Shader,
   ShaderBindGroupDescriptor,
   ShaderDescriptor,
+  ShaderType,
 } from 'toolkit/types/webgpu/shaders';
 import type { Texture } from 'toolkit/types/webgpu/textures';
 
@@ -76,6 +79,7 @@ function buildShader({
 
   return {
     id,
+    type: ShaderType.Render,
     vertex,
     fragment,
     bindings,
@@ -162,6 +166,10 @@ export function createShader(
   let vertexModule: GPUShaderModule;
   let fragmentModule: GPUShaderModule;
 
+  if (!('vertex' in descriptor) || !('fragment' in descriptor)) {
+    throw new Error('Unable to build shader: no vertex or fragment in descriptor');
+  }
+
   if ('source' in descriptor) {
     vertexModule = device.createShaderModule({
       code: descriptor.source,
@@ -198,4 +206,33 @@ export function cloneShader(
   const { id, vertex, fragment } = shader;
 
   return buildShader({ id, vertex, fragment, bindings, buffers, textures });
+}
+
+export function createPostProcessingShader(
+  id: number,
+  device: GPUDevice,
+  descriptor: PostProcessingShaderDescriptor,
+): PostProcessingShader {
+  const fragment = {
+    module: device.createShaderModule({
+      code: descriptor.source,
+    }),
+    entryPoint: descriptor.entryPoint,
+  };
+
+  let needsUpdate = true;
+
+  return {
+    id,
+    type: ShaderType.PostProcessing,
+
+    get needsUpdate() {
+      return needsUpdate;
+    },
+    set needsUpdate(value: boolean) {
+      needsUpdate = value;
+    },
+
+    fragment,
+  };
 }

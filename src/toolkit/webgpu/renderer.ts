@@ -3,6 +3,7 @@ import { BufferAttributeFormat, VertexBuffer } from 'toolkit/types/webgpu/buffer
 import {
   BufferCommand,
   DrawCommand,
+  PostProcessingCommand,
   RenderCommand,
   RenderCommandType,
   Renderer,
@@ -47,13 +48,6 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
   });
   let renderTargetView = renderTarget.createView();
 
-  // let sceneTarget = device.createTexture({
-  //   size: presentationSize,
-  //   format: presentationFormat,
-  //   usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-  // });
-  // let sceneTextureView = sceneTarget.createView();
-
   // create the depth texture
   let depthTexture = device.createTexture({
     size: presentationSize,
@@ -62,15 +56,6 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
     // sampleCount: 4,
   });
   let depthTextureView = depthTexture.createView();
-
-  let commands: BufferCommand[] = [];
-  let draws: DrawCommand[] = [];
-
-  // TODO: The cache is based on the shader id, but it may need more
-  // TODO: When the shader is removed, we dont remove the pipeline; there may be
-  //       multiple shaders using the same pipeline (cloned shaders)
-  const pipelineCache: GenericObject<GPURenderPipeline> = {};
-  const bindGroupCache: GenericObject<GPUBindGroup[]> = {};
 
   const quadSampler = device.createSampler();
 
@@ -127,25 +112,30 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
     //   count: 4,
     // },
   });
+  let quadBindGroup: GPUBindGroup;
+  let quadBindGroupOutput: GPUTextureView;
 
-  let quadBindGroup = device.createBindGroup({
-    layout: quadPipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: quadSampler },
-      {
-        binding: 1,
-        // resource: sceneTextureView,
-        resource: renderTargetView,
-      },
-    ],
-  });
+  let commands: BufferCommand[] = [];
+  let draws: DrawCommand[] = [];
+  let postProcessing: PostProcessingCommand[] = [];
+
+  // TODO: The cache is based on the shader id, but it may need more
+  // TODO: When the shader is removed, we dont remove the pipeline; there may be
+  //       multiple shaders using the same pipeline (cloned shaders)
+  const pipelineCache: GenericObject<GPURenderPipeline> = {};
+  const bindGroupCache: GenericObject<GPUBindGroup[]> = {};
+  const postProcessingOutputTextures: GenericObject<{ texture: GPUTexture; view: GPUTextureView }> =
+    {};
+
+  let rebuildBindGroups = true;
+  let lastOutput: GPUTextureView;
 
   return {
     device,
 
     begin() {},
 
-    submit(command: RenderCommand | BufferCommand) {
+    submit(command: RenderCommand | BufferCommand | PostProcessingCommand) {
       if (command.type === RenderCommandType.Draw) {
         draws.push(command);
       } else if (
@@ -153,10 +143,13 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         command.type === RenderCommandType.CopyToTexture
       ) {
         commands.push(command);
+      } else if (command.type === RenderCommandType.PostProcessing) {
+        postProcessing.push(command);
       }
     },
 
     finish() {
+      // hand resize if necessary
       if (
         canvas.clientWidth !== presentationSize[0] ||
         canvas.clientHeight !== presentationSize[1]
@@ -180,14 +173,6 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         });
         renderTargetView = renderTarget.createView();
 
-        // sceneTarget.destroy();
-        // sceneTarget = device.createTexture({
-        //   size: presentationSize,
-        //   format: presentationFormat,
-        //   usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-        // });
-        // sceneTextureView = sceneTarget.createView();
-
         depthTexture.destroy();
         depthTexture = device.createTexture({
           size: presentationSize,
@@ -208,46 +193,56 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
             },
           ],
         });
+
+        rebuildBindGroups = true;
       }
 
-      {
-        for (let i = 0; i < commands.length; ++i) {
-          const command = commands[i];
-          if (command.type === RenderCommandType.WriteBuffer) {
-            let { dst, src } = command;
+      const commandEncoder = device.createCommandEncoder();
 
-            if (src instanceof Float64Array) {
-              src = new Float32Array(src);
-            }
-            device.queue.writeBuffer(dst, 0, src.buffer, src.byteOffset, src.byteLength);
-          } else {
-            const { dst, src } = command;
-            if (src instanceof ImageBitmap) {
-              device.queue.copyExternalImageToTexture({ source: src }, { texture: dst }, [
-                src.width,
-                src.height,
-              ]);
-            } else {
-              const {
-                buffer,
-                shape: [width, height],
-              } = src;
-              device.queue.writeTexture(
-                { texture: dst },
-                buffer,
-                {
-                  bytesPerRow: width * 4,
-                },
-                {
-                  width,
-                  height,
-                },
-              );
-            }
+      // handle the copy commands
+      for (let i = 0; i < commands.length; ++i) {
+        const command = commands[i];
+        if (command.type === RenderCommandType.WriteBuffer) {
+          let { dst, src } = command;
+
+          if (src instanceof Float64Array) {
+            src = new Float32Array(src);
           }
+          device.queue.writeBuffer(dst, 0, src.buffer, src.byteOffset, src.byteLength);
+        } else if (command.type === RenderCommandType.CopyToTexture) {
+          const { dst, src } = command;
+          if (src instanceof ImageBitmap) {
+            device.queue.copyExternalImageToTexture({ source: src }, { texture: dst }, [
+              src.width,
+              src.height,
+            ]);
+          } else {
+            const {
+              buffer,
+              shape: [width, height],
+            } = src;
+            device.queue.writeTexture(
+              { texture: dst },
+              buffer,
+              {
+                bytesPerRow: width * 4,
+              },
+              {
+                width,
+                height,
+              },
+            );
+          }
+        } else {
+          // @ts-ignore
+          throw new Error(`Unknown buffer command: ${command.type}`);
         }
+      }
+      commands = [];
 
-        const renderPassDescriptor = {
+      // render the scene to the render target
+      {
+        const passEncoder = commandEncoder.beginRenderPass({
           colorAttachments: [
             {
               view: renderTargetView,
@@ -268,12 +263,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
             stencilLoadOp: 'clear',
             stencilStoreOp: 'store',
           },
-        };
-
-        const commandEncoder = device.createCommandEncoder();
-        // TODO: Remove ignore once the types have been updated
-        // @ts-ignore
-        const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+        });
 
         draws.sort((d1, d2) => {
           const first = d1.priority;
@@ -324,15 +314,102 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
 
           shader.needsUpdate = false;
         }
-
         draws = [];
-        commands = [];
+
+        lastOutput = renderTargetView;
         passEncoder.end();
-        device.queue.submit([commandEncoder.finish()]);
       }
 
+      // run the post processing passes
       {
-        const renderPassDescriptor = {
+        for (let i = 0; i < postProcessing.length; ++i) {
+          const { shader } = postProcessing[i];
+
+          let output = postProcessingOutputTextures[shader.id];
+          if (!output || rebuildBindGroups) {
+            if (output) {
+              output.texture.destroy();
+            }
+            const texture = device.createTexture({
+              size: presentationSize,
+              format: presentationFormat,
+              usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+            });
+            output = {
+              texture,
+              view: texture.createView(),
+            };
+            renderTargetView = renderTarget.createView();
+          }
+
+          const passEncoder = commandEncoder.beginRenderPass({
+            colorAttachments: [
+              {
+                view: output.view,
+                clearValue: [0, 0, 0, 1],
+                loadOp: 'clear',
+                storeOp: 'store',
+              },
+            ],
+          });
+
+          let pipeline = pipelineCache[shader.id];
+          if (!pipeline || shader.needsUpdate) {
+            pipeline = device.createRenderPipeline({
+              vertex: {
+                module: quadShaderModule,
+                entryPoint: 'vertex_main',
+                buffers: [quadVertexBuffer.layout],
+              },
+              fragment: {
+                ...shader.fragment,
+                targets: [
+                  {
+                    format: presentationFormat,
+                  },
+                ],
+              },
+
+              primitive: {
+                topology: 'triangle-list',
+                cullMode: 'none',
+              },
+            });
+            pipelineCache[shader.id] = pipeline;
+            shader.needsUpdate = false;
+          }
+
+          let groups = bindGroupCache[shader.id];
+          if (!groups || rebuildBindGroups) {
+            groups = [
+              device.createBindGroup({
+                layout: pipeline.getBindGroupLayout(0),
+                entries: [
+                  { binding: 0, resource: quadSampler },
+                  {
+                    binding: 1,
+                    resource: renderTargetView,
+                  },
+                ],
+              }),
+            ];
+            bindGroupCache[shader.id] = groups;
+          }
+
+          passEncoder.setPipeline(pipeline);
+          passEncoder.setBindGroup(0, groups[0]);
+          passEncoder.setVertexBuffer(0, quadVertexBuffer.buffer);
+          passEncoder.draw(6, 1, 0, 0);
+          passEncoder.end();
+
+          lastOutput = output.view;
+        }
+        postProcessing = [];
+      }
+
+      // render the final texture to a quad
+      {
+        const passEncoder = commandEncoder.beginRenderPass({
           colorAttachments: [
             {
               view: context.getCurrentTexture().createView(),
@@ -341,27 +418,41 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
               storeOp: 'store',
             },
           ],
-        };
-
-        const commandEncoder = device.createCommandEncoder();
-        // TODO: Remove ignore once the types have been updated
-        // @ts-ignore
-        const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+        });
 
         passEncoder.setPipeline(quadPipeline);
+
+        if (!quadBindGroup || quadBindGroupOutput != lastOutput) {
+          quadBindGroupOutput = lastOutput;
+          quadBindGroup = device.createBindGroup({
+            layout: quadPipeline.getBindGroupLayout(0),
+            entries: [
+              { binding: 0, resource: quadSampler },
+              {
+                binding: 1,
+                resource: quadBindGroupOutput,
+              },
+            ],
+          });
+        }
         passEncoder.setBindGroup(0, quadBindGroup);
         passEncoder.setVertexBuffer(0, quadVertexBuffer.buffer);
         passEncoder.draw(6, 1, 0, 0);
-
         passEncoder.end();
-        device.queue.submit([commandEncoder.finish()]);
       }
+
+      device.queue.submit([commandEncoder.finish()]);
+
+      rebuildBindGroups = false;
     },
 
     destroy() {
       depthTexture.destroy();
       renderTarget.destroy();
-      // sceneTarget.destroy();
+
+      Object.values(postProcessingOutputTextures).forEach(({ texture }) => {
+        texture.destroy();
+      });
     },
   };
 }

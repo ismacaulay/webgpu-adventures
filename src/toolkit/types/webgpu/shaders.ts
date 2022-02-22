@@ -24,15 +24,25 @@ export interface ShaderBindGroupDescriptor {
   entries: ShaderBindGroupEntry[];
 }
 
-export interface Shader {
+export enum ShaderType {
+  Render,
+  PostProcessing,
+}
+
+interface BaseShader {
   id: number;
+  needsUpdate: boolean;
+  type: ShaderType;
+}
+
+export interface Shader extends BaseShader {
+  type: ShaderType.Render;
   vertex: { module: GPUShaderModule; entryPoint: string };
   fragment: { module: GPUShaderModule; entryPoint: string };
   bindings: ShaderBindGroupDescriptor[];
   buffers: UniformBuffer[];
   textures: Texture[];
 
-  needsUpdate: boolean;
   update(uniforms: UniformDictionary): void;
 
   depthWrite: boolean;
@@ -45,6 +55,11 @@ export interface Shader {
   stencilValue: number;
 
   blend: GPUBlendState;
+}
+
+export interface PostProcessingShader extends BaseShader {
+  type: ShaderType.PostProcessing;
+  fragment: { module: GPUShaderModule; entryPoint: string };
 }
 
 /*
@@ -87,4 +102,12 @@ export interface MultiSourceShaderDescriptor extends BaseShaderDescriptor {
   };
 }
 
-export type ShaderDescriptor = SingleSourceShaderDescriptor | MultiSourceShaderDescriptor;
+export interface PostProcessingShaderDescriptor {
+  source: string;
+  entryPoint: string;
+}
+
+export type ShaderDescriptor =
+  | SingleSourceShaderDescriptor
+  | MultiSourceShaderDescriptor
+  | PostProcessingShaderDescriptor;

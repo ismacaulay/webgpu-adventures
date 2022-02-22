@@ -8,13 +8,15 @@ import {
 import type { Storage } from 'toolkit/types/generic';
 import type { UniformBuffer } from 'toolkit/types/webgpu/buffers';
 import {
+  PostProcessingShader,
   Shader,
   ShaderBindingDescriptor,
   ShaderBindingType,
   ShaderDescriptor,
+  ShaderType,
 } from 'toolkit/types/webgpu/shaders';
 import type { Texture } from 'toolkit/types/webgpu/textures';
-import { cloneShader, createShader } from 'toolkit/webgpu/shaders';
+import { cloneShader, createPostProcessingShader, createShader } from 'toolkit/webgpu/shaders';
 
 function processBindings(
   bindings: ShaderBindingDescriptor[],
@@ -65,34 +67,41 @@ export function createShaderManager(
     textureManager,
   }: { bufferManager: BufferManager; textureManager: TextureManager },
 ): ShaderManager {
-  let storage: Storage<Shader> = {};
+  let storage: Storage<Shader | PostProcessingShader> = {};
   let next = 0;
 
   return {
     create(descriptor: ShaderDescriptor) {
-      const { bindings, textures, uniformBuffers } = processBindings(descriptor.bindings, {
-        bufferManager,
-        textureManager,
-      });
+      if ('bindings' in descriptor) {
+        const { bindings, textures, uniformBuffers } = processBindings(descriptor.bindings, {
+          bufferManager,
+          textureManager,
+        });
 
-      const shader = createShader(next, device, descriptor, bindings, uniformBuffers, textures);
-      storage[next] = shader;
+        storage[next] = createShader(next, device, descriptor, bindings, uniformBuffers, textures);
+      } else {
+        storage[next] = createPostProcessingShader(next, device, descriptor);
+      }
       return next++;
     },
 
-    get(id: ShaderId) {
+    get<T extends Shader | PostProcessingShader>(id: ShaderId) {
       const shader = storage[id];
       if (!shader) {
         throw new Error(`Unknown shader id: ${id}`);
       }
 
-      return shader;
+      return shader as T;
     },
 
     clone(id: number, bindingDescriptors: ShaderBindingDescriptor[]) {
       const shader = storage[id];
       if (!shader) {
         throw new Error(`Unknown shader: ${id}`);
+      }
+
+      if (shader.type !== ShaderType.Render) {
+        throw new Error(`Unable to clone non render shaders: ${shader.type}`);
       }
 
       const { bindings, textures, uniformBuffers } = processBindings(bindingDescriptors, {

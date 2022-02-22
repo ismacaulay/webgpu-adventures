@@ -6,7 +6,7 @@ import {
 } from 'toolkit/ecs/components';
 import { DefaultBuffers } from 'toolkit/types/ecs/managers';
 import { BufferAttributeFormat, UniformType } from 'toolkit/types/webgpu/buffers';
-import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
+import { Shader, ShaderBindingType } from 'toolkit/types/webgpu/shaders';
 import { CUBE_VERTICES, CUBE_VERTICES_WITH_NORMALS } from 'pages/utils/cube-vertices';
 import gouraudShaderSource from './shaders/gouraud.wgsl';
 import phongShaderSource from './shaders/phong.wgsl';
@@ -156,7 +156,7 @@ export function setup(app: Application) {
     shader: gouraudShader,
   });
   entityManager.addComponent(cubeEntity, material);
-  let currentShader = shaderManager.get(gouraudShader);
+  let currentShader = shaderManager.get<Shader>(gouraudShader);
 
   const lightEntity = entityManager.create();
   const lightTransform = createTransformComponent({
@@ -233,33 +233,6 @@ export function setup(app: Application) {
       currentShader.update({ light_pos: lightPos, view_pos: camera.position });
     }),
   );
-  // let rafId: number;
-  // let lastTime = performance.now();
-
-  // function render() {
-  //   const now = performance.now();
-  //   const dt = (now - lastTime) / 1000;
-  //   lastTime = now;
-
-  //   lightRotation += dt;
-  //   lightRotation %= 2 * Math.PI;
-  //   vec3.set(lightPos, 1.0 * Math.sin(lightRotation), 1.0, 1.0 * Math.cos(lightRotation));
-  //   // vec3.copy(lightTransform.translation, lightPos);
-  //   lightTransform.translation = lightPos;
-  //   lightTransform.needsUpdate = true;
-
-  //   currentShader.update({ light_pos: lightPos, view_pos: camera.position });
-
-  //   camera.aspect = canvas.clientWidth / canvas.clientHeight;
-  //   camera.updateProjectionMatrix();
-
-  //   cameraController.update(dt);
-
-  //   renderSystem.update();
-
-  //   rafId = requestAnimationFrame(render);
-  // }
-  // render();
 
   return {
     setMaterial(mat: Materials) {

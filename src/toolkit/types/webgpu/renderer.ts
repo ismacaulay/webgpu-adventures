@@ -1,5 +1,5 @@
 import type { IndexBuffer, VertexBuffer } from './buffers';
-import type { Shader } from './shaders';
+import type { PostProcessingShader, Shader } from './shaders';
 
 export interface RendererSubmission {
   shader: any;
@@ -9,8 +9,11 @@ export interface RendererSubmission {
 
 export enum RenderCommandType {
   Draw = 'draw',
+
   WriteBuffer = 'writeBuffer',
   CopyToTexture = 'copyToTexture',
+
+  PostProcessing = 'postProcessing',
 }
 
 interface BaseRenderCommand {
@@ -41,11 +44,16 @@ export interface CopyToTextureCommand extends BaseRenderCommand {
 export type BufferCommand = WriteBufferCommand | CopyToTextureCommand;
 export type RenderCommand = DrawCommand;
 
+export interface PostProcessingCommand extends BaseRenderCommand {
+  type: RenderCommandType.PostProcessing;
+  shader: PostProcessingShader;
+}
+
 export interface Renderer {
   readonly device: GPUDevice;
 
   begin(): void;
-  submit(command: RenderCommand | BufferCommand): void;
+  submit(command: RenderCommand | BufferCommand | PostProcessingCommand): void;
   finish(): void;
 
   destroy(): void;
