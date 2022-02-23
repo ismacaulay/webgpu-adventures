@@ -48,6 +48,17 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
   });
   let renderTargetView = renderTarget.createView();
 
+  let objectIdTexture = device.createTexture({
+    size: presentationSize,
+    format: 'rgba8uint',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+  });
+  let objectIdView = objectIdTexture.createView();
+  const pickBuffer = device.createBuffer({
+    size: 256,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+
   // create the depth texture
   let depthTexture = device.createTexture({
     size: presentationSize,
@@ -173,6 +184,14 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         });
         renderTargetView = renderTarget.createView();
 
+        objectIdTexture.destroy();
+        objectIdTexture = device.createTexture({
+          size: presentationSize,
+          format: 'rgba8uint',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+        });
+        objectIdView = objectIdTexture.createView();
+
         depthTexture.destroy();
         depthTexture = device.createTexture({
           size: presentationSize,
@@ -246,8 +265,13 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
           colorAttachments: [
             {
               view: renderTargetView,
-              // resolveTarget: sceneTextureView,
               clearValue: [0, 0, 0, 1],
+              loadOp: 'clear',
+              storeOp: 'store',
+            },
+            {
+              view: objectIdView,
+              clearValue: [0, 0, 0, 0],
               loadOp: 'clear',
               storeOp: 'store',
             },
@@ -459,9 +483,28 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
       needsUpdate = false;
     },
 
+    async pick(x: number, y: number) {
+      console.log('picking: ', x, y);
+      console.log(presentationSize, devicePixelRatio);
+      const commandEncoder = device.createCommandEncoder();
+      commandEncoder.copyTextureToBuffer(
+        { texture: objectIdTexture, origin: { x: x * devicePixelRatio, y: y * devicePixelRatio } },
+        { buffer: pickBuffer },
+        [1],
+      );
+      device.queue.submit([commandEncoder.finish()]);
+
+      return pickBuffer.mapAsync(GPUBufferUsage.MAP_READ).then(() => {
+        const data = new Uint8Array(pickBuffer.getMappedRange());
+        console.log(new Uint8Array(data));
+        pickBuffer.unmap();
+      });
+    },
+
     destroy() {
       depthTexture.destroy();
       renderTarget.destroy();
+      objectIdTexture.destroy();
 
       Object.values(postProcessingOutputTextures).forEach(({ texture }) => {
         texture.destroy();

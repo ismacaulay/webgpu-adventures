@@ -67,6 +67,13 @@ export async function createApp(
   });
   const movementSystem = createMovementSystem(entityManager);
 
+  function handleClick(evt: PointerEvent) {
+    renderer.pick(evt.clientX, evt.clientY).then(() => {
+      console.log('done pick');
+    });
+  }
+  canvas.addEventListener('click', handleClick, false);
+
   let rafId: number;
   let lastTime = performance.now();
   let _onRenderBegin = () => {};
@@ -115,6 +122,8 @@ export async function createApp(
 
       renderer.destroy();
       cameraController.destroy();
+
+      canvas.removeEventListener('click', handleClick, false);
     },
 
     onRenderBegin(cb) {

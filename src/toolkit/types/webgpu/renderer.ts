@@ -56,5 +56,7 @@ export interface Renderer {
   submit(command: RenderCommand | BufferCommand | PostProcessingCommand): void;
   finish(): void;
 
+  pick(x: number, y: number): Promise<void>;
+
   destroy(): void;
 }

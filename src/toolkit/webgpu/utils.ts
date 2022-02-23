@@ -44,6 +44,9 @@ export function createPipeline(
           format: presentationFormat,
           blend: shader.blend,
         },
+        {
+          format: 'rgba8uint',
+        },
       ],
     },
 

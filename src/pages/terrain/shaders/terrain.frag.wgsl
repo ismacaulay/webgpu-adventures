@@ -21,12 +21,17 @@ let SURFACE_COLOR = vec3<f32>(1.0, 1.0, 1.0);
 let THICKNESS = 1.0;
 let MIN_DIFFUSE = 0.3;
 
+struct FragmentOutput {
+  @location(0) colour: vec4<f32>;
+  @location(1) object_id: vec4<u32>;
+}
+
 @stage(fragment)
 fn main(
-  @location(0) barycentric: vec3<f32>, 
+  @location(0) barycentric: vec3<f32>,
   @location(1) noise: f32,
   @location(2) position_eye: vec4<f32>
-) -> @location(0) vec4<f32> {
+) -> FragmentOutput {
   // barycentric wireframe:
   // - https://web.archive.org/web/20200708050342/http://codeflow.org/entries/2012/aug/02/easy-wireframe-display-with-barycentric-coordinates/
   // - https://tchayen.github.io/posts/wireframes-with-barycentric-coordinates
@@ -54,5 +59,10 @@ fn main(
   }
 
   var c = textureSample(u_texture, u_sampler, vec2<f32>(1.0-noise, 0.5));
-  return vec4<f32>(kd * mix(WIREFRAME_COLOR, c.xyz, w), 1.0);
+
+  /* return vec4<f32>(kd * mix(WIREFRAME_COLOR, c.xyz, w), 1.0); */
+  var out: FragmentOutput;
+  out.colour = vec4<f32>(kd * mix(WIREFRAME_COLOR, c.xyz, w), 1.0);
+  out.object_id = vec4<u32>(255u, 0u, 0u, 0u);
+  return out;
 }
