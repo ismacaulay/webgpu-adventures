@@ -48,14 +48,15 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
   });
   let renderTargetView = renderTarget.createView();
 
+  const objectIdTextureFormat: GPUTextureFormat = 'r8unorm';
   let objectIdTexture = device.createTexture({
     size: presentationSize,
-    format: 'rgba8uint',
+    format: objectIdTextureFormat,
     usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
   });
   let objectIdView = objectIdTexture.createView();
   const pickBuffer = device.createBuffer({
-    size: 256,
+    size: 4,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
 
@@ -187,7 +188,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         objectIdTexture.destroy();
         objectIdTexture = device.createTexture({
           size: presentationSize,
-          format: 'rgba8uint',
+          format: objectIdTextureFormat,
           usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
         });
         objectIdView = objectIdTexture.createView();
@@ -271,7 +272,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
             },
             {
               view: objectIdView,
-              clearValue: [0, 0, 0, 0],
+              clearValue: [255, 255, 255, 255],
               loadOp: 'clear',
               storeOp: 'store',
             },
@@ -307,7 +308,13 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
 
           let pipeline = pipelineCache[shader.id];
           if (!pipeline || shader.needsUpdate) {
-            pipeline = createPipeline(device, presentationFormat, shader, buffers);
+            pipeline = createPipeline(
+              device,
+              presentationFormat,
+              objectIdTextureFormat,
+              shader,
+              buffers,
+            );
             pipelineCache[shader.id] = pipeline;
           }
 
@@ -484,8 +491,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
     },
 
     async pick(x: number, y: number) {
-      console.log('picking: ', x, y);
-      console.log(presentationSize, devicePixelRatio);
+      // copy the pixel from the objectIdTexture to the pick buffer
       const commandEncoder = device.createCommandEncoder();
       commandEncoder.copyTextureToBuffer(
         { texture: objectIdTexture, origin: { x: x * devicePixelRatio, y: y * devicePixelRatio } },
@@ -494,10 +500,13 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
       );
       device.queue.submit([commandEncoder.finish()]);
 
+      // once the command is finished we can read the data from the buffer
       return pickBuffer.mapAsync(GPUBufferUsage.MAP_READ).then(() => {
         const data = new Uint8Array(pickBuffer.getMappedRange());
-        console.log(new Uint8Array(data));
+        const objectId = data[0];
+
         pickBuffer.unmap();
+        return { objectId };
       });
     },
 
@@ -505,6 +514,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
       depthTexture.destroy();
       renderTarget.destroy();
       objectIdTexture.destroy();
+      pickBuffer.destroy();
 
       Object.values(postProcessingOutputTextures).forEach(({ texture }) => {
         texture.destroy();

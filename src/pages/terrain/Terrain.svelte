@@ -13,9 +13,9 @@
   } from 'toolkit/ecs/components';
   import { BufferAttributeFormat, UniformType } from 'toolkit/types/webgpu/buffers';
   import type { IndexBufferDescriptor } from 'toolkit/types/webgpu/buffers';
-  import type { Colour3 } from 'toolkit/types/colour';
   import { inverseLerp } from 'toolkit/math';
   import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
+  import type { Shader } from 'toolkit/types/webgpu/shaders';
   import { DefaultBuffers } from 'toolkit/types/ecs/managers';
   import { Pane } from 'tweakpane';
   import { generateNoiseMap } from 'toolkit/math/noise';
@@ -38,9 +38,11 @@
     heightMultiplier: number,
   ) {
     const numVertices = width * height * 3;
+    const numTriangles = (width - 1) * (height - 1) * 2;
     const vertices = new Float64Array(numVertices);
     // there are w-1 and h-1 squares, and each square is made up of 6 indicies
-    const indices = new Uint32Array((width - 1) * (height - 1) * 6);
+    const indices = new Uint32Array(numTriangles * 3);
+    const ids = new Uint32Array(numTriangles);
 
     let triangleIdx = 0;
     let vertexIdx = 0;
@@ -187,6 +189,8 @@
       });
       const fragmentUniformBufferId = bufferManager.createUniformBuffer(
         {
+          entity_id: UniformType.Scalar,
+
           wireframe: UniformType.Bool,
           enable_lighting: UniformType.Bool,
 
@@ -196,6 +200,8 @@
           light2: UniformType.Vec4,
         },
         {
+          entity_id: entity,
+
           wireframe: params.wireframe,
           enable_lighting: params.lighting,
 
@@ -205,6 +211,7 @@
           light2: fromTpVec4(params.light2),
         },
       );
+      console.log(bufferManager.get(fragmentUniformBufferId).data);
       const shaderId = shaderManager.create({
         vertex: {
           source: vertSource,
@@ -277,7 +284,7 @@
         .on('change', updateGeometry);
       noiseSettings.addInput(params, 'heightMultiplier', { min: 1 }).on('change', updateGeometry);
 
-      const shader = shaderManager.get(shaderId);
+      const shader = shaderManager.get<Shader>(shaderId);
       const meshSettings = pane.addFolder({ title: 'mesh settings' });
       meshSettings.addInput(params, 'wireframe').on('change', () => {
         shader.update({ wireframe: params.wireframe });

@@ -68,8 +68,9 @@ export async function createApp(
   const movementSystem = createMovementSystem(entityManager);
 
   function handleClick(evt: PointerEvent) {
-    renderer.pick(evt.clientX, evt.clientY).then(() => {
-      console.log('done pick');
+    // TODO: dont register a pick if the mouse moved before release
+    renderer.pick(evt.clientX, evt.clientY).then((result) => {
+      console.log('done pick', result);
     });
   }
   canvas.addEventListener('click', handleClick, false);

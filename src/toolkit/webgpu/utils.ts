@@ -29,6 +29,7 @@ export function createBuffer(
 export function createPipeline(
   device: GPUDevice,
   presentationFormat: GPUTextureFormat,
+  objectIdTextureFormat: GPUTextureFormat,
   shader: Shader,
   buffers: VertexBuffer[],
 ) {
@@ -45,7 +46,7 @@ export function createPipeline(
           blend: shader.blend,
         },
         {
-          format: 'rgba8uint',
+          format: objectIdTextureFormat,
         },
       ],
     },

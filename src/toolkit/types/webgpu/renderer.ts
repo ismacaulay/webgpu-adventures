@@ -1,4 +1,5 @@
 import type { IndexBuffer, VertexBuffer } from './buffers';
+import type { PickResult } from './picking';
 import type { PostProcessingShader, Shader } from './shaders';
 
 export interface RendererSubmission {
@@ -56,7 +57,7 @@ export interface Renderer {
   submit(command: RenderCommand | BufferCommand | PostProcessingCommand): void;
   finish(): void;
 
-  pick(x: number, y: number): Promise<void>;
+  pick(x: number, y: number): Promise<PickResult>;
 
   destroy(): void;
 }
