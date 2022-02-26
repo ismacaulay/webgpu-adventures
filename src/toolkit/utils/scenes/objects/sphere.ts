@@ -20,6 +20,7 @@ function flattenVertices(indices: ArrayLike<number>, vertices: ArrayLike<number>
   return out;
 }
 
+// https://www.songho.ca/opengl/gl_sphere.html
 function generateSphereMesh(radius: number, sectors: number, stacks: number) {
   const vertices: number[] = [];
 

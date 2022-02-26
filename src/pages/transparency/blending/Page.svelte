@@ -18,8 +18,6 @@
     let app: Application;
     let pane: Pane;
 
-    const params = {};
-
     (async () => {
       const stats = new (Stats as any)();
       stats.showPanel(0);
