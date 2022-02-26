@@ -2,6 +2,7 @@
 struct UBO {
   wireframe: u32;
   enable_lighting: u32;
+  opacity: f32;
 
   light1_enabled: u32;
   light1: vec4<f32>;
@@ -54,5 +55,5 @@ fn main(
   }
 
   var c = textureSample(u_texture, u_sampler, vec2<f32>(1.0-noise, 0.5));
-  return vec4<f32>(kd * mix(WIREFRAME_COLOR, c.xyz, w), 1.0);
+  return vec4<f32>(kd * mix(WIREFRAME_COLOR, c.xyz, w), u.opacity);
 }

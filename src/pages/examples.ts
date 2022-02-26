@@ -28,6 +28,8 @@ import Framebuffers from './learn-opengl/9-framebuffers/Page.svelte';
 import NoiseMap from './terrain/NoiseMap.svelte';
 // @ts-ignore
 import Terrain from './terrain/Terrain.svelte';
+// @ts-ignore
+import TransparencyBlending from './transparency/blending/Page.svelte';
 
 export default [
   { title: 'hello-world', component: HelloWorld },
@@ -45,4 +47,6 @@ export default [
 
   { title: 'terrain/noise-map', component: NoiseMap },
   { title: 'terrain/terrain', component: Terrain },
+
+  { title: 'transparency/blending', component: TransparencyBlending },
 ];

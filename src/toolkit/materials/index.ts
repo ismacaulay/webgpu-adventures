@@ -1,2 +1,2 @@
 export * from './materials';
-export * from './color';
+export * from './colour';

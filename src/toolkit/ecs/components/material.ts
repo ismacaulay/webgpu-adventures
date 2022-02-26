@@ -34,10 +34,16 @@ export function createShaderMaterialComponent({
 
 export function createBasicMaterialComponent(initial: {
   shader: number;
-  colour?: Colour3;
   drawOrder?: number;
+  colour?: Colour3;
+  opacity?: number;
 }): BasicMaterialComponent {
-  const { shader, colour = Colours.Red, drawOrder = Number.MAX_SAFE_INTEGER } = initial;
+  const {
+    shader,
+    colour = Colours.Red,
+    drawOrder = Number.MAX_SAFE_INTEGER,
+    opacity = 1.0,
+  } = initial;
   let needsUpdate = true;
 
   return {
@@ -52,6 +58,7 @@ export function createBasicMaterialComponent(initial: {
     shader,
     uniforms: {
       colour,
+      opacity,
     },
     drawOrder,
   };

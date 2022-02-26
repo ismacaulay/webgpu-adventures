@@ -20,24 +20,31 @@ struct Matrices {
   projection: mat4x4<f32>;
 };
 @group(0) @binding(1)
-var<uniform> matrices: Matrices;
+var<uniform> m: Matrices;
+
+struct VertexOutput {
+  @builtin(position) position: vec4<f32>;
+}
 
 @stage(vertex)
-fn main(@location(0) a_pos: vec3<f32>) -> @builtin(position) vec4<f32> {
-  return matrices.projection * matrices.view * model * vec4(a_pos, 1.0);
+fn main(@location(0) a_pos: vec3<f32>) -> VertexOutput {
+  var out: VertexOutput;
+  out.position = m.projection * m.view * model * vec4(a_pos, 1.0);
+  return out;
 }
   `;
 
   const fragmentSource = `
 struct UBO {
   colour: vec3<f32>;
+  opacity: f32;
 }
 @group(0) @binding(2)
 var<uniform> ubo: UBO;
 
 @stage(fragment)
 fn main() -> @location(0) vec4<f32> {
-  return vec4<f32>(ubo.colour, 1.0);
+  return vec4<f32>(ubo.colour, ubo.opacity);
 }
   `;
 
@@ -52,9 +59,11 @@ fn main() -> @location(0) vec4<f32> {
   const fragmentUBO = bufferManager.createUniformBuffer(
     {
       colour: UniformType.Vec3,
+      opacity: UniformType.Scalar,
     },
     {
       colour: vec3.create(),
+      opacity: 1.0,
     },
   );
   return shaderManager.create({

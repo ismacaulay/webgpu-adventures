@@ -14,6 +14,7 @@
     createTransformComponent,
   } from 'toolkit/ecs/components';
   import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
+  import type { Shader } from 'toolkit/types/webgpu/shaders';
   import { DefaultBuffers } from 'toolkit/types/ecs/managers';
   import shaderVertSource from './shader.vert.wgsl';
   import shaderFragSource from './shader.frag.wgsl';
@@ -144,7 +145,7 @@
             bindings: shaderBindings,
           });
         }
-        const shader = shaderManager.get(cubeShaderId);
+        const shader = shaderManager.get<Shader>(cubeShaderId);
         shader.depthFunc = 'less';
         shader.stencilWriteMask = 0xff;
         shader.stencilReadMask = 0xff;
@@ -224,7 +225,7 @@
             bindings: outlineBindings,
           });
         }
-        const outlineShader = shaderManager.get(singleColourShaderId);
+        const outlineShader = shaderManager.get<Shader>(singleColourShaderId);
         outlineShader.depthWrite = false;
         outlineShader.depthFunc = 'always';
         outlineShader.stencilValue = 1;
@@ -322,7 +323,7 @@
           drawOrder: 1,
         }),
       );
-      const shader = shaderManager.get(planeShaderId);
+      const shader = shaderManager.get<Shader>(planeShaderId);
       shader.depthWrite = true;
       shader.depthFunc = 'less';
       shader.stencilReadMask = 0xff;

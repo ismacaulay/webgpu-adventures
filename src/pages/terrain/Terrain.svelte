@@ -13,9 +13,9 @@
   } from 'toolkit/ecs/components';
   import { BufferAttributeFormat, UniformType } from 'toolkit/types/webgpu/buffers';
   import type { IndexBufferDescriptor } from 'toolkit/types/webgpu/buffers';
-  import type { Colour3 } from 'toolkit/types/colour';
   import { inverseLerp } from 'toolkit/math';
   import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
+  import type { Shader } from 'toolkit/types/webgpu/shaders';
   import { DefaultBuffers } from 'toolkit/types/ecs/managers';
   import { Pane } from 'tweakpane';
   import { generateNoiseMap } from 'toolkit/math/noise';
@@ -91,6 +91,7 @@
 
       wireframe: false,
       lighting: true,
+      opacity: 1.0,
 
       light1_enabled: true,
       light1: { x: 0.33, y: 0.25, z: 0.9, w: 0.75 },
@@ -189,6 +190,7 @@
         {
           wireframe: UniformType.Bool,
           enable_lighting: UniformType.Bool,
+          opacity: UniformType.Scalar,
 
           light1_enabled: UniformType.Bool,
           light1: UniformType.Vec4,
@@ -198,6 +200,7 @@
         {
           wireframe: params.wireframe,
           enable_lighting: params.lighting,
+          opacity: params.opacity,
 
           light1_enabled: true,
           light1: fromTpVec4(params.light1),
@@ -277,13 +280,16 @@
         .on('change', updateGeometry);
       noiseSettings.addInput(params, 'heightMultiplier', { min: 1 }).on('change', updateGeometry);
 
-      const shader = shaderManager.get(shaderId);
+      const shader = shaderManager.get<Shader>(shaderId);
       const meshSettings = pane.addFolder({ title: 'mesh settings' });
       meshSettings.addInput(params, 'wireframe').on('change', () => {
         shader.update({ wireframe: params.wireframe });
       });
       meshSettings.addInput(params, 'lighting').on('change', () => {
         shader.update({ enable_lighting: params.lighting });
+      });
+      meshSettings.addInput(params, 'opacity', { min: 0, max: 1.0 }).on('change', () => {
+        shader.update({ opacity: params.opacity });
       });
 
       const lightSettings = pane.addFolder({ title: 'light settings' });
