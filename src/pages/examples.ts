@@ -29,7 +29,7 @@ import NoiseMap from './terrain/NoiseMap.svelte';
 // @ts-ignore
 import Terrain from './terrain/Terrain.svelte';
 // @ts-ignore
-import TransparencyBlending from './transparency/blending/Page.svelte';
+import Transparency from './transparency/Page.svelte';
 
 export default [
   { title: 'hello-world', component: HelloWorld },
@@ -48,5 +48,5 @@ export default [
   { title: 'terrain/noise-map', component: NoiseMap },
   { title: 'terrain/terrain', component: Terrain },
 
-  { title: 'transparency/blending', component: TransparencyBlending },
+  { title: 'transparency', component: Transparency },
 ];

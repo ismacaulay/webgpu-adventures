@@ -36,22 +36,26 @@
       const params = {
         cube: {
           wireframe: true,
-          colour: { r: 34, g: 160, b: 166 },
+          colour: { r: 210, g: 17, b: 25 },
           opacity: 0.5,
         },
         sphere: {
           wireframe: true,
           colour: { r: 14, g: 182, b: 32 },
-          opacity: 0.75,
+          opacity: 0.5,
+        },
+        cone: {
+          wireframe: true,
+          colour: { r: 98, g: 108, b: 236 },
+          opacity: 0.5,
         },
       };
       const { entityManager, bufferManager, shaderManager, textureManager, cameraController } = app;
 
       const camera = cameraController.camera;
-      vec3.set(camera.position, 0, 0, 3);
       camera.updateViewMatrix();
 
-      const { cube, sphere } = generateBentoBox(
+      const { cube, sphere, cone } = generateBentoBox(
         {
           entityManager,
           bufferManager,
@@ -60,8 +64,7 @@
         {
           cube: {
             transform: {
-              translation: [-2, 0, 0],
-              scale: [1, 2, 1],
+              translation: [-1.5, 0, 0],
             },
             material: {
               colour: fromTpColour(params.cube.colour),
@@ -70,10 +73,22 @@
             },
           },
           sphere: {
+            radius: 0.5,
             material: {
               colour: fromTpColour(params.sphere.colour),
               opacity: params.sphere.opacity,
               wireframe: params.sphere.wireframe,
+            },
+          },
+          cone: {
+            radius: 0.5,
+            transform: {
+              translation: [1.5, 0, 0],
+            },
+            material: {
+              colour: fromTpColour(params.cone.colour),
+              opacity: params.cone.opacity,
+              wireframe: params.cone.wireframe,
             },
           },
         },
@@ -116,6 +131,11 @@
         title: 'sphere',
         params: params.sphere,
         entity: sphere,
+      });
+      createBasicObjectControls(pane, {
+        title: 'cone',
+        params: params.cone,
+        entity: cone,
       });
     })();
 

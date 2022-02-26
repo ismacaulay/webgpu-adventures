@@ -26,3 +26,7 @@ export interface SphereObjectDescriptor extends BasicObjectDescriptor {
   sectors?: number;
   stacks?: number;
 }
+
+export interface ConeObjectDescriptor extends BasicObjectDescriptor {
+  radius?: number;
+}

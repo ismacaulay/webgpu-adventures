@@ -5,20 +5,8 @@ import {
 } from 'toolkit/ecs/components';
 import type { Managers, SphereObjectDescriptor } from 'toolkit/types/scenes';
 import { BufferAttributeFormat } from 'toolkit/types/webgpu/buffers';
+import { flattenVertices } from 'toolkit/utils/vertices';
 import { createBasicShader } from 'toolkit/webgpu/shaders/basic-shader';
-
-function flattenVertices(indices: ArrayLike<number>, vertices: ArrayLike<number>) {
-  const out = new Float32Array(indices.length * 3);
-  let idx = 0;
-  for (let i = 0; i < indices.length; ++i) {
-    idx = indices[i];
-    out[i * 3 + 0] = vertices[idx * 3 + 0];
-    out[i * 3 + 1] = vertices[idx * 3 + 1];
-    out[i * 3 + 2] = vertices[idx * 3 + 2];
-  }
-
-  return out;
-}
 
 // https://www.songho.ca/opengl/gl_sphere.html
 function generateSphereMesh(radius: number, sectors: number, stacks: number) {
