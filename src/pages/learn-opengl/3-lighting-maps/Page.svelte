@@ -18,6 +18,7 @@
   import { createBasicShader } from 'toolkit/webgpu/shaders/basic-shader';
   import cubeShaderSource from './shader.wgsl';
   import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
+  import type { Shader } from 'toolkit/types/webgpu/shaders';
   import { DefaultBuffers } from 'toolkit/types/ecs/managers';
   import { createScriptComponent } from 'toolkit/ecs/components/script';
 
@@ -187,7 +188,7 @@
         }),
       );
 
-      const cubeShader = shaderManager.get(cubeShaderId);
+      const cubeShader = shaderManager.get<Shader>(cubeShaderId);
       entityManager.addComponent(
         cubeEntity,
         createScriptComponent((dt: number) => {

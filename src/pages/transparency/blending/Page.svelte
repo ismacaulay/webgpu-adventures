@@ -6,10 +6,10 @@
   import type { Application } from 'pages/app';
   import { Pane } from 'tweakpane';
   import { vec3 } from 'gl-matrix';
-  import { generateBentoBox } from 'pages/utils/bento';
   import { fromTpColour } from 'pages/utils/tweak-pane-utils';
   import type { MaterialComponent } from 'toolkit/types/ecs/components';
   import { ComponentType } from 'toolkit/types/ecs/components';
+  import { generateBentoBox } from 'toolkit/utils/scenes/bento';
 
   let container: HTMLElement;
   let canvas: any;
@@ -37,8 +37,14 @@
       pane = new Pane({ title: 'application' });
       const params = {
         cube: {
+          wireframe: true,
           colour: { r: 34, g: 160, b: 166 },
           opacity: 0.5,
+        },
+        sphere: {
+          wireframe: true,
+          colour: { r: 14, g: 182, b: 32 },
+          opacity: 0.75,
         },
       };
       const { entityManager, bufferManager, shaderManager, textureManager, cameraController } = app;
@@ -47,7 +53,7 @@
       vec3.set(camera.position, 0, 0, 3);
       camera.updateViewMatrix();
 
-      const { cube } = generateBentoBox(
+      const { cube, sphere } = generateBentoBox(
         {
           entityManager,
           bufferManager,
@@ -55,7 +61,22 @@
         },
         {
           cube: {
-            material: { colour: fromTpColour(params.cube.colour), opacity: params.cube.opacity },
+            transform: {
+              translation: [-2, 0, 0],
+              scale: [1, 2, 1],
+            },
+            material: {
+              colour: fromTpColour(params.cube.colour),
+              opacity: params.cube.opacity,
+              wireframe: params.cube.wireframe,
+            },
+          },
+          sphere: {
+            material: {
+              colour: fromTpColour(params.sphere.colour),
+              opacity: params.sphere.opacity,
+              wireframe: params.sphere.wireframe,
+            },
           },
         },
       );
@@ -83,12 +104,20 @@
         folder.addInput(params, 'opacity', { min: 0.0, max: 1.0 }).on('change', () => {
           updateEntityMaterial(entity, { opacity: params.opacity });
         });
+        folder.addInput(params, 'wireframe').on('change', () => {
+          updateEntityMaterial(entity, { wireframe: params.wireframe });
+        });
       }
 
       createBasicObjectControls(pane, {
         title: 'cube',
         params: params.cube,
         entity: cube,
+      });
+      createBasicObjectControls(pane, {
+        title: 'sphere',
+        params: params.sphere,
+        entity: sphere,
       });
     })();
 

@@ -37,12 +37,14 @@ export function createBasicMaterialComponent(initial: {
   drawOrder?: number;
   colour?: Colour3;
   opacity?: number;
+  wireframe?: boolean;
 }): BasicMaterialComponent {
   const {
     shader,
     colour = Colours.Red,
     drawOrder = Number.MAX_SAFE_INTEGER,
     opacity = 1.0,
+    wireframe = false,
   } = initial;
   let needsUpdate = true;
 
@@ -59,6 +61,7 @@ export function createBasicMaterialComponent(initial: {
     uniforms: {
       colour,
       opacity,
+      wireframe,
     },
     drawOrder,
   };
