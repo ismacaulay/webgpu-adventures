@@ -8,6 +8,7 @@ import { generateCylinderMesh } from 'toolkit/primitives/cylinder';
 import { generateSphereMesh } from 'toolkit/primitives/sphere';
 import type { BufferManager, EntityManager, ShaderManager } from 'toolkit/types/ecs/managers';
 import { BufferAttributeFormat } from 'toolkit/types/webgpu/buffers';
+import { normalizeColour } from 'toolkit/utils/colour';
 import { createBasicShader } from 'toolkit/webgpu/shaders/basic-shader';
 
 const CORNERS: [number, number, number][] = [
@@ -32,6 +33,7 @@ export function setupCorners({
   bufferManager: BufferManager;
 }) {
   const sphereMesh = generateSphereMesh(1, 32, 32);
+  const colour: vec3 = normalizeColour([37, 116, 148]);
 
   for (let i = 0; i < CORNERS.length; ++i) {
     const entity = entityManager.create();
@@ -61,10 +63,7 @@ export function setupCorners({
       }),
     );
 
-    const sphereShaderId = createBasicShader(
-      { shaderManager, bufferManager },
-      { colour: [255, 0, 0] },
-    );
+    const sphereShaderId = createBasicShader({ shaderManager, bufferManager }, { colour });
     entityManager.addComponent(
       entity,
       createShaderMaterialComponent({
@@ -100,6 +99,7 @@ export function setupConnectingLines({
     [10, 0, 10],
     [-10, 0, 10],
   ];
+  const colour: vec3 = normalizeColour([191, 191, 191]);
 
   for (let i = 0; i < translations.length; ++i) {
     const entity = entityManager.create();
@@ -144,7 +144,7 @@ export function setupConnectingLines({
       }),
     );
 
-    const shaderId = createBasicShader({ shaderManager, bufferManager }, { colour: [0, 255, 0] });
+    const shaderId = createBasicShader({ shaderManager, bufferManager }, { colour });
     entityManager.addComponent(
       entity,
       createShaderMaterialComponent({
