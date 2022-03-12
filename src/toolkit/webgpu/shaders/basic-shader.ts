@@ -4,13 +4,16 @@ import { BufferManager, DefaultBuffers, ShaderManager } from 'toolkit/types/ecs/
 import { UniformType } from 'toolkit/types/webgpu/buffers';
 import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
 
-export function createBasicShader({
-  shaderManager,
-  bufferManager,
-}: {
-  shaderManager: ShaderManager;
-  bufferManager: BufferManager;
-}): ShaderId {
+export function createBasicShader(
+  {
+    shaderManager,
+    bufferManager,
+  }: {
+    shaderManager: ShaderManager;
+    bufferManager: BufferManager;
+  },
+  material?: { colour?: vec3 },
+): ShaderId {
   const vertexSource = `
 @group(0) @binding(0)
 var<uniform> model: mat4x4<f32>;
@@ -54,7 +57,7 @@ fn main() -> @location(0) vec4<f32> {
       colour: UniformType.Vec3,
     },
     {
-      colour: vec3.create(),
+      colour: material?.colour ?? vec3.create(),
     },
   );
   return shaderManager.create({
