@@ -4,18 +4,10 @@
   import Canvas from 'components/Canvas.svelte';
   import { createApp } from 'pages/app';
   import type { Application } from 'pages/app';
-  import { CameraControls, CameraType } from 'toolkit/types/camera';
+  import { CameraType } from 'toolkit/types/camera';
   import type { OrthographicCamera } from 'toolkit/types/camera';
   import { Pane } from 'tweakpane';
-  import {
-    createMeshGeometryComponent,
-    createShaderMaterialComponent,
-    createTransformComponent,
-  } from 'toolkit/ecs/components';
-  import { generateSphereMesh } from 'toolkit/primitives/sphere';
-  import { BufferAttributeFormat } from 'toolkit/types/webgpu/buffers';
-  import { createBasicShader } from 'toolkit/webgpu/shaders/basic-shader';
-  import type { Shader } from 'toolkit/types/webgpu/shaders';
+  import { setupConnectingLines, setupCorners } from './scene';
 
   let container: HTMLElement;
   let canvas: any;
@@ -52,62 +44,10 @@
 
       cameraController.activeCamera = CameraType.Orthographic;
       const camera = cameraController.camera as OrthographicCamera;
-      camera.zoom = 0.1
+      camera.zoom = 0.1;
 
-      const spherePositions: [number, number, number][] = [
-        [-10, -10, -10],
-        [10, -10, -10],
-        [10, 10, -10],
-        [-10, 10, -10],
-
-        [-10, -10, 10],
-        [10, -10, 10],
-        [10, 10, 10],
-        [-10, 10, 10],
-      ];
-
-      const sphereMesh = generateSphereMesh(1, 32, 32);
-
-      // TODO: setup geometry instancing
-      for (let i = 0; i < spherePositions.length; ++i) {
-        const entity = entityManager.create();
-
-        entityManager.addComponent(
-          entity,
-          createTransformComponent({
-            translation: spherePositions[i],
-          }),
-        );
-
-        entityManager.addComponent(
-          entity,
-          createMeshGeometryComponent({
-            count: sphereMesh.vertices.length / 3,
-            buffers: [
-              {
-                array: sphereMesh.vertices,
-                attributes: [
-                  {
-                    location: 0,
-                    format: BufferAttributeFormat.Float32x3,
-                  },
-                ],
-              },
-            ],
-          }),
-        );
-
-        const sphereShaderId = createBasicShader(
-          { shaderManager, bufferManager },
-          { colour: [255, 0, 0] },
-        );
-        entityManager.addComponent(
-          entity,
-          createShaderMaterialComponent({
-            shader: sphereShaderId,
-          }),
-        );
-      }
+      setupCorners({ entityManager, shaderManager, bufferManager });
+      setupConnectingLines({ entityManager, shaderManager, bufferManager });
     })();
 
     return () => {
