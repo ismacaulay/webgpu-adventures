@@ -106,7 +106,7 @@ export async function createApp(
     rafId = requestAnimationFrame(render);
   }
 
-  return {
+  const app = {
     entityManager,
     bufferManager,
     textureManager,
@@ -138,11 +138,14 @@ export async function createApp(
       cameraController.destroy();
     },
 
-    onRenderBegin(cb) {
+    onRenderBegin(cb: any) {
       _onRenderBegin = cb;
     },
-    onRenderEnd(cb) {
+    onRenderEnd(cb: any) {
       _onRenderEnd = cb;
     },
   };
+
+  (window as any).app = app;
+  return app;
 }

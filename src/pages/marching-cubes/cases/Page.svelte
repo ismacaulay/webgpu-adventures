@@ -14,6 +14,7 @@
   import type { MaterialComponent } from 'toolkit/types/ecs/components';
   import type { Shader } from 'toolkit/types/webgpu/shaders';
   import type { GenericObject } from 'toolkit/types/generic';
+  import { vec3 } from 'gl-matrix';
 
   let container: HTMLElement;
   let canvas: any;
@@ -45,6 +46,8 @@
       cameraController.activeCamera = CameraType.Orthographic;
       const camera = cameraController.camera as OrthographicCamera;
       camera.zoom = 0.1;
+      vec3.set(camera.position, 2.5, 1.3, 4);
+      camera.updateViewMatrix();
 
       const { corners, entityToCorner } = setupCorners({
         entityManager,
