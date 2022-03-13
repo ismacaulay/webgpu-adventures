@@ -7,20 +7,32 @@ import {
 import { generateCylinderMesh } from 'toolkit/primitives/cylinder';
 import { generateSphereMesh } from 'toolkit/primitives/sphere';
 import type { BufferManager, EntityManager, ShaderManager } from 'toolkit/types/ecs/managers';
+import type { GenericObject } from 'toolkit/types/generic';
 import { BufferAttributeFormat } from 'toolkit/types/webgpu/buffers';
 import { normalizeColour } from 'toolkit/utils/colour';
 import { createBasicShader } from 'toolkit/webgpu/shaders/basic-shader';
 
 const CORNERS: [number, number, number][] = [
-  [-10, -10, -10],
-  [10, -10, -10],
-  [10, 10, -10],
-  [-10, 10, -10],
-
   [-10, -10, 10],
   [10, -10, 10],
   [10, 10, 10],
   [-10, 10, 10],
+
+  [-10, -10, -10],
+  [10, -10, -10],
+  [10, 10, -10],
+  [-10, 10, -10],
+];
+
+export const CORNER_IDS = [
+  'corner 0',
+  'corner 1',
+  'corner 2',
+  'corner 3',
+  'corner 4',
+  'corner 5',
+  'corner 6',
+  'corner 7',
 ];
 
 export function setupCorners({
@@ -34,11 +46,14 @@ export function setupCorners({
 }) {
   const sphereMesh = generateSphereMesh(1, 32, 32);
   const colour: vec3 = normalizeColour([37, 116, 148]);
-  const entities: number[] = [];
+  const corners: GenericObject<number> = {};
+  const entityToCorner: GenericObject<string> = {};
 
   for (let i = 0; i < CORNERS.length; ++i) {
     const entity = entityManager.create();
-    entities.push(entity);
+
+    corners[CORNER_IDS[i]] = entity;
+    entityToCorner[entity] = CORNER_IDS[i];
 
     entityManager.addComponent(
       entity,
@@ -73,6 +88,8 @@ export function setupCorners({
       }),
     );
   }
+
+  return { corners, entityToCorner };
 }
 
 export function setupConnectingLines({

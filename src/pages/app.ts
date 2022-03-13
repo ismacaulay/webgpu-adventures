@@ -22,6 +22,7 @@ import { createEventController } from 'toolkit/events/event-controller';
 import type { EventController } from 'toolkit/types/events';
 import { createSelectionController } from 'toolkit/webgpu/selection-controller';
 import { noop } from 'svelte/internal';
+import type { SelectionController } from 'toolkit/types/events/selection';
 
 export interface Application {
   entityManager: EntityManager;
@@ -31,6 +32,7 @@ export interface Application {
 
   eventController: EventController;
   cameraController: CameraController;
+  selectionController: SelectionController;
 
   renderSystem: RenderSystem;
 

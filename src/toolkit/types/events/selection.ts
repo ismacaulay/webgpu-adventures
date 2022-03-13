@@ -1,3 +1,5 @@
+import type { Unsubscriber } from '.';
+
 export enum SelectionEventType {
   Selected = 'selected',
   Cleared = 'cleared',
@@ -20,3 +22,7 @@ export interface ClearedSelectionEvent extends BaseSelectionEvent {
 export type SelectionEvent = SelectedSelectionEvent | ClearedSelectionEvent;
 
 export type SelectionEventHandler = (e: SelectionEvent) => void;
+
+export interface SelectionController {
+  on(handler: SelectionEventHandler): Unsubscriber;
+}
