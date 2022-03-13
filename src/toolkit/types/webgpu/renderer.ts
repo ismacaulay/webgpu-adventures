@@ -1,3 +1,4 @@
+import type { vec2 } from 'gl-matrix';
 import type { IndexBuffer, VertexBuffer } from './buffers';
 import type { PostProcessingShader, Shader } from './shaders';
 
@@ -55,6 +56,8 @@ export interface Renderer {
   begin(): void;
   submit(command: RenderCommand | BufferCommand | PostProcessingCommand): void;
   finish(): void;
+
+  pick(pos: vec2): Promise<{ entity: number | undefined }>;
 
   destroy(): void;
 }

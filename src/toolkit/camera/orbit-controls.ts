@@ -124,6 +124,8 @@ export function createOrbitControls(element: HTMLElement, initialState: { camera
   }
 
   function handleMouseWheel(e: WheelEvent) {
+    e.preventDefault();
+
     // perspective camera can be moved (dolly) closer/further to be zoon
     if (camera.type === CameraType.Perspective) {
       if (e.deltaY < 0) {

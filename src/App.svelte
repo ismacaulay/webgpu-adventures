@@ -17,7 +17,7 @@
   /* chrome canary overflows with height 100 */
   .container {
     width: 100vw;
-    height: 99vh;
+    height: 100vh;
   }
 </style>
 

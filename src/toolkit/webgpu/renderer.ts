@@ -11,6 +11,7 @@ import {
 import { createBindGroups, createPipeline } from './utils';
 import quadShaderSource from './shaders/quad.wgsl';
 import { createVertexBuffer } from './buffers';
+import type { vec2 } from 'gl-matrix';
 
 export async function createRenderer(canvas: HTMLCanvasElement): Promise<Renderer> {
   const gpu: GPU | undefined = navigator.gpu;
@@ -47,6 +48,18 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
     usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
   });
   let renderTargetView = renderTarget.createView();
+
+  const objectIdTextureFormat: GPUTextureFormat = 'r8unorm';
+  let objectIdTexture = device.createTexture({
+    size: presentationSize,
+    format: objectIdTextureFormat,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+  });
+  let objectIdView = objectIdTexture.createView();
+  const pickBuffer = device.createBuffer({
+    size: 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
 
   // create the depth texture
   let depthTexture = device.createTexture({
@@ -173,6 +186,14 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         });
         renderTargetView = renderTarget.createView();
 
+        objectIdTexture.destroy();
+        objectIdTexture = device.createTexture({
+          size: presentationSize,
+          format: objectIdTextureFormat,
+          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+        });
+        objectIdView = objectIdTexture.createView();
+
         depthTexture.destroy();
         depthTexture = device.createTexture({
           size: presentationSize,
@@ -251,6 +272,12 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
               loadOp: 'clear',
               storeOp: 'store',
             },
+            {
+              view: objectIdView,
+              clearValue: [255, 255, 255, 255],
+              loadOp: 'clear',
+              storeOp: 'store',
+            },
           ],
           depthStencilAttachment: {
             view: depthTextureView,
@@ -283,7 +310,13 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
 
           let pipeline = pipelineCache[shader.id];
           if (!pipeline || shader.needsUpdate) {
-            pipeline = createPipeline(device, presentationFormat, shader, buffers);
+            pipeline = createPipeline(
+              device,
+              presentationFormat,
+              objectIdTextureFormat,
+              shader,
+              buffers,
+            );
             pipelineCache[shader.id] = pipeline;
           }
 
@@ -459,10 +492,32 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
       needsUpdate = false;
     },
 
+    async pick(pos: vec2) {
+      const [x, y] = pos;
+      // copy the pixel from the objectIdTexture to the pick buffer
+      const commandEncoder = device.createCommandEncoder();
+      commandEncoder.copyTextureToBuffer(
+        { texture: objectIdTexture, origin: { x: x * devicePixelRatio, y: y * devicePixelRatio } },
+        { buffer: pickBuffer },
+        [1],
+      );
+      device.queue.submit([commandEncoder.finish()]);
+
+      // once the command is finished we can read the data from the buffer
+      return pickBuffer.mapAsync(GPUBufferUsage.MAP_READ).then(() => {
+        const data = new Uint8Array(pickBuffer.getMappedRange());
+        const objectId = data[0];
+
+        pickBuffer.unmap();
+        return { entity: objectId !== 255 ? objectId : undefined };
+      });
+    },
+
     destroy() {
       depthTexture.destroy();
       renderTarget.destroy();
-
+      objectIdTexture.destroy();
+      pickBuffer.destroy();
       Object.values(postProcessingOutputTextures).forEach(({ texture }) => {
         texture.destroy();
       });

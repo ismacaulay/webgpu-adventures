@@ -34,9 +34,11 @@ export function setupCorners({
 }) {
   const sphereMesh = generateSphereMesh(1, 32, 32);
   const colour: vec3 = normalizeColour([37, 116, 148]);
+  const entities: number[] = [];
 
   for (let i = 0; i < CORNERS.length; ++i) {
     const entity = entityManager.create();
+    entities.push(entity);
 
     entityManager.addComponent(
       entity,
@@ -63,7 +65,7 @@ export function setupCorners({
       }),
     );
 
-    const sphereShaderId = createBasicShader({ shaderManager, bufferManager }, { colour });
+    const sphereShaderId = createBasicShader({ shaderManager, bufferManager }, { entity, colour });
     entityManager.addComponent(
       entity,
       createShaderMaterialComponent({

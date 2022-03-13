@@ -18,12 +18,18 @@ import type {
 } from 'toolkit/types/ecs/managers';
 import { createMovementSystem } from 'toolkit/ecs/systems/movement';
 import type { RenderSystem } from 'toolkit/types/ecs/systems';
+import { createEventController } from 'toolkit/events/event-controller';
+import type { EventController } from 'toolkit/types/events';
+import { createSelectionController } from 'toolkit/webgpu/selection-controller';
+import { noop } from 'svelte/internal';
 
 export interface Application {
   entityManager: EntityManager;
   bufferManager: BufferManager;
   textureManager: TextureManager;
   shaderManager: ShaderManager;
+
+  eventController: EventController;
   cameraController: CameraController;
 
   renderSystem: RenderSystem;
@@ -46,6 +52,8 @@ export async function createApp(
 ): Promise<Application> {
   const renderer = await createRenderer(canvas);
 
+  const eventController = createEventController(canvas);
+
   const cameraController = createCameraController(canvas, initial?.camera);
   const camera = cameraController.camera;
   vec3.set(camera.position, ...(initial?.camera?.position ?? [0, 0, 5]));
@@ -67,10 +75,17 @@ export async function createApp(
   });
   const movementSystem = createMovementSystem(entityManager);
 
+  const selectionController = createSelectionController({
+    eventController,
+    entityManager,
+    shaderManager,
+    renderer,
+  });
+
   let rafId: number;
   let lastTime = performance.now();
-  let _onRenderBegin = () => {};
-  let _onRenderEnd = () => {};
+  let _onRenderBegin = noop;
+  let _onRenderEnd = noop;
   function render() {
     const now = performance.now();
     const dt = (now - lastTime) / 1000;
@@ -95,7 +110,9 @@ export async function createApp(
     textureManager,
     shaderManager,
 
+    eventController,
     cameraController,
+    selectionController,
 
     renderSystem,
 
@@ -107,6 +124,8 @@ export async function createApp(
       if (rafId) {
         cancelAnimationFrame(rafId);
       }
+
+      selectionController.destroy();
 
       shaderManager.destroy();
       textureManager.destroy();

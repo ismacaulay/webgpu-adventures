@@ -8,6 +8,8 @@
   import type { OrthographicCamera } from 'toolkit/types/camera';
   import { Pane } from 'tweakpane';
   import { setupConnectingLines, setupCorners } from './scene';
+  import type { Unsubscriber } from 'toolkit/types/events';
+  import { SelectionEventType } from 'toolkit/types/events/selection';
 
   let container: HTMLElement;
   let canvas: any;
@@ -15,6 +17,7 @@
   onMount(() => {
     let app: Application;
     let pane: Pane;
+    let unsubs: Unsubscriber[] = [];
 
     (async () => {
       const stats = new (Stats as any)();
@@ -37,7 +40,9 @@
         entityManager,
         bufferManager,
         shaderManager,
+        eventController,
         textureManager,
+        selectionController,
         cameraController,
         renderSystem,
       } = app;
@@ -46,14 +51,28 @@
       const camera = cameraController.camera as OrthographicCamera;
       camera.zoom = 0.1;
 
-      setupCorners({ entityManager, shaderManager, bufferManager });
+      setupCorners({
+        entityManager,
+        shaderManager,
+        bufferManager,
+      });
       setupConnectingLines({ entityManager, shaderManager, bufferManager });
+
+      selectionController.on((e) => {
+        if (e.type === SelectionEventType.Selected) {
+          console.log(e);
+        } else if (e.type === SelectionEventType.Cleared) {
+          console.log(e);
+        }
+      });
     })();
 
     return () => {
       if (app) {
         app.destroy();
         pane.dispose();
+
+        unsubs.forEach((unsub) => unsub());
       }
     };
   });
