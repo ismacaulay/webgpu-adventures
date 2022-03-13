@@ -46,13 +46,16 @@ export interface Application {
 export async function createApp(
   canvas: HTMLCanvasElement,
   initial?: {
+    renderer?: {
+      enablePicking?: boolean;
+    };
     camera?: {
       controls?: CameraControls;
       position?: [number, number, number];
     };
   },
 ): Promise<Application> {
-  const renderer = await createRenderer(canvas);
+  const renderer = await createRenderer(canvas, initial?.renderer);
 
   const eventController = createEventController(canvas);
 
@@ -77,7 +80,7 @@ export async function createApp(
   });
   const movementSystem = createMovementSystem(entityManager);
 
-  const selectionController = createSelectionController({
+  const selectionController = createSelectionController(initial?.renderer?.enablePicking ?? false, {
     eventController,
     entityManager,
     shaderManager,

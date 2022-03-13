@@ -144,7 +144,7 @@ export function createFreeControls(
     updateCamera();
   }
 
-  canvas.addEventListener('mousedown', onClick, false);
+  canvas.addEventListener('click', onClick, false);
   document.addEventListener('pointerlockchange', onPointerLockChanged, false);
   document.addEventListener('pointerlockerror', onPointerLockError, false);
   document.addEventListener('keydown', onKeyDown, false);
@@ -174,14 +174,14 @@ export function createFreeControls(
       vec3.add(camera.position, camera.position, dir);
       updateCamera();
     },
+
     destroy() {
+      canvas.removeEventListener('click', onClick, false);
       document.removeEventListener('keydown', onKeyDown, false);
       document.removeEventListener('keyup', onKeyUp, false);
       document.removeEventListener('mousemove', onMouseMove, false);
       document.removeEventListener('pointerlockchange', onPointerLockChanged, false);
       document.removeEventListener('pointerlockerror', onPointerLockError, false);
-
-      canvas.removeEventListener('click', onClick, false);
     },
   };
 }

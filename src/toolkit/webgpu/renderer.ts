@@ -13,7 +13,12 @@ import quadShaderSource from './shaders/quad.wgsl';
 import { createVertexBuffer } from './buffers';
 import type { vec2 } from 'gl-matrix';
 
-export async function createRenderer(canvas: HTMLCanvasElement): Promise<Renderer> {
+export async function createRenderer(
+  canvas: HTMLCanvasElement,
+  options?: { enablePicking?: boolean },
+): Promise<Renderer> {
+  const enablePicking = options?.enablePicking ?? false;
+
   const gpu: GPU | undefined = navigator.gpu;
   if (!gpu) {
     throw new Error('WebGPU not supported in this browser');
@@ -263,22 +268,26 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
 
       // render the scene to the render target
       {
+        const colorAttachments: GPURenderPassColorAttachment[] = [
+          {
+            view: renderTargetView,
+            // resolveTarget: sceneTextureView,
+            clearValue: [0, 0, 0, 1],
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        ];
+
+        if (enablePicking) {
+          colorAttachments.push({
+            view: objectIdView,
+            clearValue: [255, 255, 255, 255],
+            loadOp: 'clear',
+            storeOp: 'store',
+          });
+        }
         const passEncoder = commandEncoder.beginRenderPass({
-          colorAttachments: [
-            {
-              view: renderTargetView,
-              // resolveTarget: sceneTextureView,
-              clearValue: [0, 0, 0, 1],
-              loadOp: 'clear',
-              storeOp: 'store',
-            },
-            {
-              view: objectIdView,
-              clearValue: [255, 255, 255, 255],
-              loadOp: 'clear',
-              storeOp: 'store',
-            },
-          ],
+          colorAttachments,
           depthStencilAttachment: {
             view: depthTextureView,
 
@@ -316,6 +325,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
               objectIdTextureFormat,
               shader,
               buffers,
+              enablePicking,
             );
             pipelineCache[shader.id] = pipeline;
           }

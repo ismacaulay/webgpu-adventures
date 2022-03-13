@@ -31,7 +31,7 @@
 
       pane = new Pane({ title: 'settings' });
 
-      app = await createApp(canvas.getElement());
+      app = await createApp(canvas.getElement(), { renderer: { enablePicking: true } });
       app.onRenderBegin(() => {
         stats.begin();
       });
