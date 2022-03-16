@@ -32,7 +32,7 @@ export interface DrawCommand extends BaseRenderCommand {
 
 export interface WriteBufferCommand extends BaseRenderCommand {
   type: RenderCommandType.WriteBuffer;
-  src: Float32Array | Float64Array;
+  src: Float32Array | Float64Array | Uint16Array | Uint32Array;
   dst: GPUBuffer;
 }
 

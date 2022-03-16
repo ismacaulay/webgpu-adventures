@@ -1,9 +1,10 @@
-import type { vec3 } from 'gl-matrix';
+import { vec3 } from 'gl-matrix';
 import {
   createMeshGeometryComponent,
   createShaderMaterialComponent,
   createTransformComponent,
 } from 'toolkit/ecs/components';
+import { EDGE_TO_CORNER_LOOKUP } from 'toolkit/marching-cubes/tables';
 import { generateCylinderMesh } from 'toolkit/primitives/cylinder';
 import { generateSphereMesh } from 'toolkit/primitives/sphere';
 import type { BufferManager, EntityManager, ShaderManager } from 'toolkit/types/ecs/managers';
@@ -13,15 +14,15 @@ import { normalizeColour } from 'toolkit/utils/colour';
 import { createBasicShader } from 'toolkit/webgpu/shaders/basic-shader';
 
 const CORNERS: [number, number, number][] = [
-  [-10, -10, 10],
-  [10, -10, 10],
-  [10, 10, 10],
-  [-10, 10, 10],
-
   [-10, -10, -10],
   [10, -10, -10],
-  [10, 10, -10],
+  [10, -10, 10],
+  [-10, -10, 10],
+
   [-10, 10, -10],
+  [10, 10, -10],
+  [10, 10, 10],
+  [-10, 10, 10],
 ];
 
 export const CORNER_IDS = [
@@ -46,13 +47,13 @@ export function setupCorners({
 }) {
   const sphereMesh = generateSphereMesh(1, 32, 32);
   const colour: vec3 = normalizeColour([37, 116, 148]);
-  const corners: GenericObject<number> = {};
+  const corners: number[] = [];
   const entityToCorner: GenericObject<string> = {};
 
   for (let i = 0; i < CORNERS.length; ++i) {
     const entity = entityManager.create();
 
-    corners[CORNER_IDS[i]] = entity;
+    corners.push(entity);
     entityToCorner[entity] = CORNER_IDS[i];
 
     entityManager.addComponent(
@@ -171,4 +172,60 @@ export function setupConnectingLines({
       }),
     );
   }
+}
+
+export function setupSurface({
+  entityManager,
+  shaderManager,
+  bufferManager,
+}: {
+  entityManager: EntityManager;
+  shaderManager: ShaderManager;
+  bufferManager: BufferManager;
+}) {
+  const entity = entityManager.create();
+  entityManager.addComponent(entity, createTransformComponent({}));
+
+  const vertices = new Float32Array(EDGE_TO_CORNER_LOOKUP.length * 3);
+  const p = vec3.create();
+  for (let i = 0; i < EDGE_TO_CORNER_LOOKUP.length; ++i) {
+    const [a, b] = EDGE_TO_CORNER_LOOKUP[i];
+    vec3.lerp(p, CORNERS[a], CORNERS[b], 0.5);
+
+    vertices[i * 3 + 0] = p[0];
+    vertices[i * 3 + 1] = p[1];
+    vertices[i * 3 + 2] = p[2];
+  }
+
+  entityManager.addComponent(
+    entity,
+    createMeshGeometryComponent({
+      indices: new Uint32Array(13),
+      count: 0,
+      buffers: [
+        {
+          array: vertices,
+          attributes: [
+            {
+              location: 0,
+              format: BufferAttributeFormat.Float32x3,
+            },
+          ],
+        },
+      ],
+    }),
+  );
+
+  const shaderId = createBasicShader(
+    { shaderManager, bufferManager },
+    { colour: normalizeColour([164, 35, 207]) },
+  );
+  entityManager.addComponent(
+    entity,
+    createShaderMaterialComponent({
+      shader: shaderId,
+    }),
+  );
+
+  return entity;
 }

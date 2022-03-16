@@ -7,7 +7,7 @@ export function createIndexBuffer(
 ): IndexBuffer {
   const format: GPUIndexFormat = descriptor.array instanceof Uint16Array ? 'uint16' : 'uint32';
   const data = descriptor.array;
-  const buffer = createBuffer(device, data, GPUBufferUsage.INDEX);
+  const buffer = createBuffer(device, data, GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST);
 
   return {
     type: BufferType.Index,
