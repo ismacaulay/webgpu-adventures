@@ -12,6 +12,7 @@ import type { GenericObject } from 'toolkit/types/generic';
 import { BufferAttributeFormat } from 'toolkit/types/webgpu/buffers';
 import { normalizeColour } from 'toolkit/utils/colour';
 import { createBasicShader } from 'toolkit/webgpu/shaders/basic-shader';
+import { createDiffuseShader } from 'toolkit/webgpu/shaders/diffuse-shader';
 
 const CORNERS: [number, number, number][] = [
   [-10, -10, -10],
@@ -216,8 +217,16 @@ export function setupSurface({
     }),
   );
 
-  const shaderId = createBasicShader(
+  const shaderId = createDiffuseShader(
     { shaderManager, bufferManager },
+    [
+      // { position: [0.33, 0.25, 0.9], intensity: 0.75 },
+      // { position: [-0.55, -0.25, -0.79], intensity: 0.75 },
+      { position: [-1, 1, -1], intensity: 0.75 },
+      { position: [1, -1, 1], intensity: 0.75 },
+      { position: [-1, -1, 1], intensity: 0.75 },
+      { position: [1, 1, -1], intensity: 0.75 },
+    ],
     { colour: normalizeColour([164, 35, 207]) },
   );
   entityManager.addComponent(
