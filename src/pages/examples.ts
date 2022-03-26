@@ -15,6 +15,7 @@ import NoiseMap from './terrain/NoiseMap.svelte';
 import Terrain from './terrain/Terrain.svelte';
 
 import MarchingCubesCases from './marching-cubes/cases/Page.svelte';
+import MarchingCubesSmallMesh from './marching-cubes/small-mesh/Page.svelte';
 
 export default [
   { title: 'hello-world', component: HelloWorld },
@@ -34,4 +35,5 @@ export default [
   { title: 'terrain/terrain', component: Terrain },
 
   { title: 'marching-cubes/cases', component: MarchingCubesCases },
+  { title: 'marching-cubes/small-mesh', component: MarchingCubesSmallMesh },
 ];

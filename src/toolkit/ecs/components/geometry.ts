@@ -10,7 +10,7 @@ export function createMeshGeometryComponent({
   indices?: Uint16Array | Uint32Array;
   buffers: VertexBufferDescriptor[];
   count: number;
-  instances: number;
+  instances?: number;
 }): MeshGeometryComponent {
   let indexDescriptor: IndexBufferDescriptor | undefined = undefined;
   if (indices) {

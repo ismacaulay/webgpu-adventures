@@ -1,21 +1,29 @@
 import { mat4, vec3, vec4 } from 'gl-matrix';
 import type { ShaderId } from 'toolkit/types/ecs/components';
-import { BufferManager, DefaultBuffers, ShaderManager } from 'toolkit/types/ecs/managers';
+import {
+  BufferManager,
+  DefaultBuffers,
+  ShaderManager,
+  TextureManager,
+} from 'toolkit/types/ecs/managers';
 import { UniformType } from 'toolkit/types/webgpu/buffers';
 import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
-import { normalizeColour } from 'toolkit/utils/colour';
+import { convertColourMapToBuffer, VIRIDIS } from 'toolkit/utils/colour-map';
 
-export function createDiffuseShader(
+export async function createShader(
   {
     shaderManager,
     bufferManager,
+    textureManager,
   }: {
     shaderManager: ShaderManager;
     bufferManager: BufferManager;
+    textureManager: TextureManager;
   },
   lights: { position: vec3; intensity: number }[],
+  params: { groundLevel: number },
   material?: { entity?: number; colour?: vec3 },
-): ShaderId {
+): Promise<ShaderId> {
   const vertexSource = `
 @group(0) @binding(0)
 var<uniform> model: mat4x4<f32>;
@@ -30,13 +38,24 @@ var<uniform> m: Matrices;
 struct VertexOut {
   @builtin(position) position: vec4<f32>;
   @location(0) position_eye: vec4<f32>;
+  @location(1) noise: f32;
+  @location(2) value: f32;
 }
 
 @stage(vertex)
-fn main(@location(0) position: vec3<f32>) -> VertexOut {
+fn main(
+  @location(0) vertex_pos: vec3<f32>,
+  @location(1) pos: vec3<f32>,
+  @location(2) noise: f32,
+  @location(3) value: f32,
+) -> VertexOut {
+  var position = vec4<f32>(vertex_pos + pos, 1.0);
+
   var out: VertexOut;
-  out.position = m.projection * m.view * model * vec4<f32>(position, 1.0);
-  out.position_eye = m.view * model * vec4<f32>(position, 1.0);
+  out.position = m.projection * m.view * model * position;
+  out.position_eye = m.view * model * position;
+  out.noise = noise;
+  out.value = value;
   return out;
 }
 `;
@@ -46,15 +65,18 @@ struct UBO {
   entity_id: f32;
 
   colour: vec3<f32>;
-
-  selected: f32;
-  selected_colour: vec3<f32>;
+  groundLevel: f32;
 
   lights: array<vec4<f32>, 5>;
   num_lights: f32;
 }
 @group(0) @binding(2)
 var<uniform> u: UBO;
+
+@group(0) @binding(3)
+var u_sampler: sampler;
+@group(0) @binding(4)
+var u_texture: texture_2d<f32>;
 
 struct FragmentOut {
   @location(0) colour: vec4<f32>;
@@ -63,14 +85,15 @@ struct FragmentOut {
 
 @stage(fragment)
 fn main(
-  @location(0) position_eye: vec4<f32>
+  @location(0) position_eye: vec4<f32>,
+  @location(1) noise: f32,
+  @location(2) value: f32,
 ) -> FragmentOut {
-  var colour = vec3<f32>(0.0);
+  // var colour = u.colour;
+  var colour = textureSample(u_texture, u_sampler, vec2<f32>(1.0-value, 0.5)).rgb;
 
-  if (u.selected > 0.0) {
-    colour = u.selected_colour;
-  } else {
-    colour = u.colour;
+  if (noise < u.groundLevel) {
+    discard;
   }
 
   var kd = 0.0;
@@ -106,8 +129,7 @@ fn main(
 
       colour: UniformType.Vec3,
 
-      selected: UniformType.Bool,
-      selected_colour: UniformType.Vec3,
+      groundLevel: UniformType.Scalar,
 
       lights: [UniformType.Vec4, 5],
       num_lights: UniformType.Scalar,
@@ -117,8 +139,7 @@ fn main(
 
       colour: material?.colour ?? vec3.create(),
 
-      selected: false,
-      selected_colour: normalizeColour([37, 245, 10]),
+      groundLevel: params.groundLevel,
 
       num_lights: lights.length,
       lights: lights.map((l) => {
@@ -127,6 +148,20 @@ fn main(
       }),
     },
   );
+
+  const sampler = textureManager.createSampler({
+    magFilter: 'linear',
+    minFilter: 'linear',
+  });
+  const { data: colourMap, shape } = convertColourMapToBuffer(VIRIDIS);
+  const textureId = await textureManager.createTexture({
+    resource: {
+      buffer: colourMap,
+      shape,
+    },
+    format: 'rgba8unorm',
+  });
+
   return shaderManager.create({
     vertex: {
       source: vertexSource,
@@ -148,6 +183,14 @@ fn main(
       {
         type: ShaderBindingType.UniformBuffer,
         resource: fragmentUBO,
+      },
+      {
+        type: ShaderBindingType.Sampler,
+        resource: sampler,
+      },
+      {
+        type: ShaderBindingType.Texture,
+        resource: textureId,
       },
     ],
   });

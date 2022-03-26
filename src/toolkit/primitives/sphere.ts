@@ -1,4 +1,4 @@
-import {flattenVertices} from "toolkit/utils/geometry";
+import { flattenVertices } from 'toolkit/utils/geometry';
 
 // https://www.songho.ca/opengl/gl_sphere.html
 export function generateSphereMesh(radius: number, sectors: number, stacks: number) {
