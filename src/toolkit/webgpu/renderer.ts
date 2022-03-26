@@ -43,6 +43,7 @@ export async function createRenderer(
     device,
     size: presentationSize,
     format: presentationFormat,
+    compositingAlphaMode: 'opaque',
   });
 
   // setup the render target
@@ -180,6 +181,7 @@ export async function createRenderer(
           device,
           size: presentationSize,
           format: presentationFormat,
+          compositingAlphaMode: 'opaque',
         });
 
         renderTarget.destroy();
@@ -315,7 +317,7 @@ export async function createRenderer(
         for (let i = 0; i < draws.length; ++i) {
           const command = draws[i];
 
-          const { shader, buffers, count, indices } = command;
+          const { shader, buffers, count, instances, indices } = command;
 
           let pipeline = pipelineCache[shader.id];
           if (!pipeline || shader.needsUpdate) {
@@ -350,9 +352,9 @@ export async function createRenderer(
 
           if (indices) {
             passEncoder.setIndexBuffer(indices.buffer, indices.format);
-            passEncoder.drawIndexed(count, 1, 0, 0, 0);
+            passEncoder.drawIndexed(count, instances, 0, 0, 0);
           } else {
-            passEncoder.draw(count, 1, 0, 0);
+            passEncoder.draw(count, instances, 0, 0);
           }
 
           shader.needsUpdate = false;

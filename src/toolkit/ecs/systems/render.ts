@@ -142,6 +142,7 @@ export function createRenderSystem(
           indices,
           buffers: vertexBuffers,
           count: geometry.count,
+          instances: geometry.instances,
           priority: material.drawOrder,
         });
 

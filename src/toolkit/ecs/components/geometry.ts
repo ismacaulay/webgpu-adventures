@@ -5,10 +5,12 @@ export function createMeshGeometryComponent({
   indices,
   buffers,
   count,
+  instances = 1,
 }: {
   indices?: Uint16Array | Uint32Array;
   buffers: VertexBufferDescriptor[];
   count: number;
+  instances: number;
 }): MeshGeometryComponent {
   let indexDescriptor: IndexBufferDescriptor | undefined = undefined;
   if (indices) {
@@ -32,5 +34,6 @@ export function createMeshGeometryComponent({
     buffers,
 
     count,
+    instances,
   };
 }

@@ -27,6 +27,7 @@ export interface DrawCommand extends BaseRenderCommand {
   indices?: IndexBuffer;
   buffers: VertexBuffer[];
   count: number;
+  instances: number;
   priority: number;
 }
 

@@ -47,6 +47,7 @@ export interface MeshGeometryComponent extends BaseGeometryComponent {
   indices?: IndexBufferDescriptor;
   buffers: VertexBufferDescriptor[];
   count: number;
+  instances: number;
 }
 export type GeometryComponent = MeshGeometryComponent;
 
