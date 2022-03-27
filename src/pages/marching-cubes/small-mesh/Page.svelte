@@ -28,7 +28,7 @@
 
       pane = new Pane({ title: 'settings' });
       const params = {
-        groundLevel: 0,
+        groundLevel: 0.5,
       };
 
       app = await createApp(canvas.getElement(), { renderer: { enablePicking: true } });
@@ -55,8 +55,9 @@
       camera.updateViewMatrix();
 
       pane.addInput(params, 'groundLevel', { min: -1, max: 1 }).on('change', () => {
-        const shader = shaderManager.get<Shader>(shaderId);
-        shader.update({ groundLevel: params.groundLevel });
+        /* const shader = shaderManager.get<Shader>(shaderId); */
+        /* shader.update({ groundLevel: params.groundLevel }); */
+        // TODO: Regenerate mesh on ground level change
       });
 
       app.onRenderBegin(() => {
