@@ -54,11 +54,11 @@
       vec3.set(camera.position, centre[0], centre[1], 0);
       camera.updateViewMatrix();
 
-      pane.addInput(params, 'groundLevel', { min: -1, max: 1 }).on('change', () => {
-        /* const shader = shaderManager.get<Shader>(shaderId); */
-        /* shader.update({ groundLevel: params.groundLevel }); */
-        // TODO: Regenerate mesh on ground level change
-      });
+      /* pane.addInput(params, 'groundLevel', { min: -1, max: 1 }).on('change', () => { */
+      /*   /1* const shader = shaderManager.get<Shader>(shaderId); *1/ */
+      /*   /1* shader.update({ groundLevel: params.groundLevel }); *1/ */
+      /*   // TODO: Regenerate mesh on ground level change */
+      /* }); */
 
       app.onRenderBegin(() => {
         stats.begin();

@@ -93,8 +93,8 @@ fn main(
   var colour = textureSample(u_texture, u_sampler, vec2<f32>(1.0-value, 0.5)).rgb;
 
   if (noise < u.isoLevel) {
-    colour = vec3<f32>(0.5, 0.0, 0.0);
-    // discard;
+    // colour = vec3<f32>(0.5, 0.0, 0.0);
+    discard;
   }
 
   var kd = 0.0;

@@ -14,7 +14,6 @@ import { normalizeColour } from 'toolkit/utils/colour';
 import { generateSphereMesh } from 'toolkit/primitives/sphere';
 import { createShader } from './instanced-sphere-shader';
 import { computeBoundingBox } from 'toolkit/math/bounding-box';
-import { generateNoise3D } from 'toolkit/math/noise';
 import { vec2, vec3 } from 'gl-matrix';
 import { inverseLerp } from 'toolkit/math';
 import { EDGE_LOOKUP, EDGE_TO_CORNER_LOOKUP } from 'toolkit/marching-cubes/tables';
@@ -22,7 +21,6 @@ import { createDiffuseShader } from 'toolkit/webgpu/shaders/diffuse-shader';
 import { createSphereDensityFn } from 'toolkit/marching-cubes/density';
 
 /*
- * TODO: these are wrong
  * 0: x, y, z+1
  * 1: x+1, y, z+1
  * 2: x+1, y, z
@@ -168,29 +166,7 @@ function generateMesh({
   const numPoints = sizeX * sizeY * sizeZ;
 
   const positions = new Float32Array(numPoints * 3);
-
-  // const persistence = 0.5;
-  // const lacunarity = 2.0;
-  // const scale = 30.0;
-  // const octaves = 4;
-
-  // const offset = {
-  //   x: 0,
-  //   y: 0,
-  //   z: 0,
-  // };
-
-  // const { noiseMap, min, max } = generateNoise3D({
-  //   size,
-  //   seed,
-  //   scale,
-  //   octaves,
-  //   persistence,
-  //   lacunarity,
-  //   offset,
-  // });
-
-  const surfaceValues = new Float64Array(numPoints);
+  const values = new Float64Array(numPoints);
 
   let idx: number;
   let value: number;
@@ -202,7 +178,7 @@ function generateMesh({
         idx = z * sizeY * sizeX + y * sizeX + x;
         value = density(x, y, z);
 
-        surfaceValues[idx] = value;
+        values[idx] = value;
         max = Math.max(max, value);
         min = Math.min(min, value);
       }
@@ -211,7 +187,7 @@ function generateMesh({
 
   const vertices: number[] = [];
 
-  const dataValues = new Float64Array(numPoints);
+  const data = new Float64Array(numPoints);
   let edgeIdx: number;
   let edges: number[];
   const cubeIdx: vec3 = vec3.create();
@@ -223,17 +199,17 @@ function generateMesh({
         positions[idx * 3 + 1] = y;
         positions[idx * 3 + 2] = z;
 
-        dataValues[idx] = inverseLerp(min, max, surfaceValues[idx]);
+        data[idx] = inverseLerp(min, max, values[idx]);
 
         if (x < sizeX - 1 && y < sizeY - 1 && z < sizeZ - 1) {
           vec3.set(cubeIdx, x, y, z);
           edgeIdx = computeLookupIndex(cubeIdx, {
-            values: surfaceValues,
+            values: values,
             isoLevel,
             size,
           });
           edges = EDGE_LOOKUP[edgeIdx];
-          addVerticesForEdges({ cubeIdx, edges, values: surfaceValues, isoLevel, size }, vertices);
+          addVerticesForEdges({ cubeIdx, edges, values: values, isoLevel, size }, vertices);
         }
       }
     }
@@ -242,8 +218,8 @@ function generateMesh({
   return {
     vertices: Float32Array.from(vertices),
     numPoints,
-    noiseMap: surfaceValues,
-    values: dataValues,
+    noiseMap: values,
+    values: data,
     positions,
   };
 }
