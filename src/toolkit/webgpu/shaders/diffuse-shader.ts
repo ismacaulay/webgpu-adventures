@@ -21,15 +21,15 @@ export function createDiffuseShader(
 var<uniform> model: mat4x4<f32>;
 
 struct Matrices {
-  view: mat4x4<f32>;
-  projection: mat4x4<f32>;
+  view: mat4x4<f32>,
+  projection: mat4x4<f32>,
 };
 @group(0) @binding(1)
 var<uniform> m: Matrices;
 
 struct VertexOut {
-  @builtin(position) position: vec4<f32>;
-  @location(0) position_eye: vec4<f32>;
+  @builtin(position) position: vec4<f32>,
+  @location(0) position_eye: vec4<f32>,
 }
 
 @stage(vertex)
@@ -43,22 +43,22 @@ fn main(@location(0) position: vec3<f32>) -> VertexOut {
 
   const fragmentSource = `
 struct UBO {
-  entity_id: f32;
+  entity_id: f32,
 
-  colour: vec3<f32>;
+  colour: vec3<f32>,
 
-  selected: f32;
-  selected_colour: vec3<f32>;
+  selected: f32,
+  selected_colour: vec3<f32>,
 
-  lights: array<vec4<f32>, 5>;
-  num_lights: f32;
+  lights: array<vec4<f32>, 5>,
+  num_lights: f32,
 }
 @group(0) @binding(2)
 var<uniform> u: UBO;
 
 struct FragmentOut {
-  @location(0) colour: vec4<f32>;
-  @location(1) object_id: f32;
+  @location(0) colour: vec4<f32>,
+  @location(1) object_id: f32,
 }
 
 @stage(fragment)

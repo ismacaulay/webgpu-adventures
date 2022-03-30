@@ -21,7 +21,7 @@ export async function createShader(
     textureManager: TextureManager;
   },
   lights: { position: vec3; intensity: number }[],
-  params: { groundLevel: number },
+  params: { isoLevel: number },
   material?: { entity?: number; colour?: vec3 },
 ): Promise<ShaderId> {
   const vertexSource = `
@@ -29,17 +29,17 @@ export async function createShader(
 var<uniform> model: mat4x4<f32>;
 
 struct Matrices {
-  view: mat4x4<f32>;
-  projection: mat4x4<f32>;
+  view: mat4x4<f32>,
+  projection: mat4x4<f32>,
 };
 @group(0) @binding(1)
 var<uniform> m: Matrices;
 
 struct VertexOut {
-  @builtin(position) position: vec4<f32>;
-  @location(0) position_eye: vec4<f32>;
-  @location(1) noise: f32;
-  @location(2) value: f32;
+  @builtin(position) position: vec4<f32>,
+  @location(0) position_eye: vec4<f32>,
+  @location(1) noise: f32,
+  @location(2) value: f32,
 }
 
 @stage(vertex)
@@ -62,13 +62,13 @@ fn main(
 
   const fragmentSource = `
 struct UBO {
-  entity_id: f32;
+  entity_id: f32,
 
-  colour: vec3<f32>;
-  groundLevel: f32;
+  colour: vec3<f32>,
+  isoLevel: f32,
 
-  lights: array<vec4<f32>, 5>;
-  num_lights: f32;
+  lights: array<vec4<f32>, 5>,
+  num_lights: f32,
 }
 @group(0) @binding(2)
 var<uniform> u: UBO;
@@ -79,8 +79,8 @@ var u_sampler: sampler;
 var u_texture: texture_2d<f32>;
 
 struct FragmentOut {
-  @location(0) colour: vec4<f32>;
-  @location(1) object_id: f32;
+  @location(0) colour: vec4<f32>,
+  @location(1) object_id: f32,
 }
 
 @stage(fragment)
@@ -92,8 +92,9 @@ fn main(
   // var colour = u.colour;
   var colour = textureSample(u_texture, u_sampler, vec2<f32>(1.0-value, 0.5)).rgb;
 
-  if (noise < u.groundLevel) {
-    discard;
+  if (noise < u.isoLevel) {
+    colour = vec3<f32>(0.5, 0.0, 0.0);
+    // discard;
   }
 
   var kd = 0.0;
@@ -129,7 +130,7 @@ fn main(
 
       colour: UniformType.Vec3,
 
-      groundLevel: UniformType.Scalar,
+      isoLevel: UniformType.Scalar,
 
       lights: [UniformType.Vec4, 5],
       num_lights: UniformType.Scalar,
@@ -139,7 +140,7 @@ fn main(
 
       colour: material?.colour ?? vec3.create(),
 
-      groundLevel: params.groundLevel,
+      isoLevel: params.isoLevel,
 
       num_lights: lights.length,
       lights: lights.map((l) => {
