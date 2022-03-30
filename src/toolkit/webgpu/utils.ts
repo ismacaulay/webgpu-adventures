@@ -29,9 +29,22 @@ export function createBuffer(
 export function createPipeline(
   device: GPUDevice,
   presentationFormat: GPUTextureFormat,
+  objectIdTextureFormat: GPUTextureFormat,
   shader: Shader,
   buffers: VertexBuffer[],
+  enablePicking: boolean,
 ) {
+  const targets: GPUColorTargetState[] = [
+    {
+      format: presentationFormat,
+      blend: shader.blend,
+    },
+  ];
+
+  if (enablePicking) {
+    targets.push({ format: objectIdTextureFormat });
+  }
+
   return device.createRenderPipeline({
     vertex: {
       ...shader.vertex,
@@ -39,12 +52,7 @@ export function createPipeline(
     },
     fragment: {
       ...shader.fragment,
-      targets: [
-        {
-          format: presentationFormat,
-          blend: shader.blend,
-        },
-      ],
+      targets,
     },
 
     primitive: {

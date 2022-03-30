@@ -13,7 +13,6 @@
   } from 'toolkit/ecs/components';
   import { BufferAttributeFormat, UniformType } from 'toolkit/types/webgpu/buffers';
   import type { IndexBufferDescriptor } from 'toolkit/types/webgpu/buffers';
-  import type { Colour3 } from 'toolkit/types/colour';
   import { inverseLerp } from 'toolkit/math';
   import { ShaderBindingType } from 'toolkit/types/webgpu/shaders';
   import { DefaultBuffers } from 'toolkit/types/ecs/managers';

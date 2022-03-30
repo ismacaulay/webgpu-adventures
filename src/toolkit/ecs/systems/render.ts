@@ -93,6 +93,12 @@ export function createRenderSystem(
         if (geometry.indices) {
           if (!geometry.indices.id) {
             geometry.indices.id = bufferManager.createIndexBuffer(geometry.indices);
+          } else if (geometry.needsUpdate) {
+            renderer.submit({
+              type: RenderCommandType.WriteBuffer,
+              src: geometry.indices.array,
+              dst: bufferManager.get<VertexBuffer>(geometry.indices.id).buffer,
+            });
           }
 
           indices = bufferManager.get<IndexBuffer>(geometry.indices.id);
@@ -136,6 +142,7 @@ export function createRenderSystem(
           indices,
           buffers: vertexBuffers,
           count: geometry.count,
+          instances: geometry.instances,
           priority: material.drawOrder,
         });
 

@@ -213,10 +213,6 @@ export async function createTriangleRenderer(canvas: HTMLCanvasElement) {
         depthClearValue: 1.0,
         depthLoadOp: 'clear',
         depthStoreOp: 'store',
-
-        stencilClearValue: 0,
-        stencilLoadOp: 'clear',
-        stencilStoreOp: 'store',
       },
     };
 

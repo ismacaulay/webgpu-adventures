@@ -3,6 +3,7 @@ import {
   BufferType,
   VertexBuffer,
   VertexBufferDescriptor,
+  VertexBufferStepMode,
 } from 'toolkit/types/webgpu/buffers';
 import { createBuffer } from '../utils';
 
@@ -19,7 +20,7 @@ function getStrideForFormat(type: BufferAttributeFormat) {
 
 export function createVertexBuffer(
   device: GPUDevice,
-  { array, attributes }: VertexBufferDescriptor,
+  { array, stepMode = VertexBufferStepMode.Vertex, attributes }: VertexBufferDescriptor,
 ): VertexBuffer {
   let data: Float32Array;
   if (array instanceof Float64Array) {
@@ -50,6 +51,7 @@ export function createVertexBuffer(
     layout: {
       arrayStride: offset,
       attributes: attrs,
+      stepMode,
     },
 
     destroy() {

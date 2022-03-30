@@ -18,13 +18,21 @@ import type {
 } from 'toolkit/types/ecs/managers';
 import { createMovementSystem } from 'toolkit/ecs/systems/movement';
 import type { RenderSystem } from 'toolkit/types/ecs/systems';
+import { createEventController } from 'toolkit/events/event-controller';
+import type { EventController } from 'toolkit/types/events';
+import { createSelectionController } from 'toolkit/webgpu/selection-controller';
+import { noop } from 'svelte/internal';
+import type { SelectionController } from 'toolkit/types/events/selection';
 
 export interface Application {
   entityManager: EntityManager;
   bufferManager: BufferManager;
   textureManager: TextureManager;
   shaderManager: ShaderManager;
+
+  eventController: EventController;
   cameraController: CameraController;
+  selectionController: SelectionController;
 
   renderSystem: RenderSystem;
 
@@ -38,13 +46,18 @@ export interface Application {
 export async function createApp(
   canvas: HTMLCanvasElement,
   initial?: {
+    renderer?: {
+      enablePicking?: boolean;
+    };
     camera?: {
       controls?: CameraControls;
       position?: [number, number, number];
     };
   },
 ): Promise<Application> {
-  const renderer = await createRenderer(canvas);
+  const renderer = await createRenderer(canvas, initial?.renderer);
+
+  const eventController = createEventController(canvas);
 
   const cameraController = createCameraController(canvas, initial?.camera);
   const camera = cameraController.camera;
@@ -67,10 +80,17 @@ export async function createApp(
   });
   const movementSystem = createMovementSystem(entityManager);
 
+  const selectionController = createSelectionController(initial?.renderer?.enablePicking ?? false, {
+    eventController,
+    entityManager,
+    shaderManager,
+    renderer,
+  });
+
   let rafId: number;
   let lastTime = performance.now();
-  let _onRenderBegin = () => {};
-  let _onRenderEnd = () => {};
+  let _onRenderBegin = noop;
+  let _onRenderEnd = noop;
   function render() {
     const now = performance.now();
     const dt = (now - lastTime) / 1000;
@@ -89,13 +109,15 @@ export async function createApp(
     rafId = requestAnimationFrame(render);
   }
 
-  return {
+  const app = {
     entityManager,
     bufferManager,
     textureManager,
     shaderManager,
 
+    eventController,
     cameraController,
+    selectionController,
 
     renderSystem,
 
@@ -108,6 +130,8 @@ export async function createApp(
         cancelAnimationFrame(rafId);
       }
 
+      selectionController.destroy();
+
       shaderManager.destroy();
       textureManager.destroy();
       bufferManager.destroy();
@@ -117,11 +141,14 @@ export async function createApp(
       cameraController.destroy();
     },
 
-    onRenderBegin(cb) {
+    onRenderBegin(cb: any) {
       _onRenderBegin = cb;
     },
-    onRenderEnd(cb) {
+    onRenderEnd(cb: any) {
       _onRenderEnd = cb;
     },
   };
+
+  (window as any).app = app;
+  return app;
 }

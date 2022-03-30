@@ -75,9 +75,15 @@ export interface BufferAttribute {
   location: number;
 }
 
+export enum VertexBufferStepMode {
+  Vertex = 'vertex',
+  Instance = 'instance',
+}
+
 export interface VertexBufferDescriptor {
   id?: number;
   array: Float32Array | Float64Array;
+  stepMode?: VertexBufferStepMode;
   attributes: BufferAttribute[];
 }
 

@@ -37,7 +37,7 @@ export function createEntityManager(): EntityManager {
           }
 
           let entHasAllComponents = true;
-          let flags = entityComponentFlags.get(nextEnt.value) || 0x0;
+          const flags = entityComponentFlags.get(nextEnt.value) || 0x0;
 
           // I think this can be components & flags === components
           for (let i = 0; i < components.length; ++i) {
@@ -52,7 +52,7 @@ export function createEntityManager(): EntityManager {
           }
 
           const comps = entityComponents.get(nextEnt.value);
-          let value: Component[] = [];
+          const value: Component[] = [];
           if (comps) {
             for (let i = 0; i < components.length; ++i) {
               value.push(comps.get(components[i]) as Component);

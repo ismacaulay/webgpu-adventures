@@ -1,7 +1,7 @@
 import type { Colour3 } from 'toolkit/types/colour';
 
 function hexToRgb(hex: string): Colour3 {
-  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
 
   if (!result) {
     throw new Error(`Unable to parse hex color: ${hex}`);

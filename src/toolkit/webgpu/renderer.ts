@@ -11,8 +11,14 @@ import {
 import { createBindGroups, createPipeline } from './utils';
 import quadShaderSource from './shaders/quad.wgsl';
 import { createVertexBuffer } from './buffers';
+import type { vec2 } from 'gl-matrix';
 
-export async function createRenderer(canvas: HTMLCanvasElement): Promise<Renderer> {
+export async function createRenderer(
+  canvas: HTMLCanvasElement,
+  options?: { enablePicking?: boolean },
+): Promise<Renderer> {
+  const enablePicking = options?.enablePicking ?? false;
+
   const gpu: GPU | undefined = navigator.gpu;
   if (!gpu) {
     throw new Error('WebGPU not supported in this browser');
@@ -37,6 +43,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
     device,
     size: presentationSize,
     format: presentationFormat,
+    compositingAlphaMode: 'opaque',
   });
 
   // setup the render target
@@ -47,6 +54,18 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
     usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
   });
   let renderTargetView = renderTarget.createView();
+
+  const objectIdTextureFormat: GPUTextureFormat = 'r8unorm';
+  let objectIdTexture = device.createTexture({
+    size: presentationSize,
+    format: objectIdTextureFormat,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+  });
+  let objectIdView = objectIdTexture.createView();
+  const pickBuffer = device.createBuffer({
+    size: 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
 
   // create the depth texture
   let depthTexture = device.createTexture({
@@ -162,6 +181,7 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
           device,
           size: presentationSize,
           format: presentationFormat,
+          compositingAlphaMode: 'opaque',
         });
 
         renderTarget.destroy();
@@ -172,6 +192,14 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
           // sampleCount: 4,
         });
         renderTargetView = renderTarget.createView();
+
+        objectIdTexture.destroy();
+        objectIdTexture = device.createTexture({
+          size: presentationSize,
+          format: objectIdTextureFormat,
+          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+        });
+        objectIdView = objectIdTexture.createView();
 
         depthTexture.destroy();
         depthTexture = device.createTexture({
@@ -242,16 +270,26 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
 
       // render the scene to the render target
       {
+        const colorAttachments: GPURenderPassColorAttachment[] = [
+          {
+            view: renderTargetView,
+            // resolveTarget: sceneTextureView,
+            clearValue: [0, 0, 0, 1],
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        ];
+
+        if (enablePicking) {
+          colorAttachments.push({
+            view: objectIdView,
+            clearValue: [255, 255, 255, 255],
+            loadOp: 'clear',
+            storeOp: 'store',
+          });
+        }
         const passEncoder = commandEncoder.beginRenderPass({
-          colorAttachments: [
-            {
-              view: renderTargetView,
-              // resolveTarget: sceneTextureView,
-              clearValue: [0, 0, 0, 1],
-              loadOp: 'clear',
-              storeOp: 'store',
-            },
-          ],
+          colorAttachments,
           depthStencilAttachment: {
             view: depthTextureView,
 
@@ -279,11 +317,18 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
         for (let i = 0; i < draws.length; ++i) {
           const command = draws[i];
 
-          const { shader, buffers, count, indices } = command;
+          const { shader, buffers, count, instances, indices } = command;
 
           let pipeline = pipelineCache[shader.id];
           if (!pipeline || shader.needsUpdate) {
-            pipeline = createPipeline(device, presentationFormat, shader, buffers);
+            pipeline = createPipeline(
+              device,
+              presentationFormat,
+              objectIdTextureFormat,
+              shader,
+              buffers,
+              enablePicking,
+            );
             pipelineCache[shader.id] = pipeline;
           }
 
@@ -307,9 +352,9 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
 
           if (indices) {
             passEncoder.setIndexBuffer(indices.buffer, indices.format);
-            passEncoder.drawIndexed(count, 1, 0, 0, 0);
+            passEncoder.drawIndexed(count, instances, 0, 0, 0);
           } else {
-            passEncoder.draw(count, 1, 0, 0);
+            passEncoder.draw(count, instances, 0, 0);
           }
 
           shader.needsUpdate = false;
@@ -459,10 +504,32 @@ export async function createRenderer(canvas: HTMLCanvasElement): Promise<Rendere
       needsUpdate = false;
     },
 
+    async pick(pos: vec2) {
+      const [x, y] = pos;
+      // copy the pixel from the objectIdTexture to the pick buffer
+      const commandEncoder = device.createCommandEncoder();
+      commandEncoder.copyTextureToBuffer(
+        { texture: objectIdTexture, origin: { x: x * devicePixelRatio, y: y * devicePixelRatio } },
+        { buffer: pickBuffer },
+        [1],
+      );
+      device.queue.submit([commandEncoder.finish()]);
+
+      // once the command is finished we can read the data from the buffer
+      return pickBuffer.mapAsync(GPUBufferUsage.MAP_READ).then(() => {
+        const data = new Uint8Array(pickBuffer.getMappedRange());
+        const objectId = data[0];
+
+        pickBuffer.unmap();
+        return { entity: objectId !== 255 ? objectId : undefined };
+      });
+    },
+
     destroy() {
       depthTexture.destroy();
       renderTarget.destroy();
-
+      objectIdTexture.destroy();
+      pickBuffer.destroy();
       Object.values(postProcessingOutputTextures).forEach(({ texture }) => {
         texture.destroy();
       });

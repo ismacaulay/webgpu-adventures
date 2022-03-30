@@ -1,3 +1,4 @@
+import type { vec2 } from 'gl-matrix';
 import type { IndexBuffer, VertexBuffer } from './buffers';
 import type { PostProcessingShader, Shader } from './shaders';
 
@@ -26,12 +27,13 @@ export interface DrawCommand extends BaseRenderCommand {
   indices?: IndexBuffer;
   buffers: VertexBuffer[];
   count: number;
+  instances: number;
   priority: number;
 }
 
 export interface WriteBufferCommand extends BaseRenderCommand {
   type: RenderCommandType.WriteBuffer;
-  src: Float32Array | Float64Array;
+  src: Float32Array | Float64Array | Uint16Array | Uint32Array;
   dst: GPUBuffer;
 }
 
@@ -55,6 +57,8 @@ export interface Renderer {
   begin(): void;
   submit(command: RenderCommand | BufferCommand | PostProcessingCommand): void;
   finish(): void;
+
+  pick(pos: vec2): Promise<{ entity: number | undefined }>;
 
   destroy(): void;
 }

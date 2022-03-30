@@ -35,12 +35,15 @@ export function createOrbitControls(element: HTMLElement, initialState: { camera
 
   const dollyScale = 0.95;
   let scale = 1.0;
+  document.oncontextmenu = () => {
+    return false;
+  };
 
   function handleMouseDown(e: MouseEvent) {
     if (e.button === MouseButton.Left) {
       state = State.Rotate;
       vec2.set(rotateStart, e.clientX, e.clientY);
-    } else if (e.button === MouseButton.Middle) {
+    } else if (e.button === MouseButton.Middle || e.button === MouseButton.Right) {
       state = State.Pan;
       vec2.set(panStart, e.clientX, e.clientY);
     }
@@ -102,6 +105,8 @@ export function createOrbitControls(element: HTMLElement, initialState: { camera
   }
 
   function handlePointerDown(e: PointerEvent) {
+    e.preventDefault();
+
     document.addEventListener('pointerup', handlePointerUp, true);
     document.addEventListener('pointermove', handlePointerMove, true);
 
@@ -117,6 +122,8 @@ export function createOrbitControls(element: HTMLElement, initialState: { camera
   }
 
   function handlePointerUp(e: PointerEvent) {
+    e.preventDefault();
+
     document.removeEventListener('pointerup', handlePointerUp, true);
     document.removeEventListener('pointermove', handlePointerMove, true);
 
@@ -124,6 +131,8 @@ export function createOrbitControls(element: HTMLElement, initialState: { camera
   }
 
   function handleMouseWheel(e: WheelEvent) {
+    e.preventDefault();
+
     // perspective camera can be moved (dolly) closer/further to be zoon
     if (camera.type === CameraType.Perspective) {
       if (e.deltaY < 0) {
