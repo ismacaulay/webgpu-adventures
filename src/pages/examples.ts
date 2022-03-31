@@ -16,6 +16,7 @@ import Terrain from './terrain/Terrain.svelte';
 
 import MarchingCubesCases from './marching-cubes/cases/Page.svelte';
 import MarchingCubesSmallMesh from './marching-cubes/small-mesh/Page.svelte';
+import MarchingCubesLargeMesh from './marching-cubes/large-mesh/Page.svelte';
 
 export default [
   { title: 'hello-world', component: HelloWorld },
@@ -36,4 +37,5 @@ export default [
 
   { title: 'marching-cubes/cases', component: MarchingCubesCases },
   { title: 'marching-cubes/small-mesh', component: MarchingCubesSmallMesh },
+  { title: 'marching-cubes/large-mesh', component: MarchingCubesLargeMesh },
 ];
