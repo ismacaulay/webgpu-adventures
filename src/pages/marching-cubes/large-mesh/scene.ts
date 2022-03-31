@@ -18,6 +18,7 @@ import { generateNoise3D } from 'toolkit/math/noise';
 import { createMarchingCubes } from 'toolkit/marching-cubes/march';
 import { createNoise3DDensityFn } from 'toolkit/marching-cubes/density';
 import { computeBoundingBox } from 'toolkit/math/bounding-box';
+import { pointInBox, pointInSphere } from 'toolkit/math/point';
 
 export function buildScene({
   entityManager,
@@ -30,13 +31,13 @@ export function buildScene({
 }) {
   const size: vec3 = [101, 101, 101];
   const spacing = 0.1;
+  // const size: vec3 = [11, 11, 11];
+  // const spacing = 1;
 
-  const centre = vec3.create();
+  const centre = vec3.fromValues(5, 5, 5);
   const isoLevel = 0.25;
 
-  vec3.scale(centre, vec3.sub(centre, size, [1, 1, 1]), 0.5);
-
-  const densityFn = createNoise3DDensityFn({
+  const densityFn1 = createNoise3DDensityFn({
     seed: 42,
     scale: 10,
     octaves: 8,
@@ -45,9 +46,29 @@ export function buildScene({
     offset: { x: 0, y: 0, z: 0 },
   });
 
+  const radius = 4.5;
+  const min: vec3 = [2, 2, 2];
+  const max: vec3 = [8, 5, 8];
+  const densityFn = (idx: vec3) => {
+    // TODO: instead of a sphere, what if it was a box?
+    //
+    // if (pointInSphere(idx, centre, radius)) {
+    //   return densityFn1(idx);
+    // }
+
+    // if (pointInBox(idx, min, max)) {
+    //   return densityFn1(idx);
+    // }
+
+    if (pointInBox(idx, min, max) && pointInSphere(idx, centre, radius)) {
+      return densityFn1(idx);
+    }
+    return isoLevel - 1;
+  };
+
   const marchingCubes = createMarchingCubes({ size, spacing, densityFn, isoLevel });
   const { vertices: meshVerts } = marchingCubes.march();
-  console.log(meshVerts);
+  console.log('num vertices:', meshVerts.length / 3);
   const boundingBox = computeBoundingBox(meshVerts);
 
   /*

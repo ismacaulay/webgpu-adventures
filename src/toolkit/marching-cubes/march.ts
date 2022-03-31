@@ -64,8 +64,6 @@ function cornerPosition(corner: number, cubeIdx: vec3, spacing: number): vec3 {
   return [x * spacing, y * spacing, z * spacing];
 }
 
-let maxValue = Number.NEGATIVE_INFINITY;
-let minValue = Number.POSITIVE_INFINITY;
 export function createMarchingCubes({
   size,
   densityFn,
@@ -85,9 +83,6 @@ export function createMarchingCubes({
 
     for (let i = 0; i < 8; ++i) {
       value = densityFn(cornerPosition(i, cubeIdx, spacing));
-      maxValue = Math.max(maxValue, value);
-      minValue = Math.min(minValue, value);
-      // console.log(value);
       if (value < isoLevel) {
         idx |= 1 << i;
       }
@@ -149,8 +144,6 @@ export function createMarchingCubes({
           }
         }
       }
-
-      console.log({ minValue, maxValue });
 
       return { vertices: Float64Array.from(vertices) };
     },
