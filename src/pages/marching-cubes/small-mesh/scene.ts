@@ -18,7 +18,7 @@ import { vec2, vec3 } from 'gl-matrix';
 import { inverseLerp } from 'toolkit/math';
 import { EDGE_LOOKUP, EDGE_TO_CORNER_LOOKUP } from 'toolkit/marching-cubes/tables';
 import { createDiffuseShader } from 'toolkit/webgpu/shaders/diffuse-shader';
-import { createSphereDensityFn } from 'toolkit/marching-cubes/density';
+import { createSphereDensityFn, DensityFn } from 'toolkit/marching-cubes/density';
 
 /*
  * 0: x, y, z+1
@@ -156,7 +156,7 @@ function generateMesh({
   size,
   isoLevel,
 }: {
-  density: (x: number, y: number, z: number) => number;
+  density: DensityFn;
   size: vec3;
   isoLevel: number;
 }) {
@@ -176,7 +176,7 @@ function generateMesh({
     for (let y = 0; y < sizeY; ++y) {
       for (let x = 0; x < sizeX; ++x) {
         idx = z * sizeY * sizeX + y * sizeX + x;
-        value = density(x, y, z);
+        value = density([x, y, z]);
 
         values[idx] = value;
         max = Math.max(max, value);
