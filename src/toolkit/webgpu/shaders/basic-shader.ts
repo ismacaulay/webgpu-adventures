@@ -20,8 +20,8 @@ export function createBasicShader(
 var<uniform> model: mat4x4<f32>;
 
 struct Matrices {
-  view: mat4x4<f32>;
-  projection: mat4x4<f32>;
+  view: mat4x4<f32>,
+  projection: mat4x4<f32>,
 };
 @group(0) @binding(1)
 var<uniform> matrices: Matrices;
@@ -34,19 +34,19 @@ fn main(@location(0) a_pos: vec3<f32>) -> @builtin(position) vec4<f32> {
 
   const fragmentSource = `
 struct UBO {
-  entity_id: f32;
+  entity_id: f32,
 
-  colour: vec3<f32>;
+  colour: vec3<f32>,
 
-  selected: f32;
-  selected_colour: vec3<f32>;
+  selected: f32,
+  selected_colour: vec3<f32>,
 }
 @group(0) @binding(2)
 var<uniform> u: UBO;
 
 struct FragmentOut {
-  @location(0) colour: vec4<f32>;
-  @location(1) object_id: f32;
+  @location(0) colour: vec4<f32>,
+  @location(1) object_id: f32,
 }
 
 @stage(fragment)

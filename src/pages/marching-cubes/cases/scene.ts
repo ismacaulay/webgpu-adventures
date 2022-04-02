@@ -201,7 +201,7 @@ export function setupSurface({
   entityManager.addComponent(
     entity,
     createMeshGeometryComponent({
-      indices: new Uint32Array(13),
+      indices: new Uint32Array(16),
       count: 0,
       buffers: [
         {
