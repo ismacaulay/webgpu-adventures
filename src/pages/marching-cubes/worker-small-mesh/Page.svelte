@@ -37,13 +37,11 @@
       const { entityManager, bufferManager, shaderManager, cameraController } = app;
 
       cameraController.activeCamera = CameraType.Orthographic;
-      const camera = cameraController.camera as OrthographicCamera;
-      camera.zoom = 0.25;
-
       buildScene({
         entityManager,
         bufferManager,
         shaderManager,
+        cameraController,
       });
 
       /* const centre = getBoundingBoxCentre(boundingBox); */

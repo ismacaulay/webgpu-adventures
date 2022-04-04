@@ -1,9 +1,10 @@
-import type { vec3 } from 'gl-matrix';
+import { vec3 } from 'gl-matrix';
 import {
   createMeshGeometryComponent,
   createShaderMaterialComponent,
   createTransformComponent,
 } from 'toolkit/ecs/components';
+import type { CameraController, OrthographicCamera } from 'toolkit/types/camera';
 import type { BufferManager, EntityManager, ShaderManager } from 'toolkit/types/ecs/managers';
 import { BufferAttributeFormat } from 'toolkit/types/webgpu/buffers';
 import { normalizeColour } from 'toolkit/utils/colour';
@@ -14,10 +15,12 @@ export async function buildScene({
   entityManager,
   bufferManager,
   shaderManager,
+  cameraController,
 }: {
   entityManager: EntityManager;
   bufferManager: BufferManager;
   shaderManager: ShaderManager;
+  cameraController: CameraController;
 }) {
   const script = '/build/workers/marching-cubes.worker.js';
 
@@ -27,8 +30,20 @@ export async function buildScene({
   const pool = createWorkerPool(script, { maxWorkers });
 
   const chunkSize: vec3 = [100, 100, 100];
-  const numChunks: vec3 = [2, 2, 2];
+  const numChunks: vec3 = [4, 4, 4];
   const pointSpacing = 0.1;
+
+  const camera = cameraController.camera as OrthographicCamera;
+  camera.zoom = 0.25;
+  const centre: vec3 = [
+    chunkSize[0] * numChunks[0] * pointSpacing / 2,
+    chunkSize[1] * numChunks[1] * pointSpacing / 2,
+    chunkSize[2] * numChunks[2] * pointSpacing / 2,
+  ];
+
+  vec3.copy(camera.target, centre);
+  vec3.set(camera.position, centre[0], centre[1], 0);
+  camera.updateViewMatrix();
 
   const promises = [];
 
