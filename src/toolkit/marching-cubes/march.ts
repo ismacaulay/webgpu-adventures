@@ -66,11 +66,13 @@ function cornerPosition(corner: number, cubeIdx: vec3, spacing: number): vec3 {
 
 export function createMarchingCubes({
   size,
+  offset,
   densityFn,
   isoLevel,
   spacing,
 }: {
   size: vec3;
+  offset: vec3;
   densityFn: DensityFn;
   isoLevel: number;
   spacing: number;
@@ -133,14 +135,12 @@ export function createMarchingCubes({
       for (let z = 0; z < sizeZ; ++z) {
         for (let y = 0; y < sizeY; ++y) {
           for (let x = 0; x < sizeX; ++x) {
-            if (x < sizeX - 1 && y < sizeY - 1 && z < sizeZ - 1) {
-              vec3.set(cubeIdx, x, y, z);
+            vec3.set(cubeIdx, offset[0] + x, offset[1] + y, offset[2] + z);
 
-              edgeIdx = computeLookupIndex(cubeIdx);
-              edges = EDGE_LOOKUP[edgeIdx];
+            edgeIdx = computeLookupIndex(cubeIdx);
+            edges = EDGE_LOOKUP[edgeIdx];
 
-              addVerticesForEdges(cubeIdx, edges, vertices);
-            }
+            addVerticesForEdges(cubeIdx, edges, vertices);
           }
         }
       }

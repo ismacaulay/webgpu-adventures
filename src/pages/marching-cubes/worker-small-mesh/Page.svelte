@@ -34,17 +34,16 @@
 
       app = await createApp(canvas.getElement(), { renderer: { enablePicking: true } });
 
-      const { entityManager, bufferManager, shaderManager, textureManager, cameraController } = app;
+      const { entityManager, bufferManager, shaderManager, cameraController } = app;
 
       cameraController.activeCamera = CameraType.Orthographic;
       const camera = cameraController.camera as OrthographicCamera;
       camera.zoom = 0.25;
 
-      await buildScene({
+      buildScene({
         entityManager,
         bufferManager,
         shaderManager,
-        textureManager,
       });
 
       /* const centre = getBoundingBoxCentre(boundingBox); */

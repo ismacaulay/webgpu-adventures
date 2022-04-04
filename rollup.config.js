@@ -107,6 +107,10 @@ export default [
       file: 'public/build/workers/marching-cubes.worker.js',
     },
     plugins: [
+      resolve({
+        browser: true,
+        dedupe: ['svelte'],
+      }),
       commonjs(),
       typescript({
         sourceMap: !production,

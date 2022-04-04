@@ -12,12 +12,18 @@ interface QueueEntry {
   onResult: any;
 }
 
-export function createWorkerPool(url: string) {
-  const maxWorkers = 3;
+interface WorkerResult {
+  workerId: number;
+  result: any;
+}
+
+export function createWorkerPool(url: string, opts?: { maxWorkers?: number }) {
+  const maxWorkers = opts?.maxWorkers ?? 1;
+
   let workers: WorkerEntry[] = [];
   let queue: QueueEntry[] = [];
 
-  function handleMessage(ev: MessageEvent) {
+  function handleMessage(ev: MessageEvent<WorkerResult>) {
     const { data } = ev;
 
     const worker = workers[data.workerId];
