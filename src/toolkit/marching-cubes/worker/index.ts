@@ -1,6 +1,6 @@
 import type { vec3 } from 'gl-matrix';
 import { pointInBox } from 'toolkit/math/point';
-import { createNoise3DDensityFn } from '../density';
+import { createNoise3DDensityFn, createSphereDensityFn } from '../density';
 import { createMarchingCubes } from '../march';
 
 // TODO: move these types
@@ -30,14 +30,18 @@ function handleChunkMessage(msg: ChunkMessage) {
 
   const isoLevel = 0;
 
-  const noiseDesnityFn = createNoise3DDensityFn(noise);
+  // TODO: can we cache results now that things are chunked?
+  // const noiseDesnityFn = createNoise3DDensityFn(noise);
+  // const densityFn = function densityFn(idx: vec3) {
+  //   if (pointInBox(idx, box.min, box.max)) {
+  //     return noiseDesnityFn(idx);
+  //   }
+  //   return isoLevel - 1;
+  // };
 
-  const densityFn = function densityFn(idx: vec3) {
-    if (pointInBox(idx, box.min, box.max)) {
-      return noiseDesnityFn(idx);
-    }
-    return isoLevel - 1;
-  };
+  const densityFn = createSphereDensityFn({ radius: 20, centre: [20, 20, 20] });
+
+  // TODO: ellipsoid density fn
 
   const offset: vec3 = [chunk[0] * chunkSize[0], chunk[1] * chunkSize[1], chunk[2] * chunkSize[2]];
 

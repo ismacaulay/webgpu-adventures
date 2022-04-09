@@ -6,10 +6,11 @@
   import type { Application } from 'pages/app';
   import { CameraType } from 'toolkit/types/camera';
   import type { OrthographicCamera } from 'toolkit/types/camera';
-  /* import { Pane } from 'tweakpane'; */
+  import { Pane } from 'tweakpane';
   import type { Unsubscriber } from 'toolkit/types/events';
   /* import { vec3 } from 'gl-matrix'; */
   import { buildScene } from './scene';
+  import type { Shader } from 'toolkit/types/webgpu/shaders';
   /* import { getBoundingBoxCentre } from 'toolkit/math/bounding-box'; */
   /* import type { Shader } from 'toolkit/types/webgpu/shaders'; */
 
@@ -18,7 +19,7 @@
 
   onMount(() => {
     let app: Application;
-    /* let pane: Pane; */
+    let pane: Pane;
     let unsubs: Unsubscriber[] = [];
     let pool: any;
 
@@ -27,21 +28,34 @@
       stats.showPanel(0);
       container.appendChild(stats.dom);
 
-      /* pane = new Pane({ title: 'settings' }); */
-      /* const params = { */
-      /*   groundLevel: 0.5, */
-      /* }; */
+      pane = new Pane({ title: 'settings' });
+      const params = {
+        wireframe: false,
+      };
+
+      let shaderId = -1;
+      const input = pane.addInput(params, 'wireframe').on('change', () => {
+        const shader = shaderManager.get<Shader>(shaderId);
+        shader.update({ wireframe: params.wireframe });
+      });
+      input.disabled = true;
 
       app = await createApp(canvas.getElement(), { renderer: { enablePicking: true } });
 
       const { entityManager, bufferManager, shaderManager, cameraController } = app;
 
       cameraController.activeCamera = CameraType.Orthographic;
-      buildScene({
-        entityManager,
-        bufferManager,
-        shaderManager,
-        cameraController,
+      buildScene(
+        {
+          entityManager,
+          bufferManager,
+          shaderManager,
+          cameraController,
+        },
+        params,
+      ).then((result) => {
+        shaderId = result.shaderId;
+        input.disabled = false;
       });
 
       /* const centre = getBoundingBoxCentre(boundingBox); */
@@ -67,7 +81,7 @@
     return () => {
       if (app) {
         app.destroy();
-        /* pane.dispose(); */
+        pane.dispose();
 
         unsubs.forEach((unsub) => unsub());
       }

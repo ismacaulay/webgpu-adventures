@@ -14,7 +14,7 @@ export function createDiffuseShader(
     bufferManager: BufferManager;
   },
   lights: { position: vec3; intensity: number }[],
-  material?: { entity?: number; colour?: vec3 },
+  material?: { entity?: number; colour?: vec3; wireframe?: boolean },
 ): ShaderId {
   const vertexSource = `
 @group(0) @binding(0)
@@ -30,13 +30,27 @@ var<uniform> m: Matrices;
 struct VertexOut {
   @builtin(position) position: vec4<f32>,
   @location(0) position_eye: vec4<f32>,
+  @location(1) barycentric: vec3<f32>,
 }
 
 @stage(vertex)
-fn main(@location(0) position: vec3<f32>) -> VertexOut {
+fn main(
+  @builtin(vertex_index) idx: u32,
+  @location(0) position: vec3<f32>
+) -> VertexOut {
   var out: VertexOut;
   out.position = m.projection * m.view * model * vec4<f32>(position, 1.0);
   out.position_eye = m.view * model * vec4<f32>(position, 1.0);
+
+  var barycentric = idx % 3u;
+  if (barycentric == 0u) {
+    out.barycentric = vec3<f32>(1f, 0f, 0f);
+  } else if (barycentric == 1u) {
+    out.barycentric = vec3<f32>(0f, 1f, 0f);
+  } else {
+    out.barycentric = vec3<f32>(0f, 0f, 1f);
+  }
+
   return out;
 }
 `;
@@ -50,6 +64,8 @@ struct UBO {
   selected: f32,
   selected_colour: vec3<f32>,
 
+  wireframe: f32,
+
   lights: array<vec4<f32>, 5>,
   num_lights: f32,
 }
@@ -61,9 +77,13 @@ struct FragmentOut {
   @location(1) object_id: f32,
 }
 
+let THICKNESS = 1.0;
+let WIREFRAME_COLOR = vec3<f32>(0.33, 0.33, 0.33);
+
 @stage(fragment)
 fn main(
-  @location(0) position_eye: vec4<f32>
+  @location(0) position_eye: vec4<f32>,
+  @location(1) barycentric: vec3<f32>
 ) -> FragmentOut {
   var colour = vec3<f32>(0.0);
 
@@ -71,6 +91,13 @@ fn main(
     colour = u.selected_colour;
   } else {
     colour = u.colour;
+  }
+
+  var w = 1.0;
+  if (u.wireframe > 0.0) {
+    var f = fwidth(barycentric);
+    var a = smoothstep(vec3<f32>(0f, 0f, 0f), f * THICKNESS, barycentric);
+    w = min(a.x, min(a.y, a.z));
   }
 
   var kd = 0.0;
@@ -86,7 +113,7 @@ fn main(
   }
 
   var out: FragmentOut;
-  out.colour = vec4<f32>(kd * colour, 1.0);
+  out.colour = vec4<f32>(kd * mix(WIREFRAME_COLOR, colour, w), 1.0);
   out.object_id = u.entity_id / 255.0;
   return out;
 }
@@ -109,6 +136,8 @@ fn main(
       selected: UniformType.Bool,
       selected_colour: UniformType.Vec3,
 
+      wireframe: UniformType.Bool,
+
       lights: [UniformType.Vec4, 5],
       num_lights: UniformType.Scalar,
     },
@@ -119,6 +148,8 @@ fn main(
 
       selected: false,
       selected_colour: normalizeColour([37, 245, 10]),
+
+      wireframe: material?.wireframe ?? false,
 
       num_lights: lights.length,
       lights: lights.map((l) => {

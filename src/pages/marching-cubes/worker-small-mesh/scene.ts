@@ -11,17 +11,20 @@ import { normalizeColour } from 'toolkit/utils/colour';
 import { createDiffuseShader } from 'toolkit/webgpu/shaders/diffuse-shader';
 import { createWorkerPool } from 'toolkit/workers/pool';
 
-export async function buildScene({
-  entityManager,
-  bufferManager,
-  shaderManager,
-  cameraController,
-}: {
-  entityManager: EntityManager;
-  bufferManager: BufferManager;
-  shaderManager: ShaderManager;
-  cameraController: CameraController;
-}) {
+export async function buildScene(
+  {
+    entityManager,
+    bufferManager,
+    shaderManager,
+    cameraController,
+  }: {
+    entityManager: EntityManager;
+    bufferManager: BufferManager;
+    shaderManager: ShaderManager;
+    cameraController: CameraController;
+  },
+  params: { wireframe: boolean },
+) {
   const script = '/build/workers/marching-cubes.worker.js';
 
   const maxWorkers = navigator.hardwareConcurrency ?? 4;
@@ -36,9 +39,9 @@ export async function buildScene({
   const camera = cameraController.camera as OrthographicCamera;
   camera.zoom = 0.25;
   const centre: vec3 = [
-    chunkSize[0] * numChunks[0] * pointSpacing / 2,
-    chunkSize[1] * numChunks[1] * pointSpacing / 2,
-    chunkSize[2] * numChunks[2] * pointSpacing / 2,
+    (chunkSize[0] * numChunks[0] * pointSpacing) / 2,
+    (chunkSize[1] * numChunks[1] * pointSpacing) / 2,
+    (chunkSize[2] * numChunks[2] * pointSpacing) / 2,
   ];
 
   vec3.copy(camera.target, centre);
@@ -53,7 +56,7 @@ export async function buildScene({
       { position: [0.33, 0.25, 0.9], intensity: 0.75 },
       { position: [-0.55, -0.25, -0.79], intensity: 0.75 },
     ],
-    { colour: normalizeColour([164, 35, 207]) },
+    { colour: normalizeColour([164, 35, 207]), wireframe: params.wireframe },
   );
   let message: any;
   let vertexCount = 0;
@@ -75,6 +78,7 @@ export async function buildScene({
     ],
   };
 
+  const entities: number[] = [];
   for (let z = 0; z < numChunks[2]; ++z) {
     for (let y = 0; y < numChunks[1]; ++y) {
       for (let x = 0; x < numChunks[0]; ++x) {
@@ -95,9 +99,9 @@ export async function buildScene({
               return;
             }
 
-            // console.log(chunk, ': ', vertices.length / 3);
             vertexCount += vertices.length / 3;
             const entity = entityManager.create();
+            entities.push(entity);
             entityManager.addComponent(entity, createTransformComponent({}));
 
             entityManager.addComponent(
@@ -132,4 +136,6 @@ export async function buildScene({
   await Promise.all(promises);
   pool.destroy();
   console.log('total vertices:', vertexCount);
+
+  return { shaderId }
 }
