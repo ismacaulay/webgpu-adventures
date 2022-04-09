@@ -1,4 +1,6 @@
 <script>
+  import ExternalLink from 'components/ExternalLink.svelte';
+
   import Basic from './basic/index.svelte';
   import LearnOpenGL from './learn-opengl/index.svelte';
   import TerrainGeneration from './terrain/index.svelte';
@@ -7,15 +9,30 @@
 
 <style>
   h1 {
-    /* font-size: 14pt; */
     text-align: center;
-    margin-bottom: 40px;
+    font-weight: 400;
+    margin: 0;
+  }
+
+  .container {
+    margin: 1em auto;
+    max-width: 750px;
+  }
+
+  .header-container {
+    margin-bottom: 1.5em;
+    text-align: center;
   }
 </style>
 
-<h1>webgpu adventures</h1>
+<div class="container">
+  <div class="header-container">
+    <h1>webgpu adventures</h1>
+    <ExternalLink href="https://github.com/ismacaulay/webgpu-adventures/">github</ExternalLink>
+  </div>
 
-<Basic />
-<LearnOpenGL />
-<TerrainGeneration />
-<MarchingCubes />
+  <Basic />
+  <LearnOpenGL />
+  <TerrainGeneration />
+  <MarchingCubes />
+</div>

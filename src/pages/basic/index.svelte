@@ -1,15 +1,10 @@
 <script>
-  import PageList from 'components/PageList.svelte';
+  import Section from 'components/Section.svelte';
   import pages from './pages';
+
+  const title = 'basic examples';
 </script>
 
-<style>
-</style>
-
-<h1>basic examples</h1>
-
-<p>
-The hello world of compute graphics.
-</p>
-
-<PageList {pages} />
+<Section {title} {pages}>
+  <p>The hello world of computer graphics.</p>
+</Section>
