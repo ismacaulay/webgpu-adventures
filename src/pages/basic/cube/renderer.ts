@@ -1,6 +1,6 @@
 import { CUBE_VERTICES_WITH_COLOR_WITH_UV } from 'pages/utils/cube-vertices';
 
-import { mat4, vec3 } from 'gl-matrix';
+import { vec3 } from 'gl-matrix';
 import { createRenderer } from 'toolkit/webgpu/renderer';
 import { createCameraController } from 'toolkit/camera/camera-controller';
 import {
@@ -47,7 +47,6 @@ export async function createCubeRenderer(canvas: HTMLCanvasElement) {
   const cube = entityManager.create();
   entityManager.addComponent(cube, createTransformComponent({}));
 
-  const vertices = CUBE_VERTICES_WITH_COLOR_WITH_UV;
   // const boundingBox = computeBoundingBox(vertices, 0, 8);
   entityManager.addComponent(
     cube,

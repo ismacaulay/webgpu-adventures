@@ -1,26 +1,42 @@
 <script>
   import router from 'page';
   import Home from './pages/Home.svelte';
-  import examples from './pages/examples';
+  import basic from './pages/basic/pages';
+  import learnOpenGL from './pages/learn-opengl/pages';
+  import terrain from './pages/terrain/pages';
+  import marchingCubes from './pages/marching-cubes/pages';
 
-  let page;
-  router('/', () => (page = Home));
-  for (let i = 0; i < examples.length; i++) {
-    const example = examples[i];
-    router(`/${example.title}`, () => (page = example.component));
+  let component;
+  let base = '';
+
+  router(`${base}/`, () => (component = Home));
+
+  function addRoutes(pages) {
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      router(`${base}/${page.title}`, () => (component = page.component));
+    }
   }
+
+  addRoutes(basic);
+  addRoutes(learnOpenGL);
+  addRoutes(terrain);
+  addRoutes(marchingCubes);
 
   router.start();
 </script>
 
 <style>
-  /* chrome canary overflows with height 100 */
   .container {
     width: 100vw;
     height: 100vh;
   }
 </style>
 
+<svelte:head>
+  <title>webgpu adventures</title>
+</svelte:head>
+
 <div class="container">
-  <svelte:component this={page} />
+  <svelte:component this={component} />
 </div>
