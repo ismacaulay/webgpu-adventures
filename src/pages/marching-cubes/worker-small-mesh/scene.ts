@@ -4,12 +4,18 @@ import {
   createShaderMaterialComponent,
   createTransformComponent,
 } from 'toolkit/ecs/components';
-import type { CameraController, OrthographicCamera } from 'toolkit/types/camera';
+import { CameraController, CameraType, OrthographicCamera } from 'toolkit/types/camera';
 import type { BufferManager, EntityManager, ShaderManager } from 'toolkit/types/ecs/managers';
 import { BufferAttributeFormat } from 'toolkit/types/webgpu/buffers';
 import { normalizeColour } from 'toolkit/utils/colour';
 import { createDiffuseShader } from 'toolkit/webgpu/shaders/diffuse-shader';
 import { createWorkerPool } from 'toolkit/workers/pool';
+
+export enum DensityFnType {
+  Noise = 'noise',
+  Sphere = 'sphere',
+  Ellipse = 'ellipse',
+}
 
 export async function buildScene(
   {
@@ -23,7 +29,7 @@ export async function buildScene(
     shaderManager: ShaderManager;
     cameraController: CameraController;
   },
-  params: { wireframe: boolean },
+  params: any,
 ) {
   const script = '/build/workers/marching-cubes.worker.js';
 
@@ -36,6 +42,7 @@ export async function buildScene(
   const numChunks: vec3 = [4, 4, 4];
   const pointSpacing = 0.1;
 
+  cameraController.activeCamera = CameraType.Orthographic;
   const camera = cameraController.camera as OrthographicCamera;
   camera.zoom = 0.25;
   const centre: vec3 = [
@@ -56,27 +63,50 @@ export async function buildScene(
       { position: [0.33, 0.25, 0.9], intensity: 0.75 },
       { position: [-0.55, -0.25, -0.79], intensity: 0.75 },
     ],
-    { colour: normalizeColour([164, 35, 207]), wireframe: params.wireframe },
+    { colour: normalizeColour([164, 35, 207]) },
   );
-  let message: any;
   let vertexCount = 0;
 
-  const noise = {
-    seed: 42,
-    scale: 10,
-    octaves: 8,
-    persistence: 0.2,
-    lacunarity: 2.0,
-    offset: { x: 0, y: 0, z: 0 },
-  };
-  const box = {
-    min: [pointSpacing, pointSpacing, pointSpacing],
-    max: [
-      chunkSize[0] * numChunks[0] * pointSpacing - pointSpacing,
-      chunkSize[1] * numChunks[1] * pointSpacing - pointSpacing,
-      chunkSize[2] * numChunks[2] * pointSpacing - pointSpacing,
-    ],
-  };
+  let message = {};
+  let baseMessage = {};
+  if (params.densityFn === DensityFnType.Noise) {
+    baseMessage = {
+      chunkSize,
+      pointSpacing,
+      isoLevel: 0,
+
+      densityFn: params.densityFn,
+      noise: params.noise,
+      box: {
+        min: [pointSpacing, pointSpacing, pointSpacing],
+        max: [
+          chunkSize[0] * numChunks[0] * pointSpacing - pointSpacing,
+          chunkSize[1] * numChunks[1] * pointSpacing - pointSpacing,
+          chunkSize[2] * numChunks[2] * pointSpacing - pointSpacing,
+        ],
+      },
+    };
+  } else if (params.densityFn === DensityFnType.Sphere) {
+    baseMessage = {
+      chunkSize,
+      pointSpacing,
+      isoLevel: 0,
+
+      densityFn: params.densityFn,
+      sphere: params.sphere,
+    };
+  } else if (params.densityFn === DensityFnType.Ellipse) {
+    baseMessage = {
+      chunkSize,
+      pointSpacing,
+      isoLevel: 1,
+
+      densityFn: params.densityFn,
+      ellipse: params.ellipse,
+    };
+  }
+
+  const start = performance.now();
 
   const entities: number[] = [];
   for (let z = 0; z < numChunks[2]; ++z) {
@@ -85,11 +115,7 @@ export async function buildScene(
         message = {
           chunk: [x, y, z],
 
-          chunkSize,
-          pointSpacing,
-
-          noise,
-          box,
+          ...baseMessage,
         };
 
         promises.push(
@@ -134,8 +160,8 @@ export async function buildScene(
   }
 
   await Promise.all(promises);
-  pool.destroy();
-  console.log('total vertices:', vertexCount);
+  const ellapsedTime = performance.now() - start;
 
-  return { shaderId }
+  pool.destroy();
+  return { shaderId, vertexCount, ellapsedTime };
 }

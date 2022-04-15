@@ -1,51 +1,41 @@
 import type { vec3 } from 'gl-matrix';
 import { pointInBox } from 'toolkit/math/point';
-import { createNoise3DDensityFn, createSphereDensityFn } from '../density';
+import {
+  createEllipsoidDensityFn,
+  createNoise3DDensityFn,
+  createSphereDensityFn,
+  DensityFn,
+} from '../density';
 import { createMarchingCubes } from '../march';
-
-// TODO: move these types
-interface ChunkMessage {
-  chunk: vec3;
-  numChunks: vec3;
-  chunkSize: vec3;
-  pointSpacing: number;
-  noise: {
-    seed: number;
-    scale: number;
-    octaves: number;
-    persistence: number;
-    lacunarity: number;
-    offset: { x: number; y: number; z: number };
-  };
-  box: { min: vec3; max: vec3 };
-}
 
 interface WorkerMessage {
   workerId: number;
-  msg: ChunkMessage;
+  msg: any;
 }
 
-function handleChunkMessage(msg: ChunkMessage) {
-  const { chunk, chunkSize, pointSpacing, noise, box } = msg;
+function handleChunkMessage(msg: any) {
+  const { chunk, chunkSize, pointSpacing, isoLevel } = msg;
 
-  const isoLevel = 0;
+  let densityFn: DensityFn;
 
-  // TODO: can we cache results now that things are chunked?
-  // const noiseDesnityFn = createNoise3DDensityFn(noise);
-  // const densityFn = function densityFn(idx: vec3) {
-  //   if (pointInBox(idx, box.min, box.max)) {
-  //     return noiseDesnityFn(idx);
-  //   }
-  //   return isoLevel - 1;
-  // };
-
-  const densityFn = createSphereDensityFn({ radius: 20, centre: [20, 20, 20] });
-
-  // TODO: ellipsoid density fn
+  if (msg.densityFn === 'noise') {
+    const noiseDesnityFn = createNoise3DDensityFn(msg.noise);
+    const box = msg.box;
+    densityFn = function densityFn(idx: vec3) {
+      if (pointInBox(idx, box.min, box.max)) {
+        return noiseDesnityFn(idx);
+      }
+      return isoLevel - 1;
+    };
+  } else if (msg.densityFn === 'sphere') {
+    densityFn = createSphereDensityFn({ ...msg.sphere, centre: [20, 20, 20] });
+  } else if (msg.densityFn === 'ellipse') {
+    densityFn = createEllipsoidDensityFn({ ...msg.ellipse, centre: [20, 20, 20] });
+  } else {
+    throw new Error(`Unknown densityFn: ${msg.densityFn}`);
+  }
 
   const offset: vec3 = [chunk[0] * chunkSize[0], chunk[1] * chunkSize[1], chunk[2] * chunkSize[2]];
-
-  // console.log('starting chunk: ', chunk, offset, box);
 
   const marchingCubes = createMarchingCubes({
     size: chunkSize,
@@ -56,7 +46,6 @@ function handleChunkMessage(msg: ChunkMessage) {
   });
 
   const { vertices } = marchingCubes.march();
-  // console.log('done chunk: ', chunk);
   return { chunk, vertices };
 }
 

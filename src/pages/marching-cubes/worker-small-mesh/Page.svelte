@@ -4,15 +4,9 @@
   import Canvas from 'components/Canvas.svelte';
   import { createApp } from 'pages/app';
   import type { Application } from 'pages/app';
-  import { CameraType } from 'toolkit/types/camera';
-  import type { OrthographicCamera } from 'toolkit/types/camera';
   import { Pane } from 'tweakpane';
   import type { Unsubscriber } from 'toolkit/types/events';
-  /* import { vec3 } from 'gl-matrix'; */
-  import { buildScene } from './scene';
-  import type { Shader } from 'toolkit/types/webgpu/shaders';
-  /* import { getBoundingBoxCentre } from 'toolkit/math/bounding-box'; */
-  /* import type { Shader } from 'toolkit/types/webgpu/shaders'; */
+  import { buildScene, DensityFnType } from './scene';
 
   let container: HTMLElement;
   let canvas: any;
@@ -21,42 +15,101 @@
     let app: Application;
     let pane: Pane;
     let unsubs: Unsubscriber[] = [];
-    let pool: any;
 
     (async () => {
       const stats = new (Stats as any)();
       stats.showPanel(0);
       container.appendChild(stats.dom);
+      app = await createApp(canvas.getElement(), { renderer: { enablePicking: false } });
 
       pane = new Pane({ title: 'settings' });
       const params = {
-        wireframe: false,
+        densityFn: DensityFnType.Noise,
+
+        noise: {
+          seed: 42,
+          scale: 10,
+          octaves: 8,
+          persistence: 0.2,
+          lacunarity: 2.0,
+          offset: { x: 0, y: 0, z: 0 },
+        },
+
+        sphere: {
+          radius: 20,
+        },
+
+        ellipse: {
+          a: 10,
+          b: 5,
+          c: 3,
+        },
+
+        mesh: {
+          colour: { r: 1.0, g: 0.0, b: 1.0 },
+          wireframe: false,
+        },
       };
 
-      let shaderId = -1;
-      const input = pane.addInput(params, 'wireframe').on('change', () => {
-        const shader = shaderManager.get<Shader>(shaderId);
-        shader.update({ wireframe: params.wireframe });
-      });
-      input.disabled = true;
+      function generate() {
+        buildScene(app, params).then((result) => {});
+      }
 
-      app = await createApp(canvas.getElement(), { renderer: { enablePicking: true } });
+      pane
+        .addInput(params, 'densityFn', {
+          options: {
+            [DensityFnType.Noise]: DensityFnType.Noise,
+            [DensityFnType.Sphere]: DensityFnType.Sphere,
+            [DensityFnType.Ellipse]: DensityFnType.Ellipse,
+          },
+          label: 'density fn',
+        })
+        .on('change', handleDensityFnChanged);
 
-      const { entityManager, bufferManager, shaderManager, cameraController } = app;
+      let densityInputs: any[] = [];
+      const densityParamsFolder = pane.addFolder({ title: 'settings' });
+      function handleDensityFnChanged() {
+        densityInputs.forEach((input) => input.dispose());
+        densityInputs = [];
 
-      cameraController.activeCamera = CameraType.Orthographic;
-      buildScene(
-        {
-          entityManager,
-          bufferManager,
-          shaderManager,
-          cameraController,
-        },
-        params,
-      ).then((result) => {
-        shaderId = result.shaderId;
-        input.disabled = false;
-      });
+        if (params.densityFn === DensityFnType.Noise) {
+          densityInputs.push(
+            densityParamsFolder.addInput(params.noise, 'seed'),
+            densityParamsFolder.addInput(params.noise, 'scale'),
+            densityParamsFolder.addInput(params.noise, 'octaves'),
+            densityParamsFolder.addInput(params.noise, 'persistence'),
+            densityParamsFolder.addInput(params.noise, 'lacunarity'),
+            densityParamsFolder.addInput(params.noise, 'offset'),
+          );
+        } else if (params.densityFn === DensityFnType.Sphere) {
+          densityInputs.push(
+            densityParamsFolder.addInput(params.sphere, 'radius', {
+              min: 1,
+              max: 20,
+            }),
+          );
+        } else if (params.densityFn === DensityFnType.Ellipse) {
+          densityInputs.push(
+            densityParamsFolder.addInput(params.ellipse, 'a', {
+              min: 1,
+              max: 20,
+            }),
+            densityParamsFolder.addInput(params.ellipse, 'b', {
+              min: 1,
+              max: 20,
+            }),
+            densityParamsFolder.addInput(params.ellipse, 'c', {
+              min: 1,
+              max: 20,
+            }),
+          );
+        }
+
+        densityInputs.push(
+          densityParamsFolder.addButton({ title: 'generate' }).on('click', generate),
+        );
+      }
+      handleDensityFnChanged();
 
       /* const centre = getBoundingBoxCentre(boundingBox); */
       /* vec3.copy(camera.target, centre); */
