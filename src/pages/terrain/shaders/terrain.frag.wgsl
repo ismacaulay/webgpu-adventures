@@ -1,12 +1,12 @@
 
 struct UBO {
-  wireframe: u32;
-  enable_lighting: u32;
+  wireframe: u32,
+  enable_lighting: u32,
 
-  light1_enabled: u32;
-  light1: vec4<f32>;
-  light2_enabled: u32;
-  light2: vec4<f32>;
+  light1_enabled: u32,
+  light1: vec4<f32>,
+  light2_enabled: u32,
+  light2: vec4<f32>,
 }
 @group(0) @binding(2)
 var<uniform> u: UBO;
@@ -23,7 +23,7 @@ let MIN_DIFFUSE = 0.3;
 
 @stage(fragment)
 fn main(
-  @location(0) barycentric: vec3<f32>, 
+  @location(0) barycentric: vec3<f32>,
   @location(1) noise: f32,
   @location(2) position_eye: vec4<f32>
 ) -> @location(0) vec4<f32> {
@@ -34,7 +34,7 @@ fn main(
   var w = 1.0;
   if (u.wireframe > 0u) {
     var f = fwidth(barycentric);
-    var a = smoothStep(vec3<f32>(0f, 0f, 0f), f * THICKNESS, barycentric);
+    var a = smoothstep(vec3<f32>(0f, 0f, 0f), f * THICKNESS, barycentric);
     w = min(a.x, min(a.y, a.z));
   }
 
