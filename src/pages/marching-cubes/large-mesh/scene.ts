@@ -3,11 +3,7 @@ import {
   createShaderMaterialComponent,
   createTransformComponent,
 } from 'toolkit/ecs/components';
-import type {
-  BufferManager,
-  EntityManager,
-  ShaderManager,
-} from 'toolkit/types/ecs/managers';
+import type { BufferManager, EntityManager, ShaderManager } from 'toolkit/types/ecs/managers';
 import { BufferAttributeFormat } from 'toolkit/types/webgpu/buffers';
 import { normalizeColour } from 'toolkit/utils/colour';
 import { vec3 } from 'gl-matrix';
@@ -29,11 +25,11 @@ export function buildScene({
   // const size: vec3 = [101, 101, 101];
   // const spacing = 0.1;
 
-  // const size: vec3 = [201, 201, 201];
-  // const spacing = 0.05;
+  const size: vec3 = [200, 200, 200];
+  const spacing = 0.05;
 
-  const size: vec3 = [401, 401, 401];
-  const spacing = 0.025;
+  // const size: vec3 = [401, 401, 401];
+  // const spacing = 0.025;
 
   // const size: vec3 = [11, 11, 11];
   // const spacing = 1;
@@ -64,14 +60,19 @@ export function buildScene({
       return densityFn1(idx);
     }
 
-
-//     if (pointInBox(idx, min, max) && pointInSphere(idx, centre, radius)) {
-//       return densityFn1(idx);
-//     }
+    //     if (pointInBox(idx, min, max) && pointInSphere(idx, centre, radius)) {
+    //       return densityFn1(idx);
+    //     }
     return isoLevel - 1;
   };
 
-  const marchingCubes = createMarchingCubes({ size, spacing, densityFn, isoLevel });
+  const marchingCubes = createMarchingCubes({
+    size,
+    offset: [0, 0, 0],
+    spacing,
+    densityFn,
+    isoLevel,
+  });
   const { vertices: meshVerts } = marchingCubes.march();
   console.log('num vertices:', meshVerts.length / 3);
   const boundingBox = computeBoundingBox(meshVerts);
@@ -115,5 +116,4 @@ export function buildScene({
   );
 
   return { boundingBox };
-
 }

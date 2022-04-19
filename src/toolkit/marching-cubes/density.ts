@@ -21,6 +21,32 @@ export function createSphereDensityFn({
   };
 }
 
+export function createEllipsoidDensityFn({
+  a,
+  b,
+  c,
+  centre,
+}: {
+  a: number;
+  b: number;
+  c: number;
+  centre: vec3;
+}) {
+  const a2 = a * a;
+  const b2 = b * b;
+  const c2 = c * c;
+
+  let x, y, z;
+  const p = vec3.create();
+
+  return function ellipsoidDensityFn(idx: vec3) {
+    vec3.sub(p, idx, centre);
+    [x, y, z] = p;
+
+     return (x * x) / a2 + (y * y) / b2 + (z * z) / c2;
+  };
+}
+
 export function densityFn1(idx: vec3) {
   //(3x)4 + (3y)4 + (3z)4 – 45x2 – 45y2 – 45z2
 
@@ -102,4 +128,3 @@ export function createNoise3DDensityFn({
     return value;
   };
 }
-

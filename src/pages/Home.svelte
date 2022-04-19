@@ -1,48 +1,38 @@
 <script>
-  import examples from './examples';
+  import ExternalLink from 'components/ExternalLink.svelte';
+
+  import Basic from './basic/index.svelte';
+  import LearnOpenGL from './learn-opengl/index.svelte';
+  import TerrainGeneration from './terrain/index.svelte';
+  import MarchingCubes from './marching-cubes/index.svelte';
 </script>
 
 <style>
   h1 {
-    font-size: 14pt;
     text-align: center;
-    margin-bottom: 40px;
+    font-weight: 400;
+    margin: 0;
   }
 
-  #nav {
-    position: relative;
-    left: 0px;
-    flex: 1;
-    max-width: 300px;
-    min-width: 300px;
-    height: 100vh;
-    overflow: auto;
-    background: #ebebeb;
+  .container {
+    margin: 1em auto;
+    max-width: 750px;
   }
 
-  .nav-link {
-    display: block;
-    padding: 0 10px;
-  }
-
-  a {
-    text-decoration: none;
-  }
-
-  a:link,
-  a:visited {
-    color: #357785;
-  }
-  a:hover {
-    text-decoration: underline;
+  .header-container {
+    margin-bottom: 1.5em;
+    text-align: center;
   }
 </style>
 
-<div id="nav">
-  <h1>
-    <a href="/">WebGPU Adventures</a>
-  </h1>
-  {#each examples as example}
-    <a class="nav-link" href="/{example.title}">{example.title}</a>
-  {/each}
+<div class="container">
+  <div class="header-container">
+    <h1>webgpu adventures</h1>
+    <ExternalLink href="https://github.com/ismacaulay/webgpu-adventures/">github</ExternalLink>
+  </div>
+
+  <Basic />
+  <LearnOpenGL />
+  <TerrainGeneration />
+  <MarchingCubes />
 </div>

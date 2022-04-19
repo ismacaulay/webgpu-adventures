@@ -6,8 +6,12 @@ html,
 body {
   margin: 0;
   padding: 0;
+
 }
 
 body {
-  font-family: 'Source Code Pro', monospace;
+  color: #333;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: "Roboto Mono", monospace;
 }
