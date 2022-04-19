@@ -38,6 +38,8 @@ export async function createRenderer(
     canvas.clientWidth * devicePixelRatio,
     canvas.clientHeight * devicePixelRatio,
   ];
+  let currentCanvasSize = [canvas.clientWidth, canvas.clientHeight];
+
   const presentationFormat = context.getPreferredFormat(adapter);
   context.configure({
     device,
@@ -170,9 +172,10 @@ export async function createRenderer(
     finish() {
       // hand resize if necessary
       if (
-        canvas.clientWidth !== presentationSize[0] ||
-        canvas.clientHeight !== presentationSize[1]
+        canvas.clientWidth !== currentCanvasSize[0] ||
+        canvas.clientHeight !== currentCanvasSize[1]
       ) {
+        currentCanvasSize = [canvas.clientWidth, canvas.clientHeight];
         presentationSize = [
           canvas.clientWidth * devicePixelRatio,
           canvas.clientHeight * devicePixelRatio,
